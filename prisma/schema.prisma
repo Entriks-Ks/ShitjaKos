@@ -7,4 +7,282 @@ datasource db {
   provider = "postgresql"
 }
 
-// Project models will be added after the project plan is provided.
+model User {
+  id              String               @id
+  name            String
+  email           String               @unique
+  emailVerified   Boolean              @default(false)
+  image           String?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  suspendedAt     DateTime?
+  role            String               @default("USER")
+  sessions        Session[]
+  accounts        Account[]
+  profile         PersonalProfile?
+  memberships     BusinessMembership[]
+  createdListings Listing[]            @relation("Creator")
+  audits          AuditEvent[]
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([providerId, accountId])
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+}
+
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+
+model PersonalProfile {
+  id          String    @id @default(cuid())
+  userId      String    @unique
+  displayName String
+  city        String    @default("Prishtina")
+  bio         String    @default("")
+  user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
+  listings    Listing[]
+}
+
+enum BusinessRole {
+  OWNER
+  MANAGER
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Business {
+  id           String               @id @default(cuid())
+  legalName    String
+  publicName   String
+  city         String
+  phone        String
+  email        String
+  description  String
+  reviewStatus ReviewStatus         @default(PENDING)
+  reviewedAt   DateTime?
+  suspendedAt  DateTime?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  memberships  BusinessMembership[]
+  shop         Shop?
+  listings     Listing[]
+}
+
+model BusinessMembership {
+  userId     String
+  businessId String
+  role       BusinessRole @default(OWNER)
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  business   Business     @relation(fields: [businessId], references: [id], onDelete: Restrict)
+
+  @@id([userId, businessId])
+}
+
+model Shop {
+  id           String   @id @default(cuid())
+  businessId   String   @unique
+  slug         String   @unique
+  tagline      String   @default("")
+  address      String   @default("")
+  openingHours String   @default("")
+  business     Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+}
+
+model Category {
+  id           String                @id
+  parentId     String?
+  slug         String                @unique
+  ownerPortal  String                @default("SHITJAKOS")
+  active       Boolean               @default(true)
+  sortOrder    Int                   @default(0)
+  version      Int                   @default(1)
+  icon         String                @default("Package")
+  parent       Category?             @relation("Tree", fields: [parentId], references: [id], onDelete: Restrict)
+  children     Category[]            @relation("Tree")
+  translations CategoryTranslation[]
+  attributes   AttributeDefinition[]
+  listings     Listing[]
+}
+
+model CategoryTranslation {
+  categoryId String
+  locale     String
+  name       String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([categoryId, locale])
+}
+
+enum AttributeType {
+  TEXT
+  NUMBER
+  SELECT
+  BOOLEAN
+}
+
+model AttributeDefinition {
+  id           String                  @id
+  categoryId   String
+  key          String
+  type         AttributeType
+  required     Boolean                 @default(false)
+  filterable   Boolean                 @default(true)
+  unit         String?
+  min          Float?
+  max          Float?
+  options      Json                    @default("[]")
+  sortOrder    Int                     @default(0)
+  category     Category                @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  translations AttributeTranslation[]
+  values       ListingAttributeValue[]
+
+  @@unique([categoryId, key])
+}
+
+model AttributeTranslation {
+  attributeId String
+  locale      String
+  label       String
+  attribute   AttributeDefinition @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+
+  @@id([attributeId, locale])
+}
+
+enum ListingIntent {
+  FOR_SALE
+  WANTED
+}
+
+enum ListingStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  SOLD
+  CLOSED
+}
+
+enum Condition {
+  NEW
+  LIKE_NEW
+  USED
+  DEFECTIVE
+  FOR_PARTS
+}
+
+model Listing {
+  id                String                  @id @default(cuid())
+  personalProfileId String?
+  businessId        String?
+  createdById       String
+  categoryId        String
+  intent            ListingIntent           @default(FOR_SALE)
+  status            ListingStatus           @default(DRAFT)
+  moderationStatus  ReviewStatus            @default(PENDING)
+  title             String
+  description       String
+  priceCents        Int?
+  currency          String                  @default("EUR")
+  condition         Condition               @default(USED)
+  city              String
+  negotiable        Boolean                 @default(false)
+  contactPhone      String?
+  phoneVisible      Boolean                 @default(false)
+  version           Int                     @default(1)
+  publishedAt       DateTime?
+  expiresAt         DateTime?
+  soldAt            DateTime?
+  createdAt         DateTime                @default(now())
+  updatedAt         DateTime                @updatedAt
+  personalProfile   PersonalProfile?        @relation(fields: [personalProfileId], references: [id], onDelete: Restrict)
+  business          Business?               @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  createdBy         User                    @relation("Creator", fields: [createdById], references: [id], onDelete: Restrict)
+  category          Category                @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  attributes        ListingAttributeValue[]
+  media             ListingMedia[]
+
+  @@index([status, moderationStatus, city, publishedAt])
+  @@index([categoryId, priceCents])
+  @@index([personalProfileId, status])
+  @@index([businessId, status])
+}
+
+model ListingAttributeValue {
+  listingId   String
+  attributeId String
+  value       Json
+  listing     Listing             @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  attribute   AttributeDefinition @relation(fields: [attributeId], references: [id], onDelete: Restrict)
+
+  @@id([listingId, attributeId])
+}
+
+model ListingMedia {
+  id         String  @id @default(cuid())
+  listingId  String
+  storageKey String  @unique
+  altText    String
+  position   Int
+  listing    Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, position])
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  actorId   String
+  action    String
+  targetId  String
+  detail    Json
+  createdAt DateTime @default(now())
+  actor     User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([targetId, createdAt])
+}

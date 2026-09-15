@@ -16,10 +16,17 @@ export function getPrisma(): PrismaClient {
     DATABASE_URL: process.env.DATABASE_URL,
   });
   if (!result.success) {
-    throw new Error("Set DATABASE_URL to a valid PostgreSQL URL in .env before using the database.");
+    throw new Error(
+      "Set DATABASE_URL to a valid PostgreSQL URL in .env before using the database.",
+    );
   }
 
-  const adapter = new PrismaPg({ connectionString: result.data.DATABASE_URL });
+  const adapter = new PrismaPg({
+    connectionString: result.data.DATABASE_URL,
+    max: 5,
+    idleTimeoutMillis: 1000,
+    connectionTimeoutMillis: 10000,
+  });
   globalForPrisma.prisma = new PrismaClient({ adapter });
   return globalForPrisma.prisma;
 }

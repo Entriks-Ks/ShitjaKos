@@ -34,6 +34,10 @@ yarn-error.log*
 .env*
 !.env.example
 /src/generated/prisma/
+/.local-mail/
+/.uploads/
+/test-results/
+/playwright-report/
 
 # vercel
 .vercel

@@ -13,14 +13,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Project Starter",
-  description: "A space for what comes next.",
+  title: { default: "ShitjaKos — Tregu yt lokal", template: "%s | ShitjaKos" },
+  description:
+    "Bli dhe shit në Kosovë. Shpallje private, biznese lokale dhe gjetje të reja pranë teje.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
-      lang="en"
+      lang="sq"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
