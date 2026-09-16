@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import Image from "next/image";
 import { MapPin, ArrowUpRight, Package } from "lucide-react";
 import { Locale, money, translated } from "@/lib/catalog";
@@ -19,7 +19,7 @@ export function ListingCard({ item, locale }: { item: CardListing; locale: Local
         {item.media[0] ? (
           <Image
             unoptimized
-            src={`/api/media/${item.media[0].id}`}
+            src={`/api/media/${item.media[0].id}?size=thumb`}
             alt={item.media[0].altText}
             fill
             sizes="(max-width: 640px) 100vw, 25vw"

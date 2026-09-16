@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import sharp from "sharp";
 import { getPrisma } from "@/lib/prisma";
 import { Actor, canManageListing } from "@/lib/permissions";
+import { removeListingThumbnail } from "@/lib/listing-images";
 
 export class MediaOperationError extends Error {
   constructor(
@@ -59,7 +60,7 @@ export async function addListingPhoto(
     const media = await db.$transaction(async (tx) => {
       const locked = await tx.listing.updateMany({
         where: { id: listingId, version: listing.version },
-        data: { version: { increment: 1 }, moderationStatus: "PENDING" },
+        data: { version: { increment: 1 } },
       });
       if (!locked.count)
         throw new MediaOperationError("Listing changed. Retry the photo upload.", 409);
@@ -114,7 +115,7 @@ export async function deleteListingPhoto(
     await db.$transaction(async (tx) => {
       const changed = await tx.listing.updateMany({
         where: { id: listingId, version: listing.version },
-        data: { version: { increment: 1 }, moderationStatus: "PENDING" },
+        data: { version: { increment: 1 } },
       });
       if (!changed.count)
         throw new MediaOperationError("Listing changed. Reload and retry.", 409);
@@ -138,4 +139,5 @@ export async function deleteListingPhoto(
     throw new MediaOperationError("Listing changed. Reload and retry.", 409);
   }
   await unlink(uploadPath(media.storageKey)).catch(() => {});
+  await removeListingThumbnail(media.storageKey);
 }

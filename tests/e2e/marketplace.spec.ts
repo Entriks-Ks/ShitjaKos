@@ -122,7 +122,7 @@ test("verified accounts, ownership, category validation, reviews, personal/busin
     .getByLabel("Add photos")
     .setInputFiles({ name: "phone.png", mimeType: "image/png", buffer: image });
   await expect(seller.page.getByRole("button", { name: "Remove photo 1" })).toBeVisible();
-  await seller.page.getByRole("button", { name: "Submit for publication" }).click();
+  await seller.page.getByRole("button", { name: "Publish listing" }).click();
   await expect(
     seller.page.getByText("Status: PUBLISHED", { exact: false }),
   ).toBeVisible();
@@ -133,7 +133,7 @@ test("verified accounts, ownership, category validation, reviews, personal/busin
   ).toBeVisible();
   const photo = await db.listingMedia.findFirstOrThrow({ where: { listingId } });
   expect((await outsider.context.request.get(`/api/media/${photo.id}`)).status()).toBe(
-    404,
+    200,
   );
   const tampered = await outsider.context.request.post(
     `/api/listings/${listingId}/media`,
@@ -146,15 +146,8 @@ test("verified accounts, ownership, category validation, reviews, personal/busin
   await outsider.page.goto(`/?q=${run}&lang=en`);
   await expect(
     outsider.page.getByRole("heading", { name: `Test phone ${run}` }),
-  ).toHaveCount(0);
+  ).toBeVisible();
 
-  await admin.page.goto("/admin");
-  const review = admin.page.locator("article").filter({ hasText: `Test phone ${run}` });
-  await review
-    .getByLabel("Review reason")
-    .fill("Reviewed details and photograph; allowed general goods.");
-  await review.getByRole("button", { name: "Approve", exact: true }).click();
-  await expect(review).toHaveCount(0);
   await outsider.page.goto(`/?q=${run}&seller=private&lang=en`);
   await expect(
     outsider.page.getByRole("heading", { name: `Test phone ${run}` }),
@@ -225,19 +218,10 @@ test("verified accounts, ownership, category validation, reviews, personal/busin
     .getByLabel("Add photos")
     .setInputFiles({ name: "chair.png", mimeType: "image/png", buffer: image });
   await expect(seller.page.getByRole("button", { name: "Remove photo 1" })).toBeVisible();
-  await seller.page.getByRole("button", { name: "Submit for publication" }).click();
+  await seller.page.getByRole("button", { name: "Publish listing" }).click();
   await expect(
     seller.page.getByText("Status: PUBLISHED", { exact: false }),
   ).toBeVisible();
-  await admin.page.goto("/admin");
-  const chairReview = admin.page
-    .locator("article")
-    .filter({ hasText: `Test chair ${run}` });
-  await chairReview
-    .getByLabel("Review reason")
-    .fill("Reviewed business listing and photograph.");
-  await chairReview.getByRole("button", { name: "Approve", exact: true }).click();
-  await expect(chairReview).toHaveCount(0);
   await outsider.page.goto(`/?q=${run}&seller=business&lang=en`);
   await expect(
     outsider.page.getByRole("heading", { name: `Test chair ${run}` }),
@@ -274,7 +258,7 @@ test("verified accounts, ownership, category validation, reviews, personal/busin
     .locator("article")
     .filter({ hasText: `Test phone ${run}` });
   await ownPhone.getByRole("button", { name: "Pause", exact: true }).click();
-  await expect(ownPhone.getByText("PAUSED", { exact: true })).toBeVisible();
+  await expect(ownPhone.getByText("Paused", { exact: true })).toBeVisible();
   await outsider.page.goto(`/?q=${run}&seller=private&lang=en`);
   await expect(
     outsider.page.getByRole("heading", { name: `Test phone ${run}` }),

@@ -6,12 +6,14 @@ export async function reviewItem(
   actor: Actor,
   input: {
     id: string;
-    kind: "listing" | "business";
+    kind: "business";
     decision: "APPROVED" | "REJECTED";
     reason: string;
   },
 ) {
   if (!isStaff(actor)) throw new Error("Not authorized.");
+
+  if (input.kind !== "business") throw new Error("Only businesses require review.");
 
   await getPrisma().$transaction(async (tx) => {
     if (input.kind === "business") {
@@ -25,24 +27,6 @@ export async function reviewItem(
       await tx.business.update({
         where: { id: input.id },
         data: { reviewStatus: input.decision, reviewedAt: new Date() },
-      });
-    } else {
-      const listing = await tx.listing.findUniqueOrThrow({
-        where: { id: input.id },
-        include: {
-          personalProfile: true,
-          business: { include: { memberships: true } },
-        },
-      });
-      if (
-        listing.personalProfile?.userId === actor.id ||
-        listing.business?.memberships.some((membership) => membership.userId === actor.id)
-      ) {
-        throw new Error("You cannot review your own listing.");
-      }
-      await tx.listing.update({
-        where: { id: input.id },
-        data: { moderationStatus: input.decision, version: { increment: 1 } },
       });
     }
 

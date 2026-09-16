@@ -8,7 +8,8 @@ export async function updateProfileAction(raw: unknown) {
   const actor = await requireUser();
   try {
     await updateProfile(actor, raw);
-    revalidatePath("/", "layout");
+    revalidatePath("/dashboard", "layout");
+    revalidatePath("/listings/[id]", "page");
     return { ok: true };
   } catch (error) {
     return {

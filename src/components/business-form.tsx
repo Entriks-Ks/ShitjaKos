@@ -20,7 +20,6 @@ export function BusinessForm() {
           if (r.error) setError(r.error);
           else {
             router.push("/dashboard");
-            router.refresh();
           }
         } catch {
           setError("Could not create business.");

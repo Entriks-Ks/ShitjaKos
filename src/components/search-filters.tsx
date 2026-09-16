@@ -1,4 +1,5 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
+import { SearchForm } from "@/components/search-form";
 import { cities, copy, Locale, optionLabel, translated } from "@/lib/catalog";
 import { SearchParams } from "@/lib/search-navigation";
 import type { getCategories } from "@/repositories/catalog";
@@ -18,7 +19,7 @@ export function SearchFilters({
       (attribute) => attribute.type === "SELECT" && attribute.filterable,
     ) ?? [];
   return (
-    <form className="panel mb-6" action="/search">
+    <SearchForm key={JSON.stringify(p)} className="panel mb-6">
       <input type="hidden" name="lang" value={locale} />
       <div className="filter-grid">
         <label className="field">
@@ -105,6 +106,6 @@ export function SearchFilters({
           {t.clear}
         </Link>
       </div>
-    </form>
+    </SearchForm>
   );
 }

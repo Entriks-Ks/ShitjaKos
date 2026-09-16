@@ -1,4 +1,5 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
+import { SearchForm } from "@/components/search-form";
 import {
   Armchair,
   Laptop,
@@ -14,8 +15,8 @@ import { CategoryIcon } from "@/components/category-icon";
 import { redirect } from "next/navigation";
 import { searchUrl } from "@/lib/search-navigation";
 import { cities, copy, localeOf, translated } from "@/lib/catalog";
-import { currentUser } from "@/lib/session";
-import { getCategories } from "@/repositories/catalog";
+import { currentActor as currentUser } from "@/lib/session";
+import { getCachedCategories as getCategories } from "@/lib/catalog-cache";
 import { searchListings } from "@/repositories/listings";
 export const dynamic = "force-dynamic";
 export default async function Home({
@@ -70,7 +71,7 @@ export default async function Home({
             <span>{t.subhead}</span>
           </h1>
           <p className="muted max-w-lg">{t.intro}</p>
-          <form className="searchbar" action="/search">
+          <SearchForm className="searchbar">
             <input type="hidden" name="lang" value={locale} />
             <div className="hidden sm:flex items-center pl-3">
               <Search size={19} />
@@ -91,7 +92,7 @@ export default async function Home({
               <Search size={17} />
               {t.search}
             </button>
-          </form>
+          </SearchForm>
           <div className="flex flex-wrap gap-5 mt-5 text-[11px] text-stone-600">
             <span className="flex items-center gap-1">
               <MapPin size={13} /> Prishtina · Prizren · Ferizaj

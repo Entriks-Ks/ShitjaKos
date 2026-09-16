@@ -1,7 +1,6 @@
 "use client";
 
 import { startTransition, useState } from "react";
-import { useRouter } from "next/navigation";
 import {
   createCategoryAction,
   createFieldAction,
@@ -61,7 +60,6 @@ export function CategoryCreateForm({
 }: {
   groups: { id: string; name: string }[];
 }) {
-  const router = useRouter();
   const [parentId, setParentId] = useState("");
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
@@ -90,7 +88,6 @@ export function CategoryCreateForm({
               form.reset();
               setParentId("");
               setMessage("Category added. It is now available in the catalog.");
-              router.refresh();
             }
           } catch {
             setError("Could not add the category. Please try again.");
@@ -160,7 +157,6 @@ export function FieldCreateForm({
     hasChoiceFilter: boolean;
   }[];
 }) {
-  const router = useRouter();
   const [categoryId, setCategoryId] = useState("");
   const [type, setType] = useState<FieldType>("TEXT");
   const [options, setOptions] = useState<Names[]>([
@@ -208,7 +204,6 @@ export function FieldCreateForm({
                 { sq: "", en: "", de: "" },
               ]);
               setMessage("Listing field added to the selected subcategory.");
-              router.refresh();
             }
           } catch {
             setError("Could not add the field. Please try again.");

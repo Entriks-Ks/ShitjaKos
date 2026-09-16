@@ -67,7 +67,7 @@ export async function saveListing(actor: Actor, raw: unknown) {
         throw new Error("Closed listings cannot be edited.");
       const changed = await tx.listing.updateMany({
         where: { id: v.id, version: v.version },
-        data: { ...data, version: { increment: 1 }, moderationStatus: "PENDING" },
+        data: { ...data, version: { increment: 1 } },
       });
       if (!changed.count)
         throw new Error("This listing changed in another tab. Reload before editing.");
@@ -81,6 +81,7 @@ export async function saveListing(actor: Actor, raw: unknown) {
     const item = await tx.listing.create({
       data: {
         ...data,
+        moderationStatus: "APPROVED",
         createdById: actor.id,
         personalProfileId,
         businessId,
@@ -110,8 +111,10 @@ export async function transitionListing(
     if (!canTransition(item.status, target))
       throw new Error("This status change is not allowed.");
     if (target === "PUBLISHED") {
+      if (item.moderationStatus === "REJECTED")
+        throw new Error("This listing is blocked from publication.");
       if (!item.media.length)
-        throw new Error("Add at least one photo before submitting.");
+        throw new Error("Add at least one photo before publishing.");
       if (
         item.business &&
         (item.business.reviewStatus !== "APPROVED" || item.business.suspendedAt)
@@ -124,7 +127,11 @@ export async function transitionListing(
         status: target,
         version: { increment: 1 },
         ...(target === "PUBLISHED"
-          ? { publishedAt: new Date(), expiresAt: new Date(Date.now() + 30 * 86400000) }
+          ? {
+              moderationStatus: "APPROVED",
+              publishedAt: new Date(),
+              expiresAt: new Date(Date.now() + 30 * 86400000),
+            }
           : {}),
         ...(target === "SOLD" ? { soldAt: new Date() } : {}),
       },

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { Header } from "@/components/header";
@@ -7,8 +7,8 @@ import { SearchFilters } from "@/components/search-filters";
 import { ListingResults } from "@/components/listing-results";
 import { copy, localeOf, translated } from "@/lib/catalog";
 import { legacyCategories, searchUrl } from "@/lib/search-navigation";
-import { currentUser } from "@/lib/session";
-import { getCategories } from "@/repositories/catalog";
+import { currentActor as currentUser } from "@/lib/session";
+import { getCachedCategories as getCategories } from "@/lib/catalog-cache";
 import { searchListings } from "@/repositories/listings";
 
 export const dynamic = "force-dynamic";

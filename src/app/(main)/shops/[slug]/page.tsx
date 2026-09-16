@@ -3,7 +3,7 @@ import { Header } from "@/components/header";
 import { ListingCard } from "@/components/listing-card";
 import { getPublicShop, getPublicShopListings } from "@/repositories/shops";
 import { localeOf } from "@/lib/catalog";
-import { currentUser } from "@/lib/session";
+import { currentActor as currentUser } from "@/lib/session";
 import { ShieldCheck, MapPin } from "lucide-react";
 export const dynamic = "force-dynamic";
 export default async function Page({

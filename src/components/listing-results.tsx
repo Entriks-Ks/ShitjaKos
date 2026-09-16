@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import { Search, ArrowRight } from "lucide-react";
 import { ListingCard } from "@/components/listing-card";
 import { copy, Locale } from "@/lib/catalog";

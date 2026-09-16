@@ -9,7 +9,10 @@ export function getOwnedListings(userId: string) {
         { business: { memberships: { some: { userId } } } },
       ],
     },
-    include: { business: true, media: { select: { id: true } } },
+    include: {
+      business: true,
+      media: { orderBy: { position: "asc" }, take: 1, select: { id: true } },
+    },
     orderBy: { updatedAt: "desc" },
   });
 }

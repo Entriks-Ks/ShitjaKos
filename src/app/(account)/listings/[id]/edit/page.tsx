@@ -2,25 +2,26 @@ import { notFound } from "next/navigation";
 import { ListingForm } from "@/components/listing-form";
 import { requireUser } from "@/lib/session";
 import { getEditableListing } from "@/repositories/listings";
-import { getCategories } from "@/repositories/catalog";
+import { getCachedCategories as getCategories } from "@/lib/catalog-cache";
 import { canManageListing } from "@/lib/permissions";
 export const metadata = {
   title: "Edit listing",
   robots: { index: false, follow: false },
 };
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
-  const user = await requireUser();
   const { id } = await params;
-  const item = await getEditableListing(id);
+  const [user, item, categories] = await Promise.all([
+    requireUser(),
+    getEditableListing(id),
+    getCategories(),
+  ]);
   if (!item || !canManageListing(user, item)) notFound();
-  const categories = await getCategories();
   return (
     <>
       <main className="wrap max-w-3xl py-10">
         <h1>Your listing.</h1>
         <p className="notice mb-6">
-          Status: {item.status} · Review: {item.moderationStatus}. Save details before
-          uploading photos.
+          Status: {item.status}. Save details before uploading photos.
         </p>
         {["SOLD", "CLOSED"].includes(item.status) ? (
           <p>This listing is closed and cannot be edited.</p>

@@ -1,10 +1,10 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import { notFound } from "next/navigation";
 import { MapPin, ShieldCheck, Phone, Store } from "lucide-react";
 import { Header } from "@/components/header";
 import { ListingCard } from "@/components/listing-card";
-import { currentUser } from "@/lib/session";
+import { currentActor as currentUser } from "@/lib/session";
 import { canManageListing, isStaff } from "@/lib/permissions";
 import {
   getPublicListingMarker,
@@ -23,8 +23,8 @@ export default async function Page({
 }) {
   const { id } = await params;
   const locale = localeOf((await searchParams).lang);
-  const user = await currentUser();
-  const [visible, item] = await Promise.all([
+  const [user, visible, item] = await Promise.all([
+    currentUser(),
     getPublicListingMarker(id),
     getListingPreview(id),
   ]);
@@ -45,8 +45,7 @@ export default async function Page({
         </nav>
         {!visible && (
           <p className="notice mb-5">
-            Private preview — {item.status}, review {item.moderationStatus}. This listing
-            is not public.
+            Private preview — {item.status}. This listing is not public.
           </p>
         )}
         <div className="grid lg:grid-cols-[1.5fr_1fr] gap-8">

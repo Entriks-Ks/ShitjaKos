@@ -1,8 +1,8 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import { Store, ArrowUpRight } from "lucide-react";
 import { Header } from "@/components/header";
 import { getPublicShops } from "@/repositories/shops";
-import { currentUser } from "@/lib/session";
+import { currentActor as currentUser } from "@/lib/session";
 import { localeOf } from "@/lib/catalog";
 export const dynamic = "force-dynamic";
 export default async function Page({

@@ -54,7 +54,6 @@ export function ListingForm({
       if (result.error) setError(result.error);
       else {
         router.push(`/listings/${result.id}/edit`);
-        router.refresh();
       }
     } catch {
       setError("Could not save. Please try again.");
@@ -266,7 +265,8 @@ export function ListingForm({
           {busy ? "Saving…" : initial ? "Save changes" : "Save draft & add photos"}
         </button>
         <p className="text-xs text-stone-500">
-          Listings are reviewed before appearing in search. Edits require another review.
+          Listings appear immediately after you publish. Business listings require an
+          approved shop.
         </p>
       </form>
       {initial?.id && (
@@ -325,7 +325,7 @@ function PhotoEditor({
                     method: "DELETE",
                   });
                   if (!r.ok) setError("Could not delete image. Retry.");
-                  router.refresh();
+                  else router.refresh();
                 } finally {
                   setBusy(false);
                 }
@@ -382,7 +382,7 @@ function PhotoEditor({
         </p>
       )}
       {["DRAFT", "PAUSED"].includes(status) && (
-        <StatusButton id={id} target="PUBLISHED" label="Submit for publication" />
+        <StatusButton id={id} target="PUBLISHED" label="Publish listing" />
       )}
     </section>
   );
@@ -396,7 +396,6 @@ export function StatusButton({
   target: "PUBLISHED" | "PAUSED" | "SOLD" | "CLOSED";
   label: string;
 }) {
-  const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
@@ -409,7 +408,6 @@ export function StatusButton({
           try {
             const r = await statusAction(id, target);
             setError(r.error ?? "");
-            router.refresh();
           } catch {
             setError("Could not update listing.");
           } finally {

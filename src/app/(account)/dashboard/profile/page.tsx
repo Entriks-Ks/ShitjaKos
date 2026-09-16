@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import { LockKeyhole, Mail } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { cities } from "@/lib/catalog";

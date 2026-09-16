@@ -19,7 +19,11 @@ export function publicWhere(): Prisma.ListingWhereInput {
 }
 export const listingInclude = {
   category: { include: { translations: true } },
-  media: { orderBy: { position: "asc" as const } },
+  media: {
+    orderBy: { position: "asc" as const },
+    take: 1,
+    select: { id: true, altText: true },
+  },
   personalProfile: { select: { displayName: true } },
   business: { select: { publicName: true, reviewStatus: true, shop: true } },
 };
@@ -33,6 +37,13 @@ export function getPublicListingMarker(id: string) {
 
 export function getListingMedia(id: string) {
   return getPrisma().listingMedia.findUnique({ where: { id } });
+}
+
+export function getPublicListingMedia(id: string) {
+  return getPrisma().listingMedia.findFirst({
+    where: { id, listing: publicWhere() },
+    select: { id: true, storageKey: true },
+  });
 }
 
 export function getListingOwnershipDetails(id: string) {
@@ -117,25 +128,28 @@ export async function searchListings(params: Record<string, string | undefined>)
       },
     });
   const finalWhere = { AND: [where, ...filters] };
-  const count = await getPrisma().listing.count({ where: finalWhere });
-  const pages = Math.max(1, Math.ceil(count / 12));
-  const page = Math.min(
-    pages,
-    Math.max(1, Math.min(1000, Math.floor(Number(params.page)) || 1)),
-  );
+  const requestedPage = Math.max(1, Math.min(1000, Math.floor(Number(params.page)) || 1));
   const sort: Prisma.ListingOrderByWithRelationInput =
     params.sort === "price-asc"
       ? { priceCents: "asc" }
       : params.sort === "price-desc"
         ? { priceCents: "desc" }
         : { publishedAt: "desc" };
-  const items = await getPrisma().listing.findMany({
-    where: finalWhere,
-    include: listingInclude,
-    orderBy: [sort, { id: "asc" }],
-    take: 12,
-    skip: (page - 1) * 12,
-  });
+  const readPage = (page: number) =>
+    getPrisma().listing.findMany({
+      where: finalWhere,
+      include: listingInclude,
+      orderBy: [sort, { id: "asc" }],
+      take: 12,
+      skip: (page - 1) * 12,
+    });
+  const [count, requestedItems] = await Promise.all([
+    getPrisma().listing.count({ where: finalWhere }),
+    readPage(requestedPage),
+  ]);
+  const pages = Math.max(1, Math.ceil(count / 12));
+  const page = Math.min(pages, requestedPage);
+  const items = page === requestedPage ? requestedItems : await readPage(page);
   // Contact fields are deliberately omitted from public cards.
   return {
     items: items.map(({ contactPhone: _phone, ...item }) => {

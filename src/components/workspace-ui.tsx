@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import Link from "@/components/navigation-link";
 
 export function StatusBadge({
   children,
@@ -20,21 +21,30 @@ export function StatCard({
   label,
   value,
   note,
+  href,
 }: {
   icon: LucideIcon;
   label: string;
   value: number;
   note: string;
+  href?: string;
 }) {
-  return (
-    <div className="stat-card">
+  const content = (
+    <>
       <span className="stat-icon">
         <Icon size={20} />
       </span>
       <p>{label}</p>
       <strong>{value}</strong>
       <small>{note}</small>
-    </div>
+    </>
+  );
+  return href ? (
+    <Link href={href} className="stat-card stat-card-link">
+      {content}
+    </Link>
+  ) : (
+    <div className="stat-card">{content}</div>
   );
 }
 

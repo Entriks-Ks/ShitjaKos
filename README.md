@@ -82,7 +82,7 @@ Every title begins with `[Demo]`, and every description explains that the item
 is only a sample. The script can be run again without making duplicates. It is
 separate from `db:seed`, which defines the catalog and does not create listings.
 Demo listings are published directly so they appear in search without an admin
-review; actual seller listings still follow the normal review flow.
+review; seller listings also publish without individual admin approval.
 
 To remove only this script's sample listings, seller and illustrations:
 
@@ -101,8 +101,8 @@ another server, its image storage must be shared or moved to object storage.
    `.local-mail/` instead. That directory is ignored by Git and is never served
    over HTTP.
 3. Create a personal draft, choose a subcategory and fill its configured fields.
-4. Save the draft, upload photos and submit it for publication.
-5. A separate reviewer approves it; it then appears in public search.
+4. Save the draft, upload photos and click Publish listing.
+5. It appears in public search immediately, without an admin review.
 6. Create a business from `/business/new`. It is pending until reviewed.
 7. After approval, create listings using that business under “Publish as”.
    Your personal listings remain separate from the shop's inventory.
@@ -118,9 +118,8 @@ $reviewerEmail = Read-Host "Email of the verified account"
 npm run admin:grant -- $reviewerEmail
 ```
 
-Open `/admin` while signed in as that reviewer. Review business details and
-listing previews, enter a reason, and approve or reject. Reviewers cannot approve
-their own listings or businesses. Granting the role is logged. A production staff
+Open `/admin` while signed in as that reviewer. Review new business details,
+enter a reason, and approve or reject. Reviewers cannot approve their own businesses. Granting the role is logged. A production staff
 console needs MFA and additional operational controls before public launch.
 
 Admins can open `/admin/catalog` from the review queue to add category groups,
@@ -152,7 +151,7 @@ npm run db:generate
 - Email/password registration, email verification, login/logout, password reset,
   persistent sessions, auth rate limiting and suspended-account checks.
 - Personal profiles, independent businesses, memberships and public shops.
-- Manual business and listing review, reasons, self-review prevention, audit log.
+- Manual business review, reasons, self-review prevention, audit log. Listings publish immediately.
 - Admin creation of category groups, subcategories and typed listing fields.
 - Reference taxonomy: 11 groups and 67 subcategories from
   `Category_Translations_EN_DE (2).pdf`, with its English/German labels and added
@@ -196,8 +195,7 @@ The route groups organize pages without changing their URLs. Client components
 use React hooks for form state, navigation and uploads; server pages read data
 directly through repositories instead of adding a client-fetching hook. The
 browser cannot assign roles or review states. Listing ownership is immutable
-through the listing editor. An edit or photo change returns content to review,
-removing it from public search until approved. Public search and photo access
+through the listing editor. Edits and photo changes preserve publication without requiring review. Public search and photo access
 use the same visibility predicate.
 
 Category answer `value` is a JSON primitive with a declared definition type. Both
@@ -255,6 +253,38 @@ npx playwright test tests/e2e/catalog-browse.spec.ts
 ```
 
 ## Configuration and production boundaries
+
+### Loading and performance
+
+Search forms and internal links use client navigation with a thin progress bar.
+The current page stays visible during transitions instead of being replaced by
+skeleton screens. Server Actions revalidate affected pages and deliver their
+updated server content without an additional client refresh. Photo uploads still
+refresh once because they use JSON route handlers, not Server Actions.
+
+Account/session reads are shared only within a server render through React `cache`;
+roles and suspensions are read again on the next request. Public headers use a small
+identity query instead of loading business memberships. Database connections stay
+idle for up to 30 seconds for reuse. Search counts and results are fetched concurrently.
+
+Public categories use a five-minute tagged Next data cache. Admin category changes
+expire that tag immediately. The raw repository is used for validation and tests;
+authorization data is never persisted in this shared cache. External catalog writes
+(including seed scripts) become visible after cache revalidation. This project keeps
+the classic Next cache model; Cache Components are not enabled.
+
+Listing cards request 480px thumbnails, generated once under `.uploads/thumbnails/`.
+Public photo requests use one database visibility query and conditional HTTP caching:
+each reuse checks visibility before returning 304. Private previews use `no-store`.
+Pausing a listing or suspending its seller therefore prevents anonymous reuse of an
+old cached image. Deleting a photo also removes its thumbnail.
+
+Run `npx tsx scripts/measure-public-performance.ts` against a production preview on
+port 3002 for read-only timings (override with `PERF_BASE_URL`). The isolated browser
+regression suite is `tests/e2e/performance.spec.ts`; it runs only with `PERF_LOCAL=1`,
+requires `DATABASE_URL` at localhost:51214, and expects the preview server to use that
+same local database and `BETTER_AUTH_URL`. It creates verified temporary accounts
+without sending email and cleans up its own fixtures.
 
 ### Account and administration
 

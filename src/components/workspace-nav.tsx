@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -21,7 +21,7 @@ export function WorkspaceNav({ admin = false }: { admin?: boolean }) {
     : [
         { href: "/dashboard", name: "Overview", icon: LayoutDashboard },
         { href: "/dashboard/profile", name: "Personal details", icon: UserRound },
-        { href: "/dashboard#shops", name: "My shops", icon: Store },
+        { href: "/dashboard/shops", name: "My shops", icon: Store },
       ];
   return (
     <nav

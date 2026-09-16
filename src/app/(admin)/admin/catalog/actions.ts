@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidateCatalog } from "@/lib/revalidation";
 import { z } from "zod";
 import { requireUser } from "@/lib/session";
 import {
@@ -23,7 +23,7 @@ export async function createCategoryAction(raw: unknown) {
   const actor = await requireUser();
   try {
     const id = await createCatalogCategory(actor, raw);
-    revalidatePath("/", "layout");
+    revalidateCatalog();
     return { id };
   } catch (error) {
     return { error: errorMessage(error) };
@@ -34,7 +34,7 @@ export async function createFieldAction(raw: unknown) {
   const actor = await requireUser();
   try {
     const id = await createCatalogField(actor, raw);
-    revalidatePath("/", "layout");
+    revalidateCatalog();
     return { id };
   } catch (error) {
     return { error: errorMessage(error) };
@@ -45,7 +45,7 @@ export async function createFieldsAction(raw: unknown) {
   const actor = await requireUser();
   try {
     const ids = await createCatalogFields(actor, raw);
-    revalidatePath("/", "layout");
+    revalidateCatalog();
     return { ids };
   } catch (error) {
     return { error: errorMessage(error) };
@@ -56,7 +56,7 @@ export async function categoryStatusAction(categoryId: string, active: boolean) 
   const actor = await requireUser();
   try {
     await setCatalogCategoryActive(actor, categoryId, active);
-    revalidatePath("/", "layout");
+    revalidateCatalog();
     return { ok: true };
   } catch (error) {
     return { error: errorMessage(error) };
@@ -67,7 +67,7 @@ export async function deleteCategoryAction(categoryId: string) {
   const actor = await requireUser();
   try {
     await deleteCatalogCategory(actor, categoryId);
-    revalidatePath("/", "layout");
+    revalidateCatalog();
     return { ok: true };
   } catch (error) {
     return { error: errorMessage(error) };
@@ -78,7 +78,7 @@ export async function deleteFieldAction(fieldId: string) {
   const actor = await requireUser();
   try {
     await deleteCatalogField(actor, fieldId);
-    revalidatePath("/", "layout");
+    revalidateCatalog();
     return { ok: true };
   } catch (error) {
     return { error: errorMessage(error) };

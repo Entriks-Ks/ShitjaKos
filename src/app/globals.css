@@ -1,4 +1,50 @@
 @import "tailwindcss";
+.navigation-progress {
+  position: fixed;
+  inset: 0 0 auto;
+  height: 3px;
+  z-index: 1000;
+  pointer-events: none;
+  overflow: hidden;
+  opacity: 0;
+  animation: navigation-reveal 0.15s ease 0.15s forwards;
+}
+.navigation-progress-bar {
+  display: block;
+  height: 100%;
+  width: 38%;
+  background: linear-gradient(90deg, #b2cb6b, #39875c, #173f35);
+  border-radius: 0 3px 3px 0;
+  animation: navigation-travel 1.4s ease-in-out infinite;
+}
+@keyframes navigation-reveal {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes navigation-travel {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(365%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .navigation-progress {
+    animation: none;
+    opacity: 1;
+  }
+  .navigation-progress-bar {
+    animation: none;
+    width: 100%;
+  }
+}
+.stat-card-link:hover,
+.stat-card-link:focus-visible {
+  background: #f3f7ed;
+  border-color: #9eb483;
+}
 .workspace-layout {
   display: grid;
   grid-template-columns: 238px minmax(0, 1fr);

@@ -1,7 +1,6 @@
 "use client";
 
 import { startTransition, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Archive, MoreHorizontal, RotateCcw, Trash2 } from "lucide-react";
 import {
   categoryStatusAction,
@@ -27,7 +26,6 @@ export function CategoryActions({
   name: string;
   active: boolean;
 }) {
-  const router = useRouter();
   const menu = useRef<HTMLDetailsElement>(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
@@ -36,7 +34,6 @@ export function CategoryActions({
   function finish() {
     setConfirming(false);
     menu.current?.removeAttribute("open");
-    router.refresh();
   }
 
   function changeStatus() {
@@ -134,7 +131,6 @@ export function FieldDeleteAction({
   name: string;
   hasValues: boolean;
 }) {
-  const router = useRouter();
   const menu = useRef<HTMLDetailsElement>(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
@@ -149,7 +145,6 @@ export function FieldDeleteAction({
         if (result.error) setError(result.error);
         else {
           menu.current?.removeAttribute("open");
-          router.refresh();
         }
       } catch {
         setError("Could not delete this field.");

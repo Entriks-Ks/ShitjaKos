@@ -1,15 +1,8 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import Image from "next/image";
-import {
-  Plus,
-  ArrowUpRight,
-  Package,
-  Store,
-  CircleCheck,
-  Pencil,
-  MapPin,
-} from "lucide-react";
+import { Plus, ArrowUpRight, Package, Store, CircleCheck, Pencil } from "lucide-react";
 import { StatusButton } from "@/components/listing-form";
+import { AccountShops } from "@/components/account-shops";
 import { EmptyState, StatCard, StatusBadge } from "@/components/workspace-ui";
 import { requireUser } from "@/lib/session";
 import { getOwnedListings } from "@/repositories/dashboard";
@@ -48,84 +41,19 @@ export default async function DashboardPage() {
         />
         <StatCard
           icon={CircleCheck}
-          label="Published & approved"
+          label="Published listings"
           value={published}
-          note="Approved for the marketplace"
+          note="Published on the marketplace"
         />
         <StatCard
           icon={Store}
           label="Your shops"
+          href="/dashboard/shops"
           value={user.memberships.length}
           note="Businesses you own or manage"
         />
       </div>
-      <section id="shops" className="workspace-section">
-        <div className="section-heading">
-          <div>
-            <h2>Your shops</h2>
-            <p>Your personal profile and business memberships, in one place.</p>
-          </div>
-          <Link className="text-action" href="/business/new">
-            <Plus size={16} />
-            Open a shop
-          </Link>
-        </div>
-        {user.memberships.length ? (
-          <div className="shop-account-grid">
-            {user.memberships.map(({ business, role }) => (
-              <article className="workspace-card shop-account-card" key={business.id}>
-                <span className="shop-emblem">
-                  <Store size={23} />
-                </span>
-                <div>
-                  <h3>{business.publicName}</h3>
-                  <p>
-                    <MapPin size={13} />
-                    {business.city} · {role === "OWNER" ? "Owner" : "Manager"}
-                  </p>
-                  <StatusBadge
-                    tone={
-                      business.reviewStatus === "APPROVED"
-                        ? "green"
-                        : business.reviewStatus === "REJECTED"
-                          ? "red"
-                          : "amber"
-                    }
-                  >
-                    {business.reviewStatus === "APPROVED"
-                      ? "Approved"
-                      : business.reviewStatus === "REJECTED"
-                        ? "Review declined"
-                        : "Awaiting review"}
-                  </StatusBadge>
-                </div>
-                {business.reviewStatus === "APPROVED" && business.shop ? (
-                  <Link className="text-action" href={`/shops/${business.shop.slug}`}>
-                    Visit shop <ArrowUpRight size={16} />
-                  </Link>
-                ) : (
-                  <small>
-                    An independent admin reviews the business before it becomes public.
-                  </small>
-                )}
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="shop-invitation">
-            <span className="shop-emblem">
-              <Store size={26} />
-            </span>
-            <div>
-              <h3>Give your business a home.</h3>
-              <p>Keep selling privately, and open a separate shop for your business.</p>
-            </div>
-            <Link className="btn btn-outline" href="/business/new">
-              Create a shop <ArrowUpRight size={15} />
-            </Link>
-          </div>
-        )}
-      </section>
+      <AccountShops memberships={user.memberships} />
       <section className="workspace-section">
         <div className="section-heading">
           <div>
@@ -148,7 +76,7 @@ export default async function DashboardPage() {
                 >
                   {item.media[0] ? (
                     <Image
-                      src={`/api/media/${item.media[0].id}`}
+                      src={`/api/media/${item.media[0].id}?size=thumb`}
                       alt={item.title}
                       fill
                       unoptimized
@@ -175,21 +103,9 @@ export default async function DashboardPage() {
                     >
                       {item.status.charAt(0) + item.status.slice(1).toLowerCase()}
                     </StatusBadge>
-                    <StatusBadge
-                      tone={
-                        item.moderationStatus === "REJECTED"
-                          ? "red"
-                          : item.moderationStatus === "PENDING"
-                            ? "amber"
-                            : "green"
-                      }
-                    >
-                      {item.moderationStatus === "PENDING"
-                        ? "Awaiting review"
-                        : item.moderationStatus === "APPROVED"
-                          ? "Approved"
-                          : "Review declined"}
-                    </StatusBadge>
+                    {item.moderationStatus === "REJECTED" && (
+                      <StatusBadge tone="red">Blocked</StatusBadge>
+                    )}
                   </div>
                 </div>
                 <div className="account-listing-actions">
@@ -203,7 +119,11 @@ export default async function DashboardPage() {
                     </Link>
                   )}
                   {["DRAFT", "PAUSED"].includes(item.status) && (
-                    <StatusButton id={item.id} target="PUBLISHED" label="Submit" />
+                    <StatusButton
+                      id={item.id}
+                      target="PUBLISHED"
+                      label="Publish listing"
+                    />
                   )}
                   {item.status === "PUBLISHED" && (
                     <StatusButton id={item.id} target="PAUSED" label="Pause" />

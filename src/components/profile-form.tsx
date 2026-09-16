@@ -1,13 +1,11 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Check, Save } from "lucide-react";
 import { cities } from "@/lib/catalog";
 import { ProfileInput } from "@/lib/validations/profile";
 import { updateProfileAction } from "@/app/(account)/dashboard/profile/actions";
 
 export function ProfileForm({ initial }: { initial: ProfileInput }) {
-  const router = useRouter();
   const [values, setValues] = useState(initial);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -29,7 +27,6 @@ export function ProfileForm({ initial }: { initial: ProfileInput }) {
           if (result.error) setError(result.error);
           else {
             setSaved(true);
-            router.refresh();
           }
         } catch {
           setError("Could not connect. Please try again.");

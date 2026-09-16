@@ -226,7 +226,7 @@ model Listing {
   categoryId        String
   intent            ListingIntent           @default(FOR_SALE)
   status            ListingStatus           @default(DRAFT)
-  moderationStatus  ReviewStatus            @default(PENDING)
+  moderationStatus  ReviewStatus            @default(APPROVED)
   title             String
   description       String
   priceCents        Int?

@@ -1,7 +1,6 @@
 "use client";
 
 import { startTransition, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { createFieldsAction } from "@/app/(admin)/admin/catalog/actions";
 
@@ -43,7 +42,6 @@ export function FieldBatchCreateForm({
     hasChoiceFilter: boolean;
   }[];
 }) {
-  const router = useRouter();
   const [categoryId, setCategoryId] = useState("");
   const [fields, setFields] = useState<DraftField[]>([emptyField(0)]);
   const [error, setError] = useState("");
@@ -88,7 +86,6 @@ export function FieldBatchCreateForm({
               const count = result.ids?.length ?? fields.length;
               setFields([emptyField(0)]);
               setMessage(`${count} listing ${count === 1 ? "field" : "fields"} added.`);
-              router.refresh();
             }
           } catch {
             setError("Could not add the fields. Please try again.");

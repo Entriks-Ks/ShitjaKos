@@ -1,11 +1,9 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Check, X } from "lucide-react";
 import { reviewAction } from "@/app/actions";
 
-export function ReviewForm({ id, kind }: { id: string; kind: "listing" | "business" }) {
-  const router = useRouter();
+export function ReviewForm({ id, kind }: { id: string; kind: "business" }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
@@ -22,7 +20,6 @@ export function ReviewForm({ id, kind }: { id: string; kind: "listing" | "busine
         setError("");
         try {
           await reviewAction(values);
-          router.refresh();
         } catch {
           setError("Could not save this decision. Refresh the queue and try again.");
         } finally {

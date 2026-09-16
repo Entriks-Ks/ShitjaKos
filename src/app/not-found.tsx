@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 export default function Page() {
   return (
     <main className="wrap py-20">

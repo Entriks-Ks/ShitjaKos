@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import { notFound } from "next/navigation";
 import { CategoryCreateForm } from "@/components/admin-catalog-forms";
 import { FieldBatchCreateForm } from "@/components/admin-field-batch-form";

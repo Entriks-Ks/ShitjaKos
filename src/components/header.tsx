@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import { Plus, ArrowUpRight } from "lucide-react";
 import { copy, Locale } from "@/lib/catalog";
 export function Header({

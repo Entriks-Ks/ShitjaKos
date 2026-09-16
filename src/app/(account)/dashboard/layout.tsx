@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/navigation-link";
 import { Mail, Phone, MapPin, ShieldCheck, Pencil } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { SignOut } from "@/components/auth-form";
