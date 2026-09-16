@@ -1,7 +1,14 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { getPrisma } from "../src/lib/prisma";
-import { createCatalogCategory, createCatalogField } from "../src/services/admin-catalog";
+import {
+  createCatalogCategory,
+  createCatalogField,
+  createCatalogFields,
+  deleteCatalogCategory,
+  deleteCatalogField,
+  setCatalogCategoryActive,
+} from "../src/services/admin-catalog";
 import { getCategories } from "../src/repositories/catalog";
 
 // This test must never use the configured hosted database.
@@ -66,18 +73,68 @@ try {
   );
   await assert.rejects(
     createCatalogField(actor, { ...field, names: labels("Other filter") }),
-    /already has a choice filter/,
+    /one choice filter/,
+  );
+  const batchIds = await createCatalogFields(actor, {
+    categoryId: child,
+    fields: [
+      {
+        ...field,
+        names: labels("Length"),
+        type: "NUMBER",
+        filterable: false,
+        unit: "cm",
+        min: 0,
+        max: 1000,
+        options: [],
+      },
+      {
+        ...field,
+        names: labels("Handmade"),
+        type: "BOOLEAN",
+        filterable: false,
+        options: [],
+      },
+    ],
+  });
+  assert.equal(batchIds.length, 2);
+  const beforeFailedBatch = await db.attributeDefinition.count({
+    where: { categoryId: child },
+  });
+  await assert.rejects(
+    createCatalogFields(actor, {
+      categoryId: child,
+      fields: [
+        { ...field, names: labels("Temporary field"), filterable: false },
+        { ...field, names: labels("Temporary field"), filterable: false },
+      ],
+    }),
+    /different English name/,
+  );
+  assert.equal(
+    await db.attributeDefinition.count({ where: { categoryId: child } }),
+    beforeFailedBatch,
   );
   const catalog = await getCategories();
   assert.equal(
     catalog.find((category) => category.id === child)?.attributes[0]?.id,
     fieldId,
   );
-  assert.equal(await db.auditEvent.count({ where: { actorId: id } }), 3);
+  assert.equal(await db.auditEvent.count({ where: { actorId: id } }), 5);
+  await setCatalogCategoryActive(actor, group, false);
+  assert.equal(
+    await db.category.count({ where: { id: { in: [group, child] }, active: false } }),
+    2,
+  );
+  await setCatalogCategoryActive(actor, group, true);
+  assert.equal(
+    await db.category.count({ where: { id: { in: [group, child] }, active: true } }),
+    2,
+  );
   const profile = await db.personalProfile.create({
     data: { userId: id, displayName: "Catalog test" },
   });
-  await db.listing.create({
+  const listing = await db.listing.create({
     data: {
       personalProfileId: profile.id,
       createdById: id,
@@ -87,6 +144,12 @@ try {
       city: "Prishtina",
     },
   });
+  await db.listingAttributeValue.create({
+    data: { listingId: listing.id, attributeId: fieldId, value: "wood" },
+  });
+  await assert.rejects(deleteCatalogField(actor, fieldId), /saved listing answers/);
+  await assert.rejects(deleteCatalogCategory(actor, child), /has listings/);
+  await assert.rejects(deleteCatalogCategory(actor, group), /subcategories first/);
   await assert.rejects(
     createCatalogField(actor, {
       ...field,
@@ -98,8 +161,24 @@ try {
     }),
     /already has listings/,
   );
+  const disposable = await createCatalogCategory(actor, {
+    parentId: group,
+    names: labels("Disposable child"),
+    icon: "Package",
+  });
+  categoryIds.push(disposable);
+  const disposableField = await createCatalogField(actor, {
+    ...field,
+    categoryId: disposable,
+    names: labels("Disposable field"),
+    filterable: false,
+  });
+  await deleteCatalogField(actor, disposableField);
+  await deleteCatalogCategory(actor, disposable);
+  categoryIds.splice(categoryIds.indexOf(disposable), 1);
+  assert.equal(await db.category.findUnique({ where: { id: disposable } }), null);
   console.log(
-    "Catalog integration passed: authorization, hierarchy, persistence, audit, and existing-listing safeguards.",
+    "Catalog integration passed: authorization, hierarchy, atomic field batches, archive/restore, safe deletion, audit, and existing-listing safeguards.",
   );
 } finally {
   await db.listing.deleteMany({ where: { createdById: id } });

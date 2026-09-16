@@ -17,9 +17,8 @@ export const categoryInput = z.object({
   ]),
 });
 
-export const fieldInput = z
+export const fieldDefinitionInput = z
   .object({
-    categoryId: z.string().trim().min(1),
     names,
     type: z.enum(["TEXT", "NUMBER", "SELECT", "BOOLEAN"]),
     required: z.boolean(),
@@ -69,3 +68,15 @@ export const fieldInput = z
       });
     }
   });
+
+export const fieldInput = fieldDefinitionInput.and(
+  z.object({ categoryId: z.string().trim().min(1) }),
+);
+
+export const fieldBatchInput = z.object({
+  categoryId: z.string().trim().min(1),
+  fields: z
+    .array(fieldDefinitionInput)
+    .min(1, "Add at least one field.")
+    .max(20, "Add no more than 20 fields at once."),
+});

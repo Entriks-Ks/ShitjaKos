@@ -1,113 +1,204 @@
 import Link from "next/link";
-import { SignOut } from "@/components/auth-form";
+import Image from "next/image";
+import {
+  Plus,
+  ArrowUpRight,
+  Package,
+  Store,
+  CircleCheck,
+  Pencil,
+  MapPin,
+} from "lucide-react";
 import { StatusButton } from "@/components/listing-form";
+import { EmptyState, StatCard, StatusBadge } from "@/components/workspace-ui";
 import { requireUser } from "@/lib/session";
 import { getOwnedListings } from "@/repositories/dashboard";
 import { money } from "@/lib/catalog";
+
 export const metadata = { title: "My account", robots: { index: false, follow: false } };
-export default async function Page() {
+
+export default async function DashboardPage() {
   const user = await requireUser();
   const items = await getOwnedListings(user.id);
+  const published = items.filter(
+    (item) => item.status === "PUBLISHED" && item.moderationStatus === "APPROVED",
+  ).length;
   return (
     <>
-      <main className="wrap py-10">
-        <div className="flex justify-between gap-4 mb-7">
-          <div>
-            <p className="eyebrow">LLOGARIA IME</p>
-            <h1>Hello, {user.name}.</h1>
-            <p className="muted">Your listings, your businesses, one account.</p>
-          </div>
-          <div className="flex items-start gap-2">
-            <SignOut />
-            {user.role === "ADMIN" && (
-              <Link href="/admin" className="btn btn-outline">
-                Review queue
-              </Link>
-            )}
-          </div>
+      <header className="workspace-welcome">
+        <div>
+          <p className="eyebrow">YOUR MARKETPLACE CORNER</p>
+          <h1>Hello, {user.name.split(" ")[0]}.</h1>
+          <p>Your listings, your shops, and everything in between.</p>
+          <Link className="welcome-link" href="/dashboard/profile">
+            <Pencil size={14} />
+            Edit your profile <ArrowUpRight size={15} />
+          </Link>
         </div>
-        <section className="grid sm:grid-cols-3 gap-4 mb-8">
-          {[
-            ["Your listings", items.length],
-            [
-              "Published & approved",
-              items.filter(
-                (i) => i.status === "PUBLISHED" && i.moderationStatus === "APPROVED",
-              ).length,
-            ],
-            ["Businesses", user.memberships.length],
-          ].map(([label, value]) => (
-            <div className="panel" key={label}>
-              <div className="muted">{label}</div>
-              <div className="text-3xl font-semibold mt-3">{value}</div>
-            </div>
-          ))}
-        </section>
-        <div className="flex justify-between items-center mb-4">
-          <h2>Your businesses</h2>
-          <Link className="btn btn-outline" href="/business/new">
+        <div className="welcome-symbol" aria-hidden="true">
+          <Store size={62} strokeWidth={1.3} />
+        </div>
+      </header>
+      <div className="workspace-stats">
+        <StatCard
+          icon={Package}
+          label="Your listings"
+          value={items.length}
+          note="Personal & business inventory"
+        />
+        <StatCard
+          icon={CircleCheck}
+          label="Published & approved"
+          value={published}
+          note="Approved for the marketplace"
+        />
+        <StatCard
+          icon={Store}
+          label="Your shops"
+          value={user.memberships.length}
+          note="Businesses you own or manage"
+        />
+      </div>
+      <section id="shops" className="workspace-section">
+        <div className="section-heading">
+          <div>
+            <h2>Your shops</h2>
+            <p>Your personal profile and business memberships, in one place.</p>
+          </div>
+          <Link className="text-action" href="/business/new">
+            <Plus size={16} />
             Open a shop
           </Link>
         </div>
         {user.memberships.length ? (
-          <div className="grid sm:grid-cols-2 gap-4 mb-10">
-            {user.memberships.map((m) => (
-              <article className="panel" key={m.businessId}>
-                <div className="flex justify-between gap-3">
-                  <h3 className="font-semibold">{m.business.publicName}</h3>
-                  <span className="pill">{m.role}</span>
-                </div>
-                <p className="muted mt-2">
-                  {m.business.city} · Review: {m.business.reviewStatus}
-                </p>
-                {m.business.reviewStatus === "APPROVED" && (
-                  <Link
-                    className="text-sm underline mt-4 inline-block"
-                    href={`/shops/${m.business.shop?.slug}`}
+          <div className="shop-account-grid">
+            {user.memberships.map(({ business, role }) => (
+              <article className="workspace-card shop-account-card" key={business.id}>
+                <span className="shop-emblem">
+                  <Store size={23} />
+                </span>
+                <div>
+                  <h3>{business.publicName}</h3>
+                  <p>
+                    <MapPin size={13} />
+                    {business.city} · {role === "OWNER" ? "Owner" : "Manager"}
+                  </p>
+                  <StatusBadge
+                    tone={
+                      business.reviewStatus === "APPROVED"
+                        ? "green"
+                        : business.reviewStatus === "REJECTED"
+                          ? "red"
+                          : "amber"
+                    }
                   >
-                    Visit shop
+                    {business.reviewStatus === "APPROVED"
+                      ? "Approved"
+                      : business.reviewStatus === "REJECTED"
+                        ? "Review declined"
+                        : "Awaiting review"}
+                  </StatusBadge>
+                </div>
+                {business.reviewStatus === "APPROVED" && business.shop ? (
+                  <Link className="text-action" href={`/shops/${business.shop.slug}`}>
+                    Visit shop <ArrowUpRight size={16} />
                   </Link>
+                ) : (
+                  <small>
+                    An independent admin reviews the business before it becomes public.
+                  </small>
                 )}
               </article>
             ))}
           </div>
         ) : (
-          <p className="notice mb-10">
-            You can sell privately now. Create a business when you’re ready to open a
-            shop.
-          </p>
+          <div className="shop-invitation">
+            <span className="shop-emblem">
+              <Store size={26} />
+            </span>
+            <div>
+              <h3>Give your business a home.</h3>
+              <p>Keep selling privately, and open a separate shop for your business.</p>
+            </div>
+            <Link className="btn btn-outline" href="/business/new">
+              Create a shop <ArrowUpRight size={15} />
+            </Link>
+          </div>
         )}
-        <div className="flex justify-between items-center mb-5">
-          <h2>Manage listings</h2>
+      </section>
+      <section className="workspace-section">
+        <div className="section-heading">
+          <div>
+            <h2>Your listings</h2>
+            <p>Manage your items from their first draft to the final sale.</p>
+          </div>
           <Link className="btn btn-primary" href="/listings/new">
+            <Plus size={16} />
             New listing
           </Link>
         </div>
         {items.length ? (
-          <div className="space-y-3">
+          <div className="account-listings">
             {items.map((item) => (
-              <article
-                className="panel flex flex-wrap justify-between gap-4"
-                key={item.id}
-              >
-                <div>
-                  <h3 className="font-semibold">{item.title}</h3>
-                  <p className="muted">
-                    {money(item.priceCents)} ·{" "}
-                    {item.business?.publicName ?? "Personal listing"} ·{" "}
-                    {item.media.length} photos
-                  </p>
-                  <div className="flex gap-2 mt-2">
-                    <span className="pill">{item.status}</span>
-                    <span className="pill">Review: {item.moderationStatus}</span>
+              <article className="account-listing" key={item.id}>
+                <Link
+                  className="account-listing-photo"
+                  href={`/listings/${item.id}`}
+                  aria-label={`Preview ${item.title}`}
+                >
+                  {item.media[0] ? (
+                    <Image
+                      src={`/api/media/${item.media[0].id}`}
+                      alt={item.title}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  ) : (
+                    <Package size={28} />
+                  )}
+                </Link>
+                <div className="account-listing-info">
+                  <p>{item.business?.publicName ?? "Personal listing"}</p>
+                  <Link href={`/listings/${item.id}`}>
+                    <h3>{item.title}</h3>
+                  </Link>
+                  <strong>{money(item.priceCents)}</strong>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    <StatusBadge
+                      tone={
+                        item.status === "PUBLISHED" &&
+                        item.moderationStatus === "APPROVED"
+                          ? "green"
+                          : "neutral"
+                      }
+                    >
+                      {item.status.charAt(0) + item.status.slice(1).toLowerCase()}
+                    </StatusBadge>
+                    <StatusBadge
+                      tone={
+                        item.moderationStatus === "REJECTED"
+                          ? "red"
+                          : item.moderationStatus === "PENDING"
+                            ? "amber"
+                            : "green"
+                      }
+                    >
+                      {item.moderationStatus === "PENDING"
+                        ? "Awaiting review"
+                        : item.moderationStatus === "APPROVED"
+                          ? "Approved"
+                          : "Review declined"}
+                    </StatusBadge>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 items-center">
+                <div className="account-listing-actions">
                   <Link className="btn btn-outline" href={`/listings/${item.id}`}>
                     Preview
                   </Link>
                   {!["SOLD", "CLOSED"].includes(item.status) && (
                     <Link className="btn btn-outline" href={`/listings/${item.id}/edit`}>
+                      <Pencil size={14} />
                       Edit / photos
                     </Link>
                   )}
@@ -125,12 +216,19 @@ export default async function Page() {
             ))}
           </div>
         ) : (
-          <div className="empty">
-            <h2>A fresh start.</h2>
-            <p className="muted mt-2">Create your first listing to get going.</p>
+          <div className="workspace-card">
+            <EmptyState icon={Package} title="Your next chapter starts here.">
+              Add a few photos and a description to publish your first listing.
+            </EmptyState>
+            <div className="text-center pb-5">
+              <Link className="btn btn-primary" href="/listings/new">
+                <Plus size={16} />
+                Create your first listing
+              </Link>
+            </div>
           </div>
         )}
-      </main>
+      </section>
     </>
   );
 }

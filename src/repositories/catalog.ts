@@ -13,10 +13,16 @@ export function getCategories() {
 
 export function getAdminCatalog() {
   return getPrisma().category.findMany({
-    where: { active: true, ownerPortal: "SHITJAKOS" },
+    where: { ownerPortal: "SHITJAKOS" },
     include: {
       translations: true,
-      attributes: { include: { translations: true }, orderBy: { sortOrder: "asc" } },
+      attributes: {
+        include: {
+          translations: true,
+          _count: { select: { values: true } },
+        },
+        orderBy: { sortOrder: "asc" },
+      },
       _count: { select: { listings: true } },
     },
     orderBy: [{ sortOrder: "asc" }, { id: "asc" }],

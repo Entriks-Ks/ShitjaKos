@@ -127,8 +127,12 @@ Admins can open `/admin/catalog` from the review queue to add category groups,
 subcategories and listing fields. Every name and selection choice has Albanian,
 English and German labels. New fields can be required only before a subcategory
 has listings; currently one selection field per subcategory can appear as a search
-filter. Changes are validated and logged in the audit history. Editing, archiving
-and reordering existing catalog entries are later admin work.
+filter. An admin can prepare up to 20 fields for one subcategory and save them in
+one transaction; any invalid field rolls back the entire batch. Changes are
+validated and logged in the audit history. Admins can archive and restore catalog
+categories. Permanent deletion is limited to categories without listings or child
+categories and fields without saved answers, which protects existing listing data.
+Editing and reordering existing catalog entries are later admin work.
 
 ### Database browser
 
@@ -251,6 +255,25 @@ npx playwright test tests/e2e/catalog-browse.spec.ts
 ```
 
 ## Configuration and production boundaries
+
+### Account and administration
+
+`/dashboard` shows your listings, business memberships, and saved contact details.
+Use `/dashboard/profile` to edit your account name, public seller name, city,
+bio, and optional phone number. The account phone is private; public contact
+visibility is still chosen separately for each listing. Saving a phone number
+does not verify it. Email changes are not part of this editor.
+
+`/admin` provides the staff review queue and recent audit activity, with navigation
+to `/admin/catalog`. Catalog groups and creation forms expand on demand; item
+actions remain in three-dot menus. Existing moderation and deletion protections
+still apply. Profile writes validate input and scope updates to the signed-in
+user, including a fresh suspension check inside the database transaction.
+
+The phone field requires the `20260916180000_profile_phone` migration. Run
+`npm run db:deploy` when deploying this version to another database. The profile
+integration check is `node --conditions=react-server --import tsx tests/profile.integration.ts`;
+it requires the local test database at localhost:51214 and refuses hosted databases.
 
 See `.env.example`. Real email delivery requires SMTP settings and `MAIL_FROM`.
 The file-mail transport refuses to run in production. Configure a production

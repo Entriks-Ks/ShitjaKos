@@ -19,9 +19,17 @@ export async function getReviewQueue(reviewerId: string) {
         },
       },
       orderBy: { createdAt: "asc" },
-      include: { business: true, personalProfile: true },
+      include: {
+        business: true,
+        personalProfile: true,
+        media: { orderBy: { position: "asc" }, take: 1 },
+      },
     }),
-    getPrisma().auditEvent.findMany({ orderBy: { createdAt: "desc" }, take: 30 }),
+    getPrisma().auditEvent.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 30,
+      include: { actor: { select: { name: true } } },
+    }),
   ]);
   return { businesses, listings, audits };
 }

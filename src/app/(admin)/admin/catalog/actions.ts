@@ -3,7 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/session";
-import { createCatalogCategory, createCatalogField } from "@/services/admin-catalog";
+import {
+  createCatalogCategory,
+  createCatalogField,
+  createCatalogFields,
+  deleteCatalogCategory,
+  deleteCatalogField,
+  setCatalogCategoryActive,
+} from "@/services/admin-catalog";
 
 function errorMessage(error: unknown) {
   if (error instanceof z.ZodError)
@@ -29,6 +36,50 @@ export async function createFieldAction(raw: unknown) {
     const id = await createCatalogField(actor, raw);
     revalidatePath("/", "layout");
     return { id };
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+}
+
+export async function createFieldsAction(raw: unknown) {
+  const actor = await requireUser();
+  try {
+    const ids = await createCatalogFields(actor, raw);
+    revalidatePath("/", "layout");
+    return { ids };
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+}
+
+export async function categoryStatusAction(categoryId: string, active: boolean) {
+  const actor = await requireUser();
+  try {
+    await setCatalogCategoryActive(actor, categoryId, active);
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+}
+
+export async function deleteCategoryAction(categoryId: string) {
+  const actor = await requireUser();
+  try {
+    await deleteCatalogCategory(actor, categoryId);
+    revalidatePath("/", "layout");
+    return { ok: true };
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+}
+
+export async function deleteFieldAction(fieldId: string) {
+  const actor = await requireUser();
+  try {
+    await deleteCatalogField(actor, fieldId);
+    revalidatePath("/", "layout");
+    return { ok: true };
   } catch (error) {
     return { error: errorMessage(error) };
   }

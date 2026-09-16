@@ -83,6 +83,7 @@ model PersonalProfile {
   displayName String
   city        String    @default("Prishtina")
   bio         String    @default("")
+  phone       String    @default("")
   user        User      @relation(fields: [userId], references: [id], onDelete: Restrict)
   listings    Listing[]
 }
