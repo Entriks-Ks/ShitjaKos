@@ -1008,7 +1008,8 @@ h2 {
 .hero {
   background: #eaf0e4;
   position: relative;
-  overflow: hidden;
+  z-index: 2;
+  overflow: visible;
   border-radius: 20px;
   padding: 48px;
   margin-top: 30px;
@@ -1022,13 +1023,19 @@ h2 {
 }
 .hero-art {
   position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  pointer-events: none;
+}
+.hero-art-inner {
+  position: absolute;
   right: 40px;
   top: 25px;
   width: 240px;
   height: 200px;
   transform: rotate(-10deg);
   opacity: 0.9;
-  pointer-events: none;
 }
 .art-block {
   position: absolute;
@@ -1047,7 +1054,9 @@ h2 {
   border: 1px solid #e2e8dc;
   position: relative;
   margin-top: 32px;
-  max-width: 920px;
+  max-width: 1040px;
+  align-items: stretch;
+  z-index: 6;
 }
 .searchbar input,
 .searchbar select {
@@ -1055,6 +1064,133 @@ h2 {
   background: white;
   min-width: 0;
   padding: 10px;
+}
+.searchbar > input[name="q"] {
+  flex: 1.4;
+  min-width: 10rem;
+}
+.searchbar > select[name="city"] {
+  flex: 0.9;
+  min-width: 8.5rem;
+  border-left: 1px solid #e8ede1;
+}
+.search-category {
+  position: relative;
+  flex: 1;
+  min-width: 9rem;
+  border-left: 1px solid #e8ede1;
+}
+.search-category-trigger {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: #1f2a1f;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+.search-category-trigger-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.search-category-trigger-label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.search-category-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  left: 0;
+  display: flex;
+  align-items: stretch;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  background: #fff;
+  border: 1px solid #dfe6d6;
+  border-radius: 14px;
+  box-shadow: 0 18px 40px #173f3518;
+  overflow: visible;
+  z-index: 50;
+}
+.search-category-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  background: #f7f9f3;
+  min-width: 12rem;
+}
+.search-category-panel.has-subs .search-category-groups {
+  border-right: 1px solid #e8ede1;
+  border-radius: 14px 0 0 14px;
+}
+.search-category-all,
+.search-category-group,
+.search-category-sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #243024;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 10px 11px;
+}
+.search-category-group {
+  font-weight: 600;
+}
+.search-category-group.is-active,
+.search-category-group:hover,
+.search-category-all:hover,
+.search-category-sub:hover {
+  background: #eef3e6;
+}
+.search-category-group.is-selected,
+.search-category-sub.is-selected,
+.search-category-all[aria-selected="true"] {
+  background: #e4edd8;
+  color: #1d4a2d;
+}
+.search-category-chevron {
+  margin-left: auto;
+  color: #7a8778;
+  flex-shrink: 0;
+}
+.search-category-subs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  min-width: 12rem;
+  background: #fff;
+  border-radius: 0 14px 14px 0;
+}
+.search-category-sub.is-parent {
+  font-weight: 600;
+  color: #3f5d41;
+  border-bottom: 1px solid #eef2e8;
+  border-radius: 0;
+  margin-bottom: 4px;
+}
+.search-category-empty {
+  margin: 12px 8px;
+  font-size: 12px;
+  color: #7a8778;
 }
 .eyebrow {
   font-size: 10px;
@@ -1201,8 +1337,29 @@ input[type="checkbox"] {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
 }
+.search-banner {
+  background:
+    linear-gradient(180deg, #e4ecd9 0%, #eaf0e4 55%, #e7eee0 100%),
+    repeating-linear-gradient(
+      -18deg,
+      transparent,
+      transparent 11px,
+      #dfe8d428 11px,
+      #dfe8d428 12px
+    );
+  padding: 28px 0 32px;
+  position: relative;
+  z-index: 2;
+  overflow: visible;
+  border-bottom: 1px solid #d7e0cc;
+}
+.searchbar-banner {
+  margin-top: 0;
+  max-width: none;
+}
 .search-page {
   padding-top: 26px;
+  padding-bottom: 60px;
 }
 .search-breadcrumb {
   display: flex;
@@ -1276,21 +1433,68 @@ input[type="checkbox"] {
   border-top: 1px solid #edf0e9;
   padding: 10px 0;
 }
+.category-parent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
 .category-tree .category-parent {
+  flex: 1;
   font-weight: 650;
   gap: 9px;
   align-items: start;
   font-size: 13px;
+  min-width: 0;
 }
 .category-parent svg {
   flex-shrink: 0;
   margin-top: 2px;
   color: #57765b;
 }
+.category-expand {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  margin-top: 2px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #57765b;
+  cursor: pointer;
+}
+.category-expand:hover {
+  background: #f3f6ef;
+}
+.category-expand svg {
+  transition: transform 0.15s ease;
+}
+.category-expand svg.is-open {
+  transform: rotate(180deg);
+}
 .category-branch ul {
   margin: 4px 0 0 18px;
   padding-left: 7px;
   border-left: 1px solid #e4e9df;
+}
+.category-more {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 650;
+  color: #3f5d41;
+  text-align: left;
+  cursor: pointer;
+}
+.category-more:hover {
+  background: #f3f6ef;
 }
 @media (min-width: 1024px) {
   .category-disclosure:not([open]) > .category-tree {
@@ -1342,8 +1546,30 @@ input[type="checkbox"] {
   .searchbar {
     flex-wrap: wrap;
   }
-  .searchbar > input {
+  .searchbar > input[name="q"] {
     flex-basis: 100%;
+  }
+  .search-category,
+  .searchbar > select[name="city"] {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+    border-left: 0;
+  }
+  .search-category-panel {
+    left: 0;
+    right: auto;
+    min-width: min(18rem, calc(100vw - 2rem));
+  }
+  .search-category-panel.has-subs {
+    flex-direction: column;
+  }
+  .search-category-panel.has-subs .search-category-groups {
+    border-right: 0;
+    border-bottom: 1px solid #e8ede1;
+    border-radius: 14px 14px 0 0;
+  }
+  .search-category-subs {
+    border-radius: 0 0 14px 14px;
   }
   .searchbar > select {
     flex: 1;

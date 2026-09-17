@@ -1,9 +1,8 @@
 import Link from "@/components/navigation-link";
-import { SearchForm } from "@/components/search-form";
+import { ListingSearchBar } from "@/components/listing-search-bar";
 import {
   Armchair,
   Laptop,
-  Search,
   MapPin,
   ArrowRight,
   ShieldCheck,
@@ -14,7 +13,7 @@ import { ListingResults } from "@/components/listing-results";
 import { CategoryIcon } from "@/components/category-icon";
 import { redirect } from "next/navigation";
 import { searchUrl } from "@/lib/search-navigation";
-import { cities, copy, localeOf, translated } from "@/lib/catalog";
+import { copy, localeOf, translated } from "@/lib/catalog";
 import { currentActor as currentUser } from "@/lib/session";
 import { getCachedCategories as getCategories } from "@/lib/catalog-cache";
 import { searchListings } from "@/repositories/listings";
@@ -57,11 +56,13 @@ export default async function Home({
       <main className="wrap">
         <section className="hero">
           <div className="hero-art" aria-hidden="true">
-            <div className="art-block bg-[#c4d698] w-32 h-36 right-0 top-3">
-              <Armchair size={70} />
-            </div>
-            <div className="art-block bg-[#f8f5e8] w-32 h-28 left-0 top-20">
-              <Laptop size={65} />
+            <div className="hero-art-inner">
+              <div className="art-block bg-[#c4d698] w-32 h-36 right-0 top-3">
+                <Armchair size={70} />
+              </div>
+              <div className="art-block bg-[#f8f5e8] w-32 h-28 left-0 top-20">
+                <Laptop size={65} />
+              </div>
             </div>
           </div>
           <p className="eyebrow">TREGU YT LOKAL · KOSOVË</p>
@@ -71,28 +72,7 @@ export default async function Home({
             <span>{t.subhead}</span>
           </h1>
           <p className="muted max-w-lg">{t.intro}</p>
-          <SearchForm className="searchbar">
-            <input type="hidden" name="lang" value={locale} />
-            <div className="hidden sm:flex items-center pl-3">
-              <Search size={19} />
-            </div>
-            <input
-              name="q"
-              aria-label={t.query}
-              placeholder={t.query}
-              defaultValue={p.q}
-            />
-            <select name="city" aria-label={t.location} defaultValue={p.city ?? ""}>
-              <option value="">Gjithë Kosova · All cities</option>
-              {cities.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-            <button className="btn btn-primary" type="submit">
-              <Search size={17} />
-              {t.search}
-            </button>
-          </SearchForm>
+          <ListingSearchBar locale={locale} categories={categories} params={p} />
           <div className="flex flex-wrap gap-5 mt-5 text-[11px] text-stone-600">
             <span className="flex items-center gap-1">
               <MapPin size={13} /> Prishtina · Prizren · Ferizaj

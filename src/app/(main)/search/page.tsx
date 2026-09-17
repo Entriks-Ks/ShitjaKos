@@ -5,6 +5,7 @@ import { Header } from "@/components/header";
 import { CategorySidebar } from "@/components/category-sidebar";
 import { SearchFilters } from "@/components/search-filters";
 import { ListingResults } from "@/components/listing-results";
+import { ListingSearchBar } from "@/components/listing-search-bar";
 import { copy, localeOf, translated } from "@/lib/catalog";
 import { legacyCategories, searchUrl } from "@/lib/search-navigation";
 import { currentActor as currentUser } from "@/lib/session";
@@ -52,6 +53,16 @@ export default async function SearchPage({
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
+      <section className="search-banner">
+        <div className="wrap">
+          <ListingSearchBar
+            locale={locale}
+            categories={categories}
+            params={params}
+            className="searchbar searchbar-banner"
+          />
+        </div>
+      </section>
       <main className="wrap search-page">
         <nav aria-label="Breadcrumb" className="search-breadcrumb">
           <Link href={`/?lang=${locale}`}>ShitjaKos</Link>

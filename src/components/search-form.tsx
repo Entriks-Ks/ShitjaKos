@@ -26,7 +26,7 @@ export function SearchForm({
           if (pending) return;
           const params = new URLSearchParams();
           new FormData(event.currentTarget).forEach((value, name) => {
-            if (typeof value === "string") params.append(name, value);
+            if (typeof value === "string" && value.trim()) params.set(name, value.trim());
           });
           startTransition(() => router.push(`/search?${params.toString()}`));
         }}
