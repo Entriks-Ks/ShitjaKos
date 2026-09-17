@@ -5,6 +5,8 @@ import { copy, Locale } from "@/lib/catalog";
 import { SearchParams, searchUrl } from "@/lib/search-navigation";
 import type { searchListings } from "@/repositories/listings";
 
+const SEARCH_COLUMNS = 3;
+
 export function ListingResults({
   result,
   locale,
@@ -18,18 +20,29 @@ export function ListingResults({
 }) {
   const t = copy[locale];
   const pageUrl = (page: number) => searchUrl(params, { page: String(page) });
+  const remainder = result.items.length % SEARCH_COLUMNS;
+  const placeholders =
+    compact && result.items.length > 0 && remainder !== 0
+      ? SEARCH_COLUMNS - remainder
+      : 0;
+
   return (
     <>
       {result.items.length ? (
-        <div
-          className={`grid grid-cols-1 sm:grid-cols-2 gap-5 ${compact ? "xl:grid-cols-3" : "lg:grid-cols-4"}`}
-        >
+        <div className={compact ? "search-results-grid" : "home-results-grid"}>
           {result.items.map((item) => (
             <ListingCard item={item} locale={locale} key={item.id} />
           ))}
+          {Array.from({ length: placeholders }, (_, index) => (
+            <div
+              key={`placeholder-${index}`}
+              className="search-results-placeholder"
+              aria-hidden="true"
+            />
+          ))}
         </div>
       ) : (
-        <div className="empty">
+        <div className={`empty${compact ? " search-results-empty" : ""}`}>
           <Search size={30} className="mx-auto mb-4 text-stone-400" />
           <h2>{t.empty}</h2>
           <p className="muted mt-2 mb-5">

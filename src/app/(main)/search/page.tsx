@@ -86,13 +86,19 @@ export default async function SearchPage({
         <div className="search-layout">
           <CategorySidebar categories={categories} params={params} locale={locale} />
           <section id="results" className="search-results">
-            <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
+            <div className="search-results-heading">
               <h1 className="mb-0">{title}</h1>
-              <span className="text-sm text-stone-500">
-                {result.count} {t.results}
-              </span>
+              <div className="search-results-heading-tools">
+                <span className="text-sm text-stone-500">
+                  {result.count} {t.results}
+                </span>
+                <SearchFilters
+                  params={params}
+                  locale={locale}
+                  selected={selected}
+                />
+              </div>
             </div>
-            <SearchFilters params={params} locale={locale} selected={selected} />
             <ListingResults result={result} locale={locale} params={params} compact />
           </section>
         </div>
