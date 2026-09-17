@@ -1,6 +1,9 @@
 import Link from "@/components/navigation-link";
 import { notFound } from "next/navigation";
-import { CategoryCreateForm } from "@/components/admin-catalog-forms";
+import {
+  CategoryCreateForm,
+  SubcategoryCreateForm,
+} from "@/components/admin-catalog-forms";
 import { FieldBatchCreateForm } from "@/components/admin-field-batch-form";
 import { CategoryActions, FieldDeleteAction } from "@/components/admin-catalog-actions";
 import { requireUser } from "@/lib/session";
@@ -25,6 +28,10 @@ export default async function Page() {
   const activeSubcategories = subcategories.filter(
     (category) => category.active && activeGroupIds.has(category.parentId!),
   );
+  const groupOptions = activeGroups.map((group) => ({
+    id: group.id,
+    name: translated(group.translations, "en"),
+  }));
 
   return (
     <>
@@ -35,26 +42,26 @@ export default async function Page() {
           </Link>
           <h1 className="mt-3">Categories &amp; listing fields</h1>
           <p className="muted max-w-3xl">
-            Add a category group, then its subcategories. Listing fields belong to
-            subcategories and appear when someone creates a listing. Names and choices
-            need Albanian, English and German labels.
+            Build the catalog in order: category → subcategory → fields. Names and
+            choices need Albanian, English and German labels.
           </p>
         </header>
 
         <div>
           <details className="catalog-create">
-            <summary>Add a category or subcategory</summary>
+            <summary>1. Add a category</summary>
             <div>
-              <CategoryCreateForm
-                groups={activeGroups.map((group) => ({
-                  id: group.id,
-                  name: translated(group.translations, "en"),
-                }))}
-              />
+              <CategoryCreateForm />
             </div>
           </details>
           <details className="catalog-create">
-            <summary>Add fields to a subcategory</summary>
+            <summary>2. Add a subcategory</summary>
+            <div>
+              <SubcategoryCreateForm groups={groupOptions} />
+            </div>
+          </details>
+          <details className="catalog-create">
+            <summary>3. Add fields to a subcategory</summary>
             <div>
               <FieldBatchCreateForm
                 subcategories={activeSubcategories.map((category) => ({

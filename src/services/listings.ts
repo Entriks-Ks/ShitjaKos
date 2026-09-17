@@ -3,6 +3,7 @@ import { getPrisma } from "@/lib/prisma";
 import { listingInput, validateAttributes } from "@/lib/validations/listing";
 import { Actor, canManageListing, canTransition } from "@/lib/permissions";
 import { Prisma } from "@/generated/prisma/client";
+
 export async function saveListing(actor: Actor, raw: unknown) {
   const v = listingInput.parse(raw);
   if (actor.suspendedAt) throw new Error("Your account is suspended.");
@@ -128,10 +129,10 @@ export async function transitionListing(
         version: { increment: 1 },
         ...(target === "PUBLISHED"
           ? {
-              moderationStatus: "APPROVED",
-              publishedAt: new Date(),
-              expiresAt: new Date(Date.now() + 30 * 86400000),
-            }
+            moderationStatus: "APPROVED",
+            publishedAt: new Date(),
+            expiresAt: new Date(Date.now() + 30 * 86400000),
+          }
           : {}),
         ...(target === "SOLD" ? { soldAt: new Date() } : {}),
       },

@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { createFieldsAction } from "@/app/(admin)/admin/catalog/actions";
 
@@ -42,6 +43,7 @@ export function FieldBatchCreateForm({
     hasChoiceFilter: boolean;
   }[];
 }) {
+  const router = useRouter();
   const [categoryId, setCategoryId] = useState("");
   const [fields, setFields] = useState<DraftField[]>([emptyField(0)]);
   const [error, setError] = useState("");
@@ -86,6 +88,7 @@ export function FieldBatchCreateForm({
               const count = result.ids?.length ?? fields.length;
               setFields([emptyField(0)]);
               setMessage(`${count} listing ${count === 1 ? "field" : "fields"} added.`);
+              router.refresh();
             }
           } catch {
             setError("Could not add the fields. Please try again.");
@@ -96,9 +99,10 @@ export function FieldBatchCreateForm({
       }}
     >
       <div>
-        <h2 className="mb-1">Add listing fields</h2>
+        <h2 className="mb-1">3. Add listing fields</h2>
         <p className="muted text-sm">
-          Choose one subcategory, prepare up to 20 fields, then save them together.
+          Choose a subcategory from step 2, prepare up to 20 fields, then save them
+          together.
         </p>
       </div>
       <label className="field">
@@ -114,11 +118,17 @@ export function FieldBatchCreateForm({
           }}
         >
           <option value="">Choose a subcategory</option>
-          {subcategories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.group} / {category.name}
+          {subcategories.length === 0 ? (
+            <option value="" disabled>
+              No subcategories yet — finish step 2 first
             </option>
-          ))}
+          ) : (
+            subcategories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.group} / {category.name}
+              </option>
+            ))
+          )}
         </select>
       </label>
 

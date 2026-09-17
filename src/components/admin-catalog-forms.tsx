@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   createCategoryAction,
   createFieldAction,
@@ -8,6 +9,7 @@ import {
 
 type Names = { sq: string; en: string; de: string };
 type FieldType = "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN";
+type CatalogGroup = { id: string; name: string };
 
 function namesFrom(form: FormData, prefix: string): Names {
   return {
@@ -55,12 +57,8 @@ const groupIcons = [
   ["Dumbbell", "Sports"],
 ] as const;
 
-export function CategoryCreateForm({
-  groups,
-}: {
-  groups: { id: string; name: string }[];
-}) {
-  const [parentId, setParentId] = useState("");
+export function CategoryCreateForm() {
+  const router = useRouter();
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -78,7 +76,7 @@ export function CategoryCreateForm({
         startTransition(async () => {
           try {
             const result = await createCategoryAction({
-              parentId: String(values.get("parentId") ?? ""),
+              parentId: "",
               names: namesFrom(values, "name"),
               icon: String(values.get("icon") ?? "Package"),
             });
@@ -86,8 +84,10 @@ export function CategoryCreateForm({
               setError(result.error);
             } else {
               form.reset();
-              setParentId("");
-              setMessage("Category added. It is now available in the catalog.");
+              setMessage(
+                "Category created. Next: open “2. Add a subcategory” and choose this category.",
+              );
+              router.refresh();
             }
           } catch {
             setError("Could not add the category. Please try again.");
@@ -98,37 +98,22 @@ export function CategoryCreateForm({
       }}
     >
       <div>
-        <h2 className="mb-1">Add a category</h2>
-        <p className="muted text-sm">Create a group or place a subcategory inside one.</p>
+        <h2 className="mb-1">1. Add a category</h2>
+        <p className="muted text-sm">
+          Top-level groups like Electronics or Vehicles. Subcategories go inside these.
+        </p>
       </div>
+      <NameFields prefix="name" title="Category name" />
       <label className="field">
-        Place inside
-        <select
-          name="parentId"
-          value={parentId}
-          onChange={(event) => setParentId(event.target.value)}
-        >
-          <option value="">New top-level group</option>
-          {groups.map((group) => (
-            <option key={group.id} value={group.id}>
-              {group.name}
+        Group icon
+        <select name="icon" defaultValue="Package">
+          {groupIcons.map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
             </option>
           ))}
         </select>
       </label>
-      <NameFields prefix="name" title="Category name" />
-      {!parentId && (
-        <label className="field">
-          Group icon
-          <select name="icon" defaultValue="Package">
-            {groupIcons.map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
       {error && (
         <p className="notice error" role="alert">
           {error}
@@ -141,6 +126,100 @@ export function CategoryCreateForm({
       )}
       <button className="btn btn-primary" disabled={busy}>
         {busy ? "Adding…" : "Add category"}
+      </button>
+    </form>
+  );
+}
+
+export function SubcategoryCreateForm({ groups }: { groups: CatalogGroup[] }) {
+  const router = useRouter();
+  const [parentId, setParentId] = useState("");
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  return (
+    <form
+      className="panel space-y-5"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!parentId) {
+          setError("Choose which category this subcategory belongs to.");
+          return;
+        }
+        const form = event.currentTarget;
+        const values = new FormData(form);
+        setBusy(true);
+        setError("");
+        setMessage("");
+        startTransition(async () => {
+          try {
+            const result = await createCategoryAction({
+              parentId,
+              names: namesFrom(values, "name"),
+              icon: "Package",
+            });
+            if (result.error) {
+              setError(result.error);
+            } else {
+              form.reset();
+              setParentId("");
+              setMessage(
+                "Subcategory created. Next: open “3. Add fields to a subcategory”.",
+              );
+              router.refresh();
+            }
+          } catch {
+            setError("Could not add the subcategory. Please try again.");
+          } finally {
+            setBusy(false);
+          }
+        });
+      }}
+    >
+      <div>
+        <h2 className="mb-1">2. Add a subcategory</h2>
+        <p className="muted text-sm">
+          Nested items like Phones under Electronics. Sellers pick these when posting.
+        </p>
+      </div>
+      {groups.length === 0 ? (
+        <p className="muted text-sm">
+          Create a category first. Then you can add subcategories under it.
+        </p>
+      ) : (
+        <>
+          <label className="field">
+            Parent category
+            <select
+              name="parentId"
+              required
+              value={parentId}
+              onChange={(event) => setParentId(event.target.value)}
+            >
+              <option value="">Choose a category…</option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <NameFields prefix="name" title="Subcategory name" />
+        </>
+      )}
+      {error && (
+        <p className="notice error" role="alert">
+          {error}
+        </p>
+      )}
+      {message && (
+        <p className="notice" role="status">
+          {message}
+        </p>
+      )}
+      <button className="btn btn-primary" disabled={busy || groups.length === 0}>
+        {busy ? "Adding…" : "Add subcategory"}
       </button>
     </form>
   );
