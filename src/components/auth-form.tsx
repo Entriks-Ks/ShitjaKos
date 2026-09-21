@@ -126,46 +126,6 @@ export function AuthForm({
               reset: "Set new password",
             }[mode]}
       </button>
-      {mode === "login" && (
-        <button
-          type="button"
-          disabled={busy}
-          className="btn btn-outline w-full"
-          onClick={async (event) => {
-            const form = event.currentTarget.form;
-            const email = form ? String(new FormData(form).get("email") ?? "") : "";
-            if (!email) {
-              setError("Enter your email address first.");
-              return;
-            }
-
-            setError("");
-            setMessage("");
-            setBusy(true);
-            try {
-              const result = await authClient.sendVerificationEmail({
-                email,
-                callbackURL: "/dashboard",
-              });
-              if (result.error) {
-                setError(
-                  result.error.message ?? "Could not send the code. Please try again.",
-                );
-              } else {
-                setMessage(
-                  "If this email has an unverified account, a new code has been sent.",
-                );
-              }
-            } catch {
-              setError("Could not connect. Please try again.");
-            } finally {
-              setBusy(false);
-            }
-          }}
-        >
-          Resend verification code
-        </button>
-      )}
       <div className="text-sm text-center text-stone-500">
         {mode === "login" ? (
           <>

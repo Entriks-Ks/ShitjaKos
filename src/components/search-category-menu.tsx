@@ -40,7 +40,7 @@ export function SearchCategoryMenu({
     ? selectedParent
       ? `${selectedParent.name} · ${selected.name}`
       : selected.name
-    : label;
+    : allLabel;
 
   const hovered = groups.find((group) => group.id === hoveredId) ?? null;
   const hoveredChildren = hovered ? childrenOf(hovered.id) : [];

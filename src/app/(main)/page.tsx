@@ -1,6 +1,7 @@
 import Link from "@/components/navigation-link";
+import Image from "next/image";
 import { ListingSearchBar } from "@/components/listing-search-bar";
-import { Armchair, Laptop, MapPin, ArrowRight, ShieldCheck, Store } from "lucide-react";
+import { ArrowRight, ShieldCheck, Store, Tag, Users } from "lucide-react";
 import { Header } from "@/components/header";
 import { ListingResults } from "@/components/listing-results";
 import { CategoryIcon } from "@/components/category-icon";
@@ -54,18 +55,19 @@ export default async function Home({
     <>
       <Header locale={locale} signedIn={!!user} />
       <main className="wrap">
+        <div className="home-showcase">
         <section className="hero">
           <div className="hero-art" aria-hidden="true">
-            <div className="hero-art-inner">
-              <div className="art-block bg-[#c4d698] w-32 h-36 right-0 top-3">
-                <Armchair size={70} />
-              </div>
-              <div className="art-block bg-[#f8f5e8] w-32 h-28 left-0 top-20">
-                <Laptop size={65} />
-              </div>
-            </div>
+            <Image
+              src="/images/main-image-made.jpg"
+              alt=""
+              fill
+              preload
+              unoptimized
+              sizes="(max-width: 767px) 100vw, 1240px"
+              className="object-cover"
+            />
           </div>
-          <p className="eyebrow">TREGU YT LOKAL · KOSOVË</p>
           <h1>
             {t.headline}
             <br />
@@ -73,39 +75,46 @@ export default async function Home({
           </h1>
           <p className="muted max-w-lg">{t.intro}</p>
           <ListingSearchBar locale={locale} categories={categories} params={p} />
-          <div className="flex flex-wrap gap-5 mt-5 text-[11px] text-stone-600">
-            <span className="flex items-center gap-1">
-              <MapPin size={13} /> Prishtina · Prizren · Ferizaj
+          <div className="hero-trust">
+            <span>
+              <ShieldCheck size={16} strokeWidth={1.8} />
+              {t.heroTrust1}
             </span>
-            <span className="flex items-center gap-1">
-              <ShieldCheck size={13} /> Shpallje të kontrolluara
+            <span>
+              <Tag size={16} strokeWidth={1.8} />
+              {t.heroTrust2}
+            </span>
+            <span>
+              <Users size={16} strokeWidth={1.8} />
+              {t.heroTrust3}
             </span>
           </div>
         </section>
-        <section id="categories" className="py-9">
-          <div className="flex justify-between items-center mb-5">
+        <section id="categories" className="home-categories-panel">
+          <div className="home-categories-head">
             <h2>{t.categories}</h2>
-            <span className="text-xs text-stone-400">Për çdo ditë. Për këdo.</span>
+            <p className="home-categories-note">Për çdo ditë. Për këdo.</p>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          <div className="home-categories">
             {categories
               .filter((c) => !c.parentId)
-              .map((c) => {
-                return (
-                  <Link
-                    key={c.id}
-                    className="category-tile"
-                    href={searchUrl({ category: c.id, lang: locale })}
-                  >
-                    <span className="category-icon">
-                      <CategoryIcon name={c.icon} size={21} />
-                    </span>
-                    <span>{translated(c.translations, locale)}</span>
-                  </Link>
-                );
-              })}
+              .map((c) => (
+                <Link
+                  key={c.id}
+                  className="category-orb"
+                  href={searchUrl({ category: c.id, lang: locale })}
+                >
+                  <span className="category-orb-icon">
+                    <CategoryIcon name={c.icon} size={26} />
+                  </span>
+                  <span className="category-orb-name">
+                    {translated(c.translations, locale)}
+                  </span>
+                </Link>
+              ))}
           </div>
         </section>
+        </div>
         <section id="results">
           <div className="flex flex-wrap justify-between gap-3 items-end mb-5">
             <div>
@@ -124,22 +133,19 @@ export default async function Home({
             favoriteIds={favoriteIds}
           />
         </section>
-        <section className="panel mt-12 flex flex-wrap items-center justify-between gap-5 bg-[#f0f4e9]">
+        <section className="panel shop-cta mt-12 flex flex-wrap items-center justify-between gap-5">
           <div className="flex items-center gap-4">
-            <Store size={35} className="text-emerald-800" />
+            <Store size={35} />
             <div>
-              <h2>Biznesi yt, më afër klientëve.</h2>
-              <p className="muted">Open your shop. Give your inventory a home.</p>
+              <h2>{t.shopCtaTitle}</h2>
+              <p className="muted">{t.shopCtaText}</p>
             </div>
           </div>
-          <Link href="/business/new" className="btn btn-outline">
-            Hap dyqanin · Open a shop <ArrowUpRightIcon />
+          <Link href="/business/new" className="btn shop-cta-btn">
+            {t.shopCtaButton} <ArrowRight size={16} />
           </Link>
         </section>
       </main>
     </>
   );
-}
-function ArrowUpRightIcon() {
-  return <ArrowRight size={16} />;
 }
