@@ -2,6 +2,7 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
+import { emailOTP } from "better-auth/plugins";
 import { getPrisma } from "./prisma";
 import { sendAuthMail } from "./mail";
 
@@ -39,6 +40,8 @@ function makeAuth() {
         "/sign-in/email": { window: 60, max: 8 },
         "/sign-up/email": { window: 60, max: 5 },
         "/send-verification-email": { window: 60, max: 5 },
+        "/email-otp/send-verification-otp": { window: 60, max: 5 },
+        "/email-otp/verify-email": { window: 60, max: 8 },
       },
     },
     databaseHooks: {
@@ -52,7 +55,29 @@ function makeAuth() {
         },
       },
     },
-    plugins: [nextCookies()],
+    plugins: [
+      emailOTP({
+        otpLength: 6,
+        expiresIn: 60 * 5,
+        allowedAttempts: 5,
+        storeOTP: "hashed",
+        sendVerificationOnSignUp: true,
+        async sendVerificationOTP({ email, otp, type }) {
+          const subject =
+            type === "forget-password"
+              ? "Your ShitjaKos password reset code"
+              : type === "sign-in"
+                ? "Your ShitjaKos sign-in code"
+                : "Your ShitjaKos verification code";
+          await sendAuthMail(
+            email,
+            subject,
+            `Your verification code is: ${otp}\n\nEnter this code in the app. It expires in 5 minutes.`,
+          );
+        },
+      }),
+      nextCookies(),
+    ],
   });
 }
 let auth: ReturnType<typeof makeAuth> | undefined;
