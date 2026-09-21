@@ -1284,6 +1284,7 @@ h2 {
   border-radius: 10px;
 }
 .listing-card {
+  position: relative;
   background: #fff;
   border: 1px solid #e6e9e1;
   border-radius: 13px;
@@ -1296,6 +1297,56 @@ h2 {
 .listing-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 12px 24px #1c35280b;
+}
+.listing-card-main {
+  display: block;
+  height: 100%;
+}
+.listing-card-favorite {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 1;
+}
+.card-favorite-control {
+  position: relative;
+}
+.card-favorite-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid #dce5d9;
+  border-radius: 999px;
+  color: #244c3a;
+  background: #fff;
+  box-shadow: 0 3px 12px #18352b21;
+  cursor: pointer;
+}
+.card-favorite-button:hover,
+.card-favorite-button[aria-pressed="true"] {
+  color: #226d45;
+  background: #eaf3e9;
+}
+.card-favorite-button:focus-visible {
+  outline: 3px solid #4b9c6c;
+  outline-offset: 2px;
+}
+.card-favorite-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+.card-favorite-error {
+  position: absolute;
+  top: 43px;
+  right: 0;
+  width: 200px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 4px 15px #18352b21;
+  color: #9a3412;
+  font-size: 12px;
 }
 .card-photo {
   aspect-ratio: 4/3;

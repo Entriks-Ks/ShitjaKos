@@ -11,6 +11,7 @@ import { legacyCategories, searchUrl } from "@/lib/search-navigation";
 import { currentActor as currentUser } from "@/lib/session";
 import { getCachedCategories as getCategories } from "@/lib/catalog-cache";
 import { searchListings } from "@/repositories/listings";
+import { getFavoriteListingIds } from "@/repositories/favorites";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,12 @@ export default async function SearchPage({
     searchListings(params),
     currentUser(),
   ]);
+  const favoriteIds = user
+    ? await getFavoriteListingIds(
+        user.id,
+        result.items.map((item) => item.id),
+      )
+    : [];
   const selected = categories.find((category) => category.id === params.category);
   const parent = categories.find((category) => category.id === selected?.parentId);
   const title = params.q
@@ -92,14 +99,17 @@ export default async function SearchPage({
                 <span className="text-sm text-stone-500">
                   {result.count} {t.results}
                 </span>
-                <SearchFilters
-                  params={params}
-                  locale={locale}
-                  selected={selected}
-                />
+                <SearchFilters params={params} locale={locale} selected={selected} />
               </div>
             </div>
-            <ListingResults result={result} locale={locale} params={params} compact />
+            <ListingResults
+              result={result}
+              locale={locale}
+              params={params}
+              compact
+              viewerSignedIn={!!user}
+              favoriteIds={favoriteIds}
+            />
           </section>
         </div>
       </main>

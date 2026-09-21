@@ -19,6 +19,7 @@ model User {
   role            String               @default("USER")
   sessions        Session[]
   accounts        Account[]
+  favorites       Favorite[]
   profile         PersonalProfile?
   memberships     BusinessMembership[]
   createdListings Listing[]            @relation("Creator")
@@ -243,6 +244,7 @@ model Listing {
   createdAt         DateTime                @default(now())
   updatedAt         DateTime                @updatedAt
   personalProfile   PersonalProfile?        @relation(fields: [personalProfileId], references: [id], onDelete: Restrict)
+  favorites         Favorite[]
   business          Business?               @relation(fields: [businessId], references: [id], onDelete: Restrict)
   createdBy         User                    @relation("Creator", fields: [createdById], references: [id], onDelete: Restrict)
   category          Category                @relation(fields: [categoryId], references: [id], onDelete: Restrict)
@@ -274,6 +276,18 @@ model ListingMedia {
   listing    Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@unique([listingId, position])
+}
+
+model Favorite {
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+  @@index([listingId])
 }
 
 model AuditEvent {

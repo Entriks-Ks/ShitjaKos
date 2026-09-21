@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   UserRound,
   Store,
+  Heart,
   ShieldCheck,
   Layers,
   ArrowUpRight,
@@ -21,6 +22,7 @@ export function WorkspaceNav({ admin = false }: { admin?: boolean }) {
     : [
         { href: "/dashboard", name: "Overview", icon: LayoutDashboard },
         { href: "/dashboard/profile", name: "Personal details", icon: UserRound },
+        { href: "/dashboard/favorites", name: "My favorites", icon: Heart },
         { href: "/dashboard/shops", name: "My shops", icon: Store },
       ];
   return (

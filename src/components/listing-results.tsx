@@ -12,13 +12,18 @@ export function ListingResults({
   locale,
   params,
   compact = false,
+  viewerSignedIn,
+  favoriteIds = [],
 }: {
   result: Awaited<ReturnType<typeof searchListings>>;
   locale: Locale;
   params: SearchParams;
   compact?: boolean;
+  viewerSignedIn: boolean;
+  favoriteIds?: string[];
 }) {
   const t = copy[locale];
+  const favorites = new Set(favoriteIds);
   const pageUrl = (page: number) => searchUrl(params, { page: String(page) });
   const remainder = result.items.length % SEARCH_COLUMNS;
   const placeholders =
@@ -31,7 +36,13 @@ export function ListingResults({
       {result.items.length ? (
         <div className={compact ? "search-results-grid" : "home-results-grid"}>
           {result.items.map((item) => (
-            <ListingCard item={item} locale={locale} key={item.id} />
+            <ListingCard
+              item={item}
+              locale={locale}
+              viewerSignedIn={viewerSignedIn}
+              saved={favorites.has(item.id)}
+              key={item.id}
+            />
           ))}
           {Array.from({ length: placeholders }, (_, index) => (
             <div

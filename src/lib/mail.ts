@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 export async function sendAuthMail(to: string, subject: string, url: string) {
-  if (process.env.MAIL_MODE === "file" && process.env.NODE_ENV !== "production") {
+  if (process.env.MAIL_MODE === "file") {
     const dir = join(process.cwd(), ".local-mail");
     await mkdir(dir, { recursive: true });
     await writeFile(

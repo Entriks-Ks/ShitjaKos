@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { Header } from "@/components/header";
 import { ListingCard } from "@/components/listing-card";
 import { getPublicShop, getPublicShopListings } from "@/repositories/shops";
+import { getFavoriteListingIds } from "@/repositories/favorites";
 import { localeOf } from "@/lib/catalog";
 import { currentActor as currentUser } from "@/lib/session";
 import { ShieldCheck, MapPin } from "lucide-react";
@@ -21,6 +22,13 @@ export default async function Page({
     currentUser(),
     getPublicShopListings(shop.businessId),
   ]);
+  const favoriteIds = user
+    ? await getFavoriteListingIds(
+        user.id,
+        items.map((item) => item.id),
+      )
+    : [];
+  const favorites = new Set(favoriteIds);
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
@@ -53,7 +61,13 @@ export default async function Page({
             {items.length ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {items.map((item) => (
-                  <ListingCard key={item.id} item={item} locale={locale} />
+                  <ListingCard
+                    key={item.id}
+                    item={item}
+                    locale={locale}
+                    viewerSignedIn={!!user}
+                    saved={favorites.has(item.id)}
+                  />
                 ))}
               </div>
             ) : (

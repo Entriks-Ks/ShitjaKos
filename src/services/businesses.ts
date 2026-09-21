@@ -5,6 +5,9 @@ import { getPrisma } from "@/lib/prisma";
 import { cities } from "@/lib/catalog";
 import { Actor } from "@/lib/permissions";
 import { audit } from "./listings";
+
+
+
 const input = z.object({
   legalName: z.string().trim().min(3).max(150),
   publicName: z.string().trim().min(3).max(100),
@@ -15,6 +18,8 @@ const input = z.object({
   address: z.string().max(200),
   openingHours: z.string().max(300),
 });
+
+
 export async function createBusiness(actor: Actor, raw: unknown) {
   const v = input.parse(raw);
   if (actor.suspendedAt) throw new Error("Account suspended.");
@@ -23,13 +28,12 @@ export async function createBusiness(actor: Actor, raw: unknown) {
     if (!user.emailVerified || user.suspendedAt)
       throw new Error("An active, verified account is required.");
     const { address, openingHours, ...data } = v;
-    const slug = `${
-      v.publicName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .slice(0, 60) || "shop"
-    }-${randomBytes(3).toString("hex")}`;
+    const slug = `${v.publicName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 60) || "shop"
+      }-${randomBytes(3).toString("hex")}`;
     const business = await tx.business.create({
       data: {
         ...data,
@@ -41,3 +45,30 @@ export async function createBusiness(actor: Actor, raw: unknown) {
     return business.id;
   });
 }
+
+export async function updateBusiness(actor: Actor, businessId: string, raw: unknown) {
+  const v = input.partial().parse(raw);
+  if (actor.suspendedAt) throw new Error("Account suspended.");
+  return getPrisma().$transaction(async (tx) => {
+    const business = await tx.business.findUniqueOrThrow({
+      where: { id: businessId },
+      include: { memberships: true },
+    });
+    const membership = business.memberships.find((m) => m.userId === actor.id);
+    if (!membership || membership.role !== "OWNER")
+      throw new Error("Not authorized to update this business.");
+    const { address, openingHours, ...data } = v;
+    await tx.business.update({
+      where: { id: businessId },
+      data: {
+        ...data,
+        shop: address || openingHours ? { update: { address, openingHours } } : undefined,
+      },
+    });
+    await audit(tx, actor.id, "business.updated", businessId, {});
+  });
+}
+
+
+
+

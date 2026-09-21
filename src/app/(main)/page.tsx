@@ -1,13 +1,6 @@
 import Link from "@/components/navigation-link";
 import { ListingSearchBar } from "@/components/listing-search-bar";
-import {
-  Armchair,
-  Laptop,
-  MapPin,
-  ArrowRight,
-  ShieldCheck,
-  Store,
-} from "lucide-react";
+import { Armchair, Laptop, MapPin, ArrowRight, ShieldCheck, Store } from "lucide-react";
 import { Header } from "@/components/header";
 import { ListingResults } from "@/components/listing-results";
 import { CategoryIcon } from "@/components/category-icon";
@@ -17,6 +10,7 @@ import { copy, localeOf, translated } from "@/lib/catalog";
 import { currentActor as currentUser } from "@/lib/session";
 import { getCachedCategories as getCategories } from "@/lib/catalog-cache";
 import { searchListings } from "@/repositories/listings";
+import { getFavoriteListingIds } from "@/repositories/favorites";
 export const dynamic = "force-dynamic";
 export default async function Home({
   searchParams,
@@ -50,6 +44,12 @@ export default async function Home({
     searchListings(p),
     currentUser(),
   ]);
+  const favoriteIds = user
+    ? await getFavoriteListingIds(
+        user.id,
+        result.items.map((item) => item.id),
+      )
+    : [];
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
@@ -116,7 +116,13 @@ export default async function Home({
               {result.count} {t.results}
             </span>
           </div>
-          <ListingResults result={result} locale={locale} params={p} />
+          <ListingResults
+            result={result}
+            locale={locale}
+            params={p}
+            viewerSignedIn={!!user}
+            favoriteIds={favoriteIds}
+          />
         </section>
         <section className="panel mt-12 flex flex-wrap items-center justify-between gap-5 bg-[#f0f4e9]">
           <div className="flex items-center gap-4">

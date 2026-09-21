@@ -4,14 +4,17 @@ import { notFound } from "next/navigation";
 import { MapPin, ShieldCheck, Phone, Store } from "lucide-react";
 import { Header } from "@/components/header";
 import { ListingCard } from "@/components/listing-card";
+import { FavoriteButton } from "@/components/favorite-button";
 import { currentActor as currentUser } from "@/lib/session";
 import { canManageListing, isStaff } from "@/lib/permissions";
+import { getFavoriteListingIds } from "@/repositories/favorites";
 import {
   getPublicListingMarker,
   getListingPreview,
   getSimilarListings,
 } from "@/repositories/listings";
 import { localeOf, money, translated } from "@/lib/catalog";
+
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false, follow: true } };
 export default async function Page({
@@ -32,6 +35,14 @@ export default async function Page({
   const owner = user ? canManageListing(user, item) : false;
   if (!visible && !owner && !(user && isStaff(user))) notFound();
   const similar = visible ? await getSimilarListings(item.categoryId, id) : [];
+  const favoriteIds =
+    visible && user
+      ? await getFavoriteListingIds(user.id, [
+          id,
+          ...similar.map((listing) => listing.id),
+        ])
+      : [];
+  const favorites = new Set(favoriteIds);
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
@@ -145,6 +156,14 @@ export default async function Page({
                   Manage your listing
                 </Link>
               )}
+              {visible &&
+                (user ? (
+                  <FavoriteButton listingId={id} initialSaved={favorites.has(id)} />
+                ) : (
+                  <Link href="/login" className="btn btn-outline mt-6 w-full">
+                    Sign in to save this listing
+                  </Link>
+                ))}
             </div>
             <section className="panel mt-5">
               <div className="flex gap-3 items-center">
@@ -198,7 +217,13 @@ export default async function Page({
             <h2 className="mb-5">More to explore</h2>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {similar.map((i) => (
-                <ListingCard key={i.id} item={i} locale={locale} />
+                <ListingCard
+                  key={i.id}
+                  item={i}
+                  locale={locale}
+                  viewerSignedIn={!!user}
+                  saved={favorites.has(i.id)}
+                />
               ))}
             </div>
           </section>

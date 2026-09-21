@@ -1,0 +1,66 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { Heart } from "lucide-react";
+
+import { setFavoriteAction } from "@/app/(main)/listings/favorite-actions";
+
+export function FavoriteButton({
+  listingId,
+  initialSaved,
+  compact = false,
+}: {
+  listingId: string;
+  initialSaved: boolean;
+  compact?: boolean;
+}) {
+  const [saved, setSaved] = useState(initialSaved);
+  const [error, setError] = useState("");
+  const [pending, startTransition] = useTransition();
+
+  function handleClick() {
+    setError("");
+
+    startTransition(async () => {
+      try {
+        const result = await setFavoriteAction(listingId, !saved);
+
+        if (result.saved === null) {
+          setError(result.error);
+          return;
+        }
+
+        setSaved(result.saved);
+      } catch {
+        setError("Could not update this favorite. Please try again.");
+      }
+    });
+  }
+
+  return (
+    <div className={compact ? "card-favorite-control" : undefined}>
+      <button
+        type="button"
+        className={compact ? "card-favorite-button" : "btn btn-outline mt-6 w-full"}
+        aria-pressed={saved}
+        aria-label={
+          compact ? (saved ? "Remove from favorites" : "Save to favorites") : undefined
+        }
+        title={
+          compact ? (saved ? "Remove from favorites" : "Save to favorites") : undefined
+        }
+        disabled={pending}
+        onClick={handleClick}
+      >
+        <Heart size={18} fill={saved ? "currentColor" : "none"} />
+        {!compact && (pending ? "Saving…" : saved ? "Saved" : "Save listing")}
+      </button>
+
+      {error && (
+        <p className={compact ? "card-favorite-error" : undefined} role="alert">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
