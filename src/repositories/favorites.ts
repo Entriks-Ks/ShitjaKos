@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getPrisma } from "@/lib/prisma";
-import { publicWhere } from "@/repositories/listings";
+import { listingInclude, publicWhere } from "@/repositories/listings";
 
 export async function isFavorited(userId: string, listingId: string) {
   const favorite = await getPrisma().favorite.findUnique({
@@ -37,10 +37,7 @@ export function getVisibleFavorites(userId: string) {
     orderBy: { createdAt: "desc" },
     select: {
       listing: {
-        select: {
-          id: true,
-          title: true,
-        },
+        include: listingInclude,
       },
     },
   });
