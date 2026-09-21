@@ -19,19 +19,26 @@ export function FavoriteButton({
   const [pending, startTransition] = useTransition();
 
   function handleClick() {
+    if (pending) return;
+
+    const previous = saved;
+    const next = !previous;
     setError("");
+    setSaved(next);
 
     startTransition(async () => {
       try {
-        const result = await setFavoriteAction(listingId, !saved);
+        const result = await setFavoriteAction(listingId, next);
 
         if (result.saved === null) {
+          setSaved(previous);
           setError(result.error);
           return;
         }
 
         setSaved(result.saved);
       } catch {
+        setSaved(previous);
         setError("Could not update this favorite. Please try again.");
       }
     });
@@ -43,6 +50,7 @@ export function FavoriteButton({
         type="button"
         className={compact ? "card-favorite-button" : "btn btn-outline mt-6 w-full"}
         aria-pressed={saved}
+        aria-busy={pending}
         aria-label={
           compact ? (saved ? "Remove from favorites" : "Save to favorites") : undefined
         }

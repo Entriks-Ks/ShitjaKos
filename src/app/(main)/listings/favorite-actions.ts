@@ -1,8 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
-import { requireUser } from "@/lib/session";
+import { currentActor } from "@/lib/session";
 import { setFavorite } from "@/services/favorites";
 
 const input = z.object({
@@ -11,7 +12,8 @@ const input = z.object({
 });
 
 export async function setFavoriteAction(listingId: string, saved: boolean) {
-  const actor = await requireUser();
+  const actor = await currentActor();
+  if (!actor) redirect("/login");
   const parsed = input.safeParse({ listingId, saved });
 
   if (!parsed.success) {
