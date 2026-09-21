@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/session";
 import { getEditableListing } from "@/repositories/listings";
 import { getCachedCategories as getCategories } from "@/lib/catalog-cache";
 import { canManageListing } from "@/lib/permissions";
+import { DeleteListingButton } from "@/components/delete-listing-button";
 export const metadata = {
   title: "Edit listing",
   robots: { index: false, follow: false },
@@ -52,6 +53,7 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
             }}
           />
         )}
+        <DeleteListingButton listingId={item.id} />
       </main>
     </>
   );

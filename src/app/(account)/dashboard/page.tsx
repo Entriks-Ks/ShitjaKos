@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Plus, ArrowUpRight, Package, Store, CircleCheck, Pencil } from "lucide-react";
 import { StatusButton } from "@/components/listing-form";
 import { AccountShops } from "@/components/account-shops";
+import { DeleteListingButton } from "@/components/delete-listing-button";
 import { EmptyState, StatCard, StatusBadge } from "@/components/workspace-ui";
 import { requireUser } from "@/lib/session";
 import { getOwnedListings } from "@/repositories/dashboard";
@@ -131,6 +132,7 @@ export default async function DashboardPage() {
                   {["PUBLISHED", "PAUSED"].includes(item.status) && (
                     <StatusButton id={item.id} target="SOLD" label="Mark sold" />
                   )}
+                  <DeleteListingButton listingId={item.id} title={item.title} compact />
                 </div>
               </article>
             ))}

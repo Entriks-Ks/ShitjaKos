@@ -3,6 +3,12 @@ import { getPrisma } from "@/lib/prisma";
 import { listingInput, validateAttributes } from "@/lib/validations/listing";
 import { Actor, canManageListing, canTransition } from "@/lib/permissions";
 import { Prisma } from "@/generated/prisma/client";
+import { removeListingThumbnail } from "@/lib/listing-images";
+import { basename, join } from "node:path";
+import { unlink } from "node:fs/promises";
+
+
+
 
 export async function saveListing(actor: Actor, raw: unknown) {
   const v = listingInput.parse(raw);
@@ -149,4 +155,63 @@ export async function audit(
   detail: Prisma.InputJsonValue,
 ) {
   await tx.auditEvent.create({ data: { actorId, action, targetId, detail } });
+}
+
+
+export async function deleteListing(actor: Actor, id: string) {
+  const media = await getPrisma().$transaction(async (tx) => {
+    const user = await tx.user.findUniqueOrThrow({
+      where: { id: actor.id },
+    });
+
+    const listing = await tx.listing.findUniqueOrThrow({
+      where: { id },
+      include: {
+        personalProfile: true,
+        business: { include: { memberships: true } },
+        media: true,
+      },
+    });
+
+    if (!canManageListing(user, listing)) {
+      throw new Error("You cannot delete this listing.");
+    }
+
+    const deleted = await tx.listing.deleteMany({
+      where: {
+        id,
+        version: listing.version,
+      },
+    });
+
+    if (deleted.count !== 1) {
+      throw new Error("The listing changed. Reload and try again.");
+    }
+
+    await audit(tx, actor.id, "listing.deleted", id, {
+      title: listing.title,
+    });
+
+    return listing.media;
+  });
+
+  // Remove files only after the database transaction succeeds.
+  for (const image of media) {
+    const key = image.storageKey;
+
+    if (basename(key) !== key || key.includes("\\")) {
+      console.error("Skipped an invalid image storage key.");
+      continue;
+    }
+
+    try {
+      await unlink(join(process.cwd(), ".uploads", key));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.error("Could not remove a deleted listing image.", error);
+      }
+    }
+
+    await removeListingThumbnail(key);
+  }
 }

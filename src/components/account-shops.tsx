@@ -1,7 +1,8 @@
 import Link from "@/components/navigation-link";
-import { Plus, Store, MapPin, ArrowUpRight } from "lucide-react";
+import { Plus, Store, MapPin, ArrowUpRight, Pencil } from "lucide-react";
 import { StatusBadge } from "@/components/workspace-ui";
 import type { requireUser } from "@/lib/session";
+import { DeleteBusinessButton } from "@/components/delete-business-button";
 
 type Memberships = Awaited<ReturnType<typeof requireUser>>["memberships"];
 
@@ -25,7 +26,7 @@ export function AccountShops({ memberships }: { memberships: Memberships }) {
               <span className="shop-emblem">
                 <Store size={23} />
               </span>
-              <div>
+              <div className="shop-account-details">
                 <h3>{business.publicName}</h3>
                 <p>
                   <MapPin size={13} />
@@ -47,15 +48,33 @@ export function AccountShops({ memberships }: { memberships: Memberships }) {
                       : "Awaiting review"}
                 </StatusBadge>
               </div>
-              {business.reviewStatus === "APPROVED" && business.shop ? (
-                <Link className="text-action" href={`/shops/${business.shop.slug}`}>
-                  Visit shop <ArrowUpRight size={16} />
-                </Link>
-              ) : (
-                <small>
-                  An independent admin reviews the business before it becomes public.
-                </small>
-              )}
+              <div className="shop-account-actions">
+                {role === "OWNER" && !business.suspendedAt && (
+                  <Link
+                    href={`/business/${business.id}/edit`}
+                    className="shop-edit-link"
+                    aria-label={`Edit ${business.publicName}`}
+                  >
+                    <Pencil size={15} aria-hidden="true" />
+                    Edit business
+                  </Link>
+                )}
+                {role === "OWNER" && (
+                  <DeleteBusinessButton
+                    businessId={business.id}
+                    name={business.publicName}
+                  />
+                )}
+                {business.reviewStatus === "APPROVED" && business.shop ? (
+                  <Link className="text-action" href={`/shops/${business.shop.slug}`}>
+                    Visit shop <ArrowUpRight size={16} />
+                  </Link>
+                ) : (
+                  <small>
+                    An independent admin reviews the business before it becomes public.
+                  </small>
+                )}
+              </div>
             </article>
           ))}
         </div>

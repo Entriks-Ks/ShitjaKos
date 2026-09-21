@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { Heart } from "lucide-react";
 
-import { setFavoriteAction } from "@/app/(main)/listings/favorite-actions";
+import { setFavoriteAction } from "@/actions/favorites";
 
 export function FavoriteButton({
   listingId,
