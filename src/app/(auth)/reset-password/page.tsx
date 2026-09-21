@@ -6,10 +6,9 @@ export default async function Page({
 }) {
   return (
     <>
-      <main className="auth-card">
-        <h1>Choose a new password.</h1>
-        <AuthForm mode="reset" token={(await searchParams).token} />
-      </main>
+      <h1>Choose a new password.</h1>
+      <p className="muted mb-8">Pick something only you will know.</p>
+      <AuthForm mode="reset" token={(await searchParams).token} />
     </>
   );
 }
