@@ -16,6 +16,7 @@ function makeAuth() {
     database: prismaAdapter(getPrisma(), { provider: "postgresql" }),
     emailAndPassword: {
       enabled: true,
+      disableSignUp: true,
       minPasswordLength: 12,
       requireEmailVerification: true,
       revokeSessionsOnPasswordReset: true,
@@ -24,11 +25,8 @@ function makeAuth() {
       },
     },
     emailVerification: {
-      sendOnSignUp: true,
+      sendOnSignUp: false,
       autoSignInAfterVerification: true,
-      sendVerificationEmail: async ({ user, url }) => {
-        await sendAuthMail(user.email, "Verify your ShitjaKos email", url);
-      },
     },
     session: { expiresIn: 60 * 60 * 24 * 7, cookieCache: { enabled: false } },
     rateLimit: {
@@ -61,7 +59,8 @@ function makeAuth() {
         expiresIn: 60 * 5,
         allowedAttempts: 5,
         storeOTP: "hashed",
-        sendVerificationOnSignUp: true,
+        disableSignUp: true,
+        overrideDefaultEmailVerification: true,
         async sendVerificationOTP({ email, otp, type }) {
           const subject =
             type === "forget-password"

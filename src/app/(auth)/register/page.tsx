@@ -1,5 +1,12 @@
 import { AuthForm } from "@/components/auth-form";
-export default function Page() {
+import { getAuth } from "@/lib/auth";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+
+export default async function Page() {
+  const session = await getAuth().api.getSession({ headers: await headers() });
+  if (session) redirect("/dashboard");
+
   return (
     <>
       <h1>One account. More possibilities.</h1>

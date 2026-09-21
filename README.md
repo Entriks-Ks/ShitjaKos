@@ -96,7 +96,8 @@ another server, its image storage must be shared or moved to object storage.
 ## Try the full flow
 
 1. Create an account at `/register`.
-2. Open the verification link sent to your email address. With `MAIL_MODE=file`
+2. Enter the six-digit verification code sent to your email address. The user
+   account is created only after the code is accepted. With `MAIL_MODE=file`
    during local development, messages are saved as private text files in
    `.local-mail/` instead. That directory is ignored by Git and is never served
    over HTTP.
@@ -313,8 +314,8 @@ For Hostinger Email, use `MAIL_MODE=smtp`, `SMTP_HOST=smtp.hostinger.com`,
 `SMTP_PORT=465`, your complete mailbox address as `SMTP_USER`, its mailbox
 password as `SMTP_PASSWORD`, and that address in `MAIL_FROM`. Port 465 uses SSL.
 Keep the password only in your private `.env`. Registration and password-reset
-emails use these settings automatically. The verification links currently point
-to `BETTER_AUTH_URL`, so update that URL when hosting the app publicly.
+emails use these settings automatically. Set `BETTER_AUTH_URL` to the public
+site URL when hosting the app.
 
 Images currently live in `.uploads/`, outside the public directory. Use a
 persistent volume for a single-server deployment; implement object storage

@@ -71,6 +71,18 @@ model Verification {
   @@index([identifier])
 }
 
+model PendingRegistration {
+  id           String   @id
+  email        String   @unique
+  name         String
+  passwordHash String
+  codeHash     String
+  expiresAt    DateTime
+  lastSentAt   DateTime
+  attempts     Int      @default(0)
+  createdAt    DateTime @default(now())
+}
+
 model RateLimit {
   id          String @id @default(cuid())
   key         String @unique

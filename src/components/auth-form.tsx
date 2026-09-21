@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Link from "@/components/navigation-link";
 import { authClient } from "@/lib/auth-client";
+import { startRegistrationAction } from "@/app/(auth)/register/actions";
 import { useRouter } from "next/navigation";
 export function AuthForm({
   mode,
@@ -13,6 +14,7 @@ export function AuthForm({
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [unverifiedEmail, setUnverifiedEmail] = useState("");
   const router = useRouter();
   return (
     <form
@@ -26,36 +28,45 @@ export function AuthForm({
         const email = String(f.get("email") ?? "");
         const password = String(f.get("password") ?? "");
         try {
+          if (mode === "register") {
+            const result = await startRegistrationAction({
+              email,
+              password,
+              name: String(f.get("name") ?? ""),
+            });
+            if (result.error) setError(result.error);
+            else if (result.registrationId) {
+              router.push(
+                `/verify-email?registration=${encodeURIComponent(result.registrationId)}&email=${encodeURIComponent(email)}`,
+              );
+            }
+            return;
+          }
           const result =
-            mode === "register"
-              ? await authClient.signUp.email({
+            mode === "login"
+              ? await authClient.signIn.email({
                   email,
                   password,
-                  name: String(f.get("name")),
                   callbackURL: "/dashboard",
                 })
-              : mode === "login"
-                ? await authClient.signIn.email({
+              : mode === "forgot"
+                ? await authClient.requestPasswordReset({
                     email,
-                    password,
-                    callbackURL: "/dashboard",
+                    redirectTo: "/reset-password",
                   })
-                : mode === "forgot"
-                  ? await authClient.requestPasswordReset({
-                      email,
-                      redirectTo: "/reset-password",
-                    })
-                  : await authClient.resetPassword({
-                      newPassword: password,
-                      token: token ?? "",
-                    });
-          if (result.error) setError(result.error.message ?? "Please try again.");
-          else if (mode === "login") {
+                : await authClient.resetPassword({
+                    newPassword: password,
+                    token: token ?? "",
+                  });
+          if (result.error) {
+            setError(result.error.message ?? "Please try again.");
+            if (mode === "login" && result.error.code === "EMAIL_NOT_VERIFIED") {
+              setUnverifiedEmail(email);
+            }
+          } else if (mode === "login") {
             router.push("/dashboard");
             router.refresh();
-          } else if (mode === "register")
-            setMessage("Check your email to verify your account before signing in.");
-          else if (mode === "forgot")
+          } else if (mode === "forgot")
             setMessage("If an account exists, a password reset message has been sent.");
           else setMessage("Password updated. You can now sign in.");
         } catch {
@@ -95,6 +106,11 @@ export function AuthForm({
           {error}
         </p>
       )}
+      {unverifiedEmail && mode === "login" && (
+        <Link href={`/verify-email?email=${encodeURIComponent(unverifiedEmail)}`}>
+          Enter your verification code
+        </Link>
+      )}
       {message && (
         <p role="status" className="notice">
           {message}
@@ -110,7 +126,7 @@ export function AuthForm({
               reset: "Set new password",
             }[mode]}
       </button>
-      {(mode === "register" || mode === "login") && (
+      {mode === "login" && (
         <button
           type="button"
           disabled={busy}
@@ -133,11 +149,11 @@ export function AuthForm({
               });
               if (result.error) {
                 setError(
-                  result.error.message ?? "Could not send the link. Please try again.",
+                  result.error.message ?? "Could not send the code. Please try again.",
                 );
               } else {
                 setMessage(
-                  "If this email has an unverified account, a new link has been sent.",
+                  "If this email has an unverified account, a new code has been sent.",
                 );
               }
             } catch {
@@ -147,7 +163,7 @@ export function AuthForm({
             }
           }}
         >
-          Resend verification email
+          Resend verification code
         </button>
       )}
       <div className="text-sm text-center text-stone-500">
