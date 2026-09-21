@@ -2,7 +2,7 @@
 import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { cities, translated, optionLabel } from "@/lib/catalog";
-import { saveListingAction, statusAction } from "@/app/actions";
+import { saveListingAction, statusAction } from "@/actions/listings";
 import type { getCategories } from "@/repositories/catalog";
 import type { ListingInput } from "@/lib/validations/listing";
 import Image from "next/image";

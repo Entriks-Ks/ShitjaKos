@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Check, X } from "lucide-react";
-import { reviewAction } from "@/app/actions";
+import { reviewAction } from "@/actions/reviews";
 
 export function ReviewForm({ id, kind }: { id: string; kind: "business" }) {
   const [busy, setBusy] = useState(false);

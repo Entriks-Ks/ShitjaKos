@@ -373,8 +373,45 @@
   color: #7c857b;
   font-size: 11px;
 }
-.shop-account-card > a {
-  margin-top: 6px;
+.shop-account-details {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.shop-account-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  flex-basis: 100%;
+  margin-top: auto;
+  padding-top: 14px;
+  border-top: 1px solid #e8ece3;
+}
+.shop-account-actions small {
+  flex: 1 1 180px;
+  line-height: 1.5;
+}
+.shop-edit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  background: #edf1e6;
+  color: #425537;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 150ms ease;
+}
+.shop-edit-link:hover {
+  background: #e1e8d8;
+}
+.shop-edit-link:focus-visible {
+  outline: 2px solid #6b7b59;
+  outline-offset: 3px;
 }
 .shop-invitation {
   display: flex;
@@ -452,6 +489,40 @@
 .account-listing-actions .btn {
   font-size: 11px;
   padding: 8px 10px;
+}
+.delete-control {
+  min-width: 0;
+}
+.delete-control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: #a13d37;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.delete-control-button:hover {
+  background: #fff1ef;
+  border-color: #f0d2ce;
+}
+.delete-control-button:focus-visible {
+  outline: 2px solid #a13d37;
+  outline-offset: 2px;
+}
+.delete-control-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+.delete-control .notice {
+  margin-top: 8px;
+  max-width: 320px;
 }
 .workspace-empty {
   text-align: center;

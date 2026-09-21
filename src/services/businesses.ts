@@ -3,10 +3,27 @@ import { z } from "zod";
 import { randomBytes } from "node:crypto";
 import { getPrisma } from "@/lib/prisma";
 import { cities } from "@/lib/catalog";
-import { Actor } from "@/lib/permissions";
+import { Actor, assertBusinessDeletionAllowed } from "@/lib/permissions";
 import { audit } from "./listings";
+import {
+  getBusinessDeletionContext,
+  removeEmptyBusiness,
+} from "@/repositories/businesses";
 
-
+export async function deleteBusiness(actor: Actor, businessId: string) {
+  return getPrisma().$transaction(async (tx) => {
+    const membership = await getBusinessDeletionContext(tx, businessId, actor.id);
+    assertBusinessDeletionAllowed(
+      membership?.user ?? actor,
+      membership,
+      membership?.business._count.listings ?? 0,
+    );
+    await removeEmptyBusiness(tx, businessId);
+    await audit(tx, actor.id, "business.deleted", businessId, {
+      publicName: membership!.business.publicName,
+    });
+  });
+}
 
 const input = z.object({
   legalName: z.string().trim().min(3).max(150),
@@ -19,7 +36,6 @@ const input = z.object({
   openingHours: z.string().max(300),
 });
 
-
 export async function createBusiness(actor: Actor, raw: unknown) {
   const v = input.parse(raw);
   if (actor.suspendedAt) throw new Error("Account suspended.");
@@ -28,12 +44,13 @@ export async function createBusiness(actor: Actor, raw: unknown) {
     if (!user.emailVerified || user.suspendedAt)
       throw new Error("An active, verified account is required.");
     const { address, openingHours, ...data } = v;
-    const slug = `${v.publicName
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "")
-      .slice(0, 60) || "shop"
-      }-${randomBytes(3).toString("hex")}`;
+    const slug = `${
+      v.publicName
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .slice(0, 60) || "shop"
+    }-${randomBytes(3).toString("hex")}`;
     const business = await tx.business.create({
       data: {
         ...data,
@@ -62,13 +79,12 @@ export async function updateBusiness(actor: Actor, businessId: string, raw: unkn
       where: { id: businessId },
       data: {
         ...data,
-        shop: address || openingHours ? { update: { address, openingHours } } : undefined,
+        shop:
+          address !== undefined || openingHours !== undefined
+            ? { update: { address, openingHours } }
+            : undefined,
       },
     });
     await audit(tx, actor.id, "business.updated", businessId, {});
   });
 }
-
-
-
-

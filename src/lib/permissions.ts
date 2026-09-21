@@ -1,4 +1,22 @@
 export type Actor = { id: string; suspendedAt: Date | null; role: string };
+export function assertBusinessDeletionAllowed(
+  actor: Actor,
+  membership: { userId: string; role: string } | null,
+  listingCount: number,
+) {
+  if (
+    actor.suspendedAt ||
+    membership?.userId !== actor.id ||
+    membership.role !== "OWNER"
+  ) {
+    throw new Error("Only the active business owner can delete this shop.");
+  }
+  if (listingCount > 0) {
+    throw new Error(
+      "Delete this shop's listings first, including drafts, sold, and closed listings.",
+    );
+  }
+}
 export function canManageListing(
   actor: Actor,
   listing: {
