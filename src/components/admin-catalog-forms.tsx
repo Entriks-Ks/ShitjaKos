@@ -48,13 +48,19 @@ function NameFields({ prefix, title }: { prefix: string; title: string }) {
 }
 
 const groupIcons = [
+  ["Ticket", "Tickets"],
+  ["House", "Home & garden"],
+  ["Store", "Business"],
+  ["CarFront", "Vehicles"],
+  ["Smartphone", "Electronics"],
+  ["Baby", "Family"],
+  ["PawPrint", "Pets"],
+  ["Tent", "Leisure & hobbies"],
+  ["Handbag", "Fashion & beauty"],
+  ["Clapperboard", "Music, film & books"],
+  ["Gift", "Give away"],
   ["Package", "General goods"],
-  ["Laptop", "Electronics"],
-  ["Armchair", "Home"],
   ["Wrench", "Tools"],
-  ["BookOpen", "Books"],
-  ["Baby", "Children"],
-  ["Dumbbell", "Sports"],
 ] as const;
 
 export function CategoryCreateForm() {

@@ -15,7 +15,7 @@ export const groups = [
   {
     id: "home",
     names: ["Shtëpi dhe kopsht", "Home & Garden", "Haus & Garten"],
-    icon: "Armchair",
+    icon: "House",
     children: [
       ["furniture", "Dhomë ndenjeje", "Living room", "Wohnzimmer"],
       [
@@ -53,7 +53,7 @@ export const groups = [
   {
     id: "business-equipment",
     names: ["Biznes dhe pajisje", "Business & Equipment", "Gewerbe & Einzelhandel"],
-    icon: "BriefcaseBusiness",
+    icon: "Store",
     children: [
       ["machines", "Makineri", "Machine", "Maschinen"],
       ["office-supplies", "Pajisje zyre", "Office", "Bürobedarf"],
@@ -63,7 +63,7 @@ export const groups = [
   {
     id: "auto",
     names: ["Automjete, biçikleta dhe varka", "Auto", "Auto, Rad & Boot"],
-    icon: "Car",
+    icon: "CarFront",
     children: [
       ["cars", "Vetura", "Cars", "Autos"],
       ["bicycles", "Biçikleta", "Bicycles", "Fahrräder"],
@@ -75,7 +75,7 @@ export const groups = [
   {
     id: "electronics",
     names: ["Elektronikë", "Electronics", "Elektronik"],
-    icon: "Laptop",
+    icon: "Smartphone",
     children: [
       [
         "phones",
@@ -164,7 +164,7 @@ export const groups = [
       "Free time, Hobbies & Neighborhood",
       "Freizeit, Hobby & Nachbarschaft",
     ],
-    icon: "Dumbbell",
+    icon: "Tent",
     children: [
       ["art-antiques", "Art dhe antikitete", "Art & Antiques", "Kunst & Antiquitäten"],
       ["spirituality", "Spiritualitet", "Spirituality", "Esoterik & Spiritualität"],
@@ -182,7 +182,7 @@ export const groups = [
   {
     id: "fashion-beauty",
     names: ["Modë dhe bukuri", "Mode & Beauty", "Mode & Schönheit"],
-    icon: "Shirt",
+    icon: "Handbag",
     children: [
       ["women-clothing", "Rroba për gra", "Women’s clothes", "Damenbekleidung"],
       ["men-clothing", "Rroba për burra", "Man’s clothes", "Herrenbekleidung"],
@@ -206,7 +206,7 @@ export const groups = [
   {
     id: "books",
     names: ["Muzikë, filma dhe libra", "Musik, Film & Books", "Musik, Film & Bücher"],
-    icon: "BookOpen",
+    icon: "Clapperboard",
     children: [
       ["books-media", "Libra dhe revista", "Books & Magazines", "Bücher & Zeitschriften"],
       ["films-dvd", "Filma dhe DVD", "Film & DVD", "Filme & DVDs"],

@@ -25,7 +25,8 @@ export default async function Home({
       Array.isArray(value) ? value[0] : value,
     ]),
   ) as Record<string, string | undefined>;
-  if (Object.keys(p).some((key) => key !== "lang" && p[key])) redirect(searchUrl(p));
+  if (Object.keys(p).some((key) => key !== "lang" && key !== "page" && p[key]))
+    redirect(searchUrl(p));
   const locale = localeOf(p.lang);
   const t = copy[locale];
   if (!process.env.DATABASE_URL)
@@ -115,13 +116,13 @@ export default async function Home({
           </div>
         </section>
         </div>
-        <section id="results">
-          <div className="flex flex-wrap justify-between gap-3 items-end mb-5">
+        <section id="results" className="home-listings">
+          <div className="home-listings-head">
             <div>
-              <p className="eyebrow mb-2">DIÇKA E RE TË PRET</p>
+              <p className="eyebrow">DIÇKA E RE TË PRET</p>
               <h2>{t.latest}</h2>
             </div>
-            <span className="text-sm text-stone-500">
+            <span>
               {result.count} {t.results}
             </span>
           </div>
@@ -132,6 +133,124 @@ export default async function Home({
             viewerSignedIn={!!user}
             favoriteIds={favoriteIds}
           />
+        </section>
+        <section className="home-decor">
+          <div className="home-decor-copy">
+            <p className="eyebrow">
+              {translated(
+                categories.find((category) => category.id === "home")?.translations ?? [],
+                locale,
+              ) || "Shtëpi dhe kopsht"}
+            </p>
+            <h2>{t.decorTitle}</h2>
+            <Link
+              href={searchUrl({ category: "home", lang: locale })}
+              className="btn btn-primary home-decor-btn"
+            >
+              {t.decorButton} <ArrowRight size={16} />
+            </Link>
+          </div>
+          <div className="home-decor-art" aria-hidden="true">
+            <figure className="home-decor-frame home-decor-frame-a">
+              <Image
+                src="/images/asthetic2.png"
+                alt=""
+                width={1600}
+                height={1067}
+                unoptimized
+                className="home-decor-img"
+              />
+            </figure>
+            <figure className="home-decor-frame home-decor-frame-b">
+              <Image
+                src="/images/asthetic1.png"
+                alt=""
+                width={1600}
+                height={1067}
+                unoptimized
+                className="home-decor-img"
+              />
+            </figure>
+          </div>
+        </section>
+        <section className="home-decor home-decor-reverse">
+          <div className="home-decor-art" aria-hidden="true">
+            <figure className="home-decor-frame home-decor-frame-a">
+              <Image
+                src="/images/asthetic4.png"
+                alt=""
+                width={1600}
+                height={1067}
+                unoptimized
+                className="home-decor-img"
+              />
+            </figure>
+            <figure className="home-decor-frame home-decor-frame-b">
+              <Image
+                src="/images/asthetic3.png"
+                alt=""
+                width={1600}
+                height={1067}
+                unoptimized
+                className="home-decor-img"
+              />
+            </figure>
+          </div>
+          <div className="home-decor-copy">
+            <p className="eyebrow">
+              {translated(
+                categories.find((category) => category.id === "electronics")?.translations ??
+                  [],
+                locale,
+              ) || "Elektronikë"}
+            </p>
+            <h2>{t.techTitle}</h2>
+            <Link
+              href={searchUrl({ category: "electronics", lang: locale })}
+              className="btn btn-primary home-decor-btn"
+            >
+              {t.decorButton} <ArrowRight size={16} />
+            </Link>
+          </div>
+        </section>
+        <section className="home-decor">
+          <div className="home-decor-copy">
+            <p className="eyebrow">
+              {translated(
+                categories.find((category) => category.id === "family")?.translations ?? [],
+                locale,
+              ) || "Familje, fëmijë dhe bebe"}
+            </p>
+            <h2>{t.familyTitle}</h2>
+            <Link
+              href={searchUrl({ category: "family", lang: locale })}
+              className="btn btn-primary home-decor-btn"
+            >
+              {t.decorButton} <ArrowRight size={16} />
+            </Link>
+          </div>
+          <div className="home-decor-art" aria-hidden="true">
+            <figure className="home-decor-frame home-decor-frame-a">
+              <Image
+                src="/images/asthetic5.png"
+                alt=""
+                width={1600}
+                height={1067}
+                unoptimized
+                className="home-decor-img"
+              />
+            </figure>
+            <figure className="home-decor-frame home-decor-frame-b">
+              <Image
+                src="/images/asthetic6.png"
+                alt=""
+                width={1600}
+                height={1067}
+                unoptimized
+                className="home-decor-img"
+              />
+            </figure>
+          </div>
         </section>
         <section className="panel shop-cta mt-12 flex flex-wrap items-center justify-between gap-5">
           <div className="flex items-center gap-4">

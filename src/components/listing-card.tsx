@@ -1,6 +1,6 @@
 import Link from "@/components/navigation-link";
 import Image from "next/image";
-import { MapPin, ArrowUpRight, Package, Heart } from "lucide-react";
+import { MapPin, Package, Heart } from "lucide-react";
 import { FavoriteButton } from "@/components/favorite-button";
 import { Locale, money, translated } from "@/lib/catalog";
 export type CardListing = {
@@ -24,8 +24,14 @@ export function ListingCard({
   viewerSignedIn: boolean;
   saved?: boolean;
 }) {
+  const kind =
+    item.intent === "WANTED"
+      ? "Kërkohet · Wanted"
+      : item.business
+        ? "Biznes"
+        : "Privat";
   return (
-    <article className="listing-card group">
+    <article className="listing-card">
       <Link className="listing-card-main" href={`/listings/${item.id}?lang=${locale}`}>
         <div className="card-photo">
           {item.media[0] ? (
@@ -35,32 +41,23 @@ export function ListingCard({
               alt={item.media[0].altText}
               fill
               sizes="(max-width: 640px) 100vw, 25vw"
-              className="object-cover transition-transform group-hover:scale-105"
+              className="object-cover"
             />
           ) : (
-            <Package size={40} className="text-stone-300" />
+            <Package size={36} />
           )}
-          <span className="photo-label">
-            {item.intent === "WANTED"
-              ? "Kërkohet · Wanted"
-              : item.business
-                ? "Biznes"
-                : "Privat"}
-          </span>
+          <span className="photo-label">{kind}</span>
         </div>
-        <div className="p-4">
-          <div className="text-[11px] uppercase tracking-wider text-stone-400 mb-2">
+        <div className="listing-card-body">
+          <p className="listing-card-category">
             {translated(item.category.translations, locale)}
-          </div>
-          <h3 className="font-semibold truncate">{item.title}</h3>
-          <div className="font-bold text-lg mt-2">{money(item.priceCents)}</div>
-          <div className="flex justify-between mt-4 text-xs text-stone-500">
-            <span className="flex items-center gap-1">
-              <MapPin size={13} />
-              {item.city}
-            </span>
-            <ArrowUpRight size={16} />
-          </div>
+          </p>
+          <h3 className="listing-card-title">{item.title}</h3>
+          <p className="listing-card-price">{money(item.priceCents)}</p>
+          <p className="listing-card-city">
+            <MapPin size={13} />
+            {item.city}
+          </p>
         </div>
       </Link>
       <div className="listing-card-favorite">
@@ -73,7 +70,7 @@ export function ListingCard({
             aria-label="Sign in to save listing"
             title="Sign in to save listing"
           >
-            <Heart size={18} />
+            <Heart size={16} />
           </Link>
         )}
       </div>
