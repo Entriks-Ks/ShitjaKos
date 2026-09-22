@@ -16,14 +16,14 @@ export function Header({
   const pathname = usePathname();
   const categoriesActive = pathname === "/";
   const shopsActive = pathname === "/shops" || pathname.startsWith("/shops/");
-  const accountControl = signedIn ? (
-    <Link className="header-icon-link" href="/dashboard" aria-label={t.account}>
+  const accountControl = (
+    <Link
+      className="header-icon-link"
+      href={signedIn ? "/dashboard" : "/login"}
+      aria-label={signedIn ? t.account : t.login}
+    >
       <User size={22} strokeWidth={1.5} />
-      <span>{t.account}</span>
-    </Link>
-  ) : (
-    <Link className="header-login" href="/login">
-      {t.login}
+      <span>{signedIn ? t.account : t.login}</span>
     </Link>
   );
   const favoritesControl = (

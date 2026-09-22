@@ -1,6 +1,7 @@
-import { ChevronDown, MapPin, Search } from "lucide-react";
+import { Search } from "lucide-react";
 import { SearchForm } from "@/components/search-form";
 import { SearchCategoryMenu } from "@/components/search-category-menu";
+import { SearchCityMenu } from "@/components/search-city-menu";
 import { cities, copy, Locale, translated } from "@/lib/catalog";
 import type { getCategories } from "@/repositories/catalog";
 
@@ -51,19 +52,17 @@ export function ListingSearchBar({
           }))}
         />
       </div>
-      <label className="searchbar-field searchbar-city">
+      <div className="searchbar-field searchbar-city">
         <span className="searchbar-field-label">{t.location}</span>
-        <span className="searchbar-field-control">
-          <MapPin size={16} aria-hidden="true" />
-          <select name="city" aria-label={t.location} defaultValue={params.city ?? ""}>
-            <option value="">{t.allCities}</option>
-            {cities.map((city) => (
-              <option key={city}>{city}</option>
-            ))}
-          </select>
-          <ChevronDown size={15} aria-hidden="true" />
-        </span>
-      </label>
+        <SearchCityMenu
+          label={t.location}
+          allLabel={t.allCities}
+          searchLabel={t.citySearch}
+          emptyLabel={t.cityEmpty}
+          defaultValue={params.city ?? ""}
+          cities={cities}
+        />
+      </div>
       <button className="searchbar-submit" type="submit">
         <Search size={17} />
         <span>{t.search}</span>
