@@ -526,6 +526,98 @@
   margin-top: 8px;
   max-width: 320px;
 }
+.delete-dialog {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  padding: 0;
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  border: 1px solid #dfe6d6;
+  border-radius: 20px;
+  background: #fff;
+  color: #293d30;
+  box-shadow: 0 24px 70px #173f3540;
+}
+.delete-dialog::backdrop {
+  background: #173f3580;
+  backdrop-filter: blur(3px);
+}
+.delete-dialog-body {
+  padding: 24px;
+}
+.delete-dialog-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.delete-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #fff1ef;
+  color: #a13d37;
+}
+.delete-dialog h2 {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+}
+.delete-dialog-item {
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 10px;
+  background: #f3f6ef;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.delete-dialog p.delete-dialog-description {
+  display: block;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.65;
+  color: #6a766b;
+}
+.delete-dialog .notice {
+  max-width: none;
+  margin-top: 16px;
+}
+.delete-dialog-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 18px 24px;
+  border-top: 1px solid #e8ece3;
+  background: #f8faf5;
+}
+.delete-dialog-footer .btn {
+  flex: 1 1 140px;
+  min-height: 44px;
+  font-size: 13px;
+  padding: 11px 14px;
+}
+.delete-dialog-confirm {
+  background: #a13d37;
+  color: #fff;
+  border: 1px solid #a13d37;
+}
+.delete-dialog-confirm:hover {
+  background: #86322e;
+}
+.delete-dialog button:focus-visible {
+  outline: 2px solid #6b7b59;
+  outline-offset: 3px;
+}
+.delete-dialog button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
 .workspace-empty {
   text-align: center;
   padding: 48px 20px;

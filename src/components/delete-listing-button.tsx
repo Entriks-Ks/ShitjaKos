@@ -4,7 +4,11 @@ import { useRouter } from "next/navigation";
 import { deleteListingAction } from "@/actions/listings";
 import { DeleteConfirmation } from "@/components/delete-confirmation";
 
-export function DeleteListingButton({ listingId, compact = false, title }: {
+export function DeleteListingButton({
+  listingId,
+  compact = false,
+  title,
+}: {
   listingId: string;
   compact?: boolean;
   title?: string;

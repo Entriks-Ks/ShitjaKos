@@ -4,7 +4,13 @@ import { useRouter } from "next/navigation";
 import { deleteBusinessAction } from "@/actions/businesses";
 import { DeleteConfirmation } from "@/components/delete-confirmation";
 
-export function DeleteBusinessButton({ businessId, name }: { businessId: string; name: string }) {
+export function DeleteBusinessButton({
+  businessId,
+  name,
+}: {
+  businessId: string;
+  name: string;
+}) {
   const router = useRouter();
   return (
     <DeleteConfirmation

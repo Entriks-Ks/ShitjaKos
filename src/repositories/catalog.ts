@@ -1,5 +1,6 @@
 import "server-only";
 import { getPrisma } from "@/lib/prisma";
+
 export function getCategories() {
   return getPrisma().category.findMany({
     where: { active: true, ownerPortal: "SHITJAKOS" },
