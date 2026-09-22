@@ -8,6 +8,7 @@ import { createPersonalProfile } from "@/repositories/users";
 // file goes through the repository layer.
 import { getPrisma } from "./prisma";
 import { sendAuthMail } from "./mail";
+import { suspensionSessionHooks } from "@/lib/suspension-hooks";
 
 function makeAuth() {
   if (!process.env.BETTER_AUTH_SECRET)
@@ -53,6 +54,7 @@ function makeAuth() {
           },
         },
       },
+      session: suspensionSessionHooks,
     },
     plugins: [
       emailOTP({

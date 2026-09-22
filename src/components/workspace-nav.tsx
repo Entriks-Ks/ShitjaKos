@@ -15,16 +15,18 @@ export function WorkspaceNav({ admin = false }: { admin?: boolean }) {
   const path = usePathname();
   const links = admin
     ? [
-        { href: "/admin", name: "Review queue", icon: ShieldCheck },
-        { href: "/admin/catalog", name: "Categories & fields", icon: Layers },
-        { href: "/dashboard", name: "My account", icon: UserRound },
-      ]
+      { href: "/admin", name: "Review queue", icon: ShieldCheck },
+      { href: "/admin/catalog", name: "Categories & fields", icon: Layers },
+      { href: "/dashboard", name: "My account", icon: UserRound },
+      { href: "/admin/users", name: "Users", icon: UserRound },
+      { href: "/admin/businesses", name: "Businesses", icon: Store },
+    ]
     : [
-        { href: "/dashboard", name: "Overview", icon: LayoutDashboard },
-        { href: "/dashboard/profile", name: "Personal details", icon: UserRound },
-        { href: "/dashboard/favorites", name: "My favorites", icon: Heart },
-        { href: "/dashboard/shops", name: "My shops", icon: Store },
-      ];
+      { href: "/dashboard", name: "Overview", icon: LayoutDashboard },
+      { href: "/dashboard/profile", name: "Personal details", icon: UserRound },
+      { href: "/dashboard/favorites", name: "My favorites", icon: Heart },
+      { href: "/dashboard/shops", name: "My shops", icon: Store },
+    ];
   return (
     <nav
       className="workspace-nav"
