@@ -53,6 +53,114 @@ export function getListingOwnershipDetails(id: string) {
   });
 }
 
+export type ListingWriteData = Pick<
+  Prisma.ListingUncheckedCreateInput,
+  | "title"
+  | "description"
+  | "categoryId"
+  | "intent"
+  | "priceCents"
+  | "city"
+  | "condition"
+  | "negotiable"
+  | "phoneVisible"
+  | "contactPhone"
+>;
+
+export type ListingAttributeWrite = {
+  attributeId: string;
+  value: Prisma.InputJsonValue;
+};
+
+export function findListingOwnership(tx: Prisma.TransactionClient, id: string) {
+  return tx.listing.findUniqueOrThrow({
+    where: { id },
+    include: { personalProfile: true, business: { include: { memberships: true } } },
+  });
+}
+
+export function findListingOwnershipWithMedia(tx: Prisma.TransactionClient, id: string) {
+  return tx.listing.findUniqueOrThrow({
+    where: { id },
+    include: {
+      personalProfile: true,
+      business: { include: { memberships: true } },
+      media: true,
+    },
+  });
+}
+
+export function findListingOwnershipWithOrderedMedia(
+  id: string,
+  client: Prisma.TransactionClient = getPrisma(),
+) {
+  return client.listing.findUnique({
+    where: { id },
+    include: {
+      personalProfile: true,
+      business: { include: { memberships: true } },
+      media: { orderBy: { position: "asc" } },
+    },
+  });
+}
+
+export function createListing(
+  tx: Prisma.TransactionClient,
+  input: {
+    data: ListingWriteData;
+    attributes: ListingAttributeWrite[];
+    createdById: string;
+    personalProfileId: string | null;
+    businessId: string | null;
+  },
+) {
+  return tx.listing.create({
+    data: {
+      ...input.data,
+      moderationStatus: "APPROVED",
+      createdById: input.createdById,
+      personalProfileId: input.personalProfileId,
+      businessId: input.businessId,
+      attributes: { create: input.attributes },
+    },
+  });
+}
+
+// Every listing write goes through the optimistic lock, so the version bump
+// lives here rather than at each call site. Returns false on a lost race.
+export async function updateListingIfVersion(
+  tx: Prisma.TransactionClient,
+  id: string,
+  version: number,
+  data: Prisma.ListingUncheckedUpdateManyInput = {},
+) {
+  const changed = await tx.listing.updateMany({
+    where: { id, version },
+    data: { ...data, version: { increment: 1 } },
+  });
+  return changed.count === 1;
+}
+
+export async function deleteListingIfVersion(
+  tx: Prisma.TransactionClient,
+  id: string,
+  version: number,
+) {
+  const deleted = await tx.listing.deleteMany({ where: { id, version } });
+  return deleted.count === 1;
+}
+
+export async function replaceListingAttributes(
+  tx: Prisma.TransactionClient,
+  listingId: string,
+  attributes: ListingAttributeWrite[],
+) {
+  await tx.listingAttributeValue.deleteMany({ where: { listingId } });
+  await tx.listingAttributeValue.createMany({
+    data: attributes.map((attribute) => ({ ...attribute, listingId })),
+  });
+}
+
 export function getListingPreview(id: string) {
   return getPrisma().listing.findUnique({
     where: { id },

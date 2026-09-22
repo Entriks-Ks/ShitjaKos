@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Actor } from "@/lib/permissions";
-import { getPrisma } from "@/lib/prisma";
+import { addFavorite, removeFavorite } from "@/repositories/favorites";
 import { getPublicListingMarker } from "@/repositories/listings";
 
 export async function setFavorite(actor: Actor, listingId: string, saved: boolean) {
@@ -9,34 +9,15 @@ export async function setFavorite(actor: Actor, listingId: string, saved: boolea
     throw new Error("This account cannot save listings.");
   }
 
-  if (saved) {
-    const listing = await getPublicListingMarker(listingId);
-
-    if (!listing) {
-      throw new Error("This listing is no longer available.");
-    }
-
-    await getPrisma().favorite.upsert({
-      where: {
-        userId_listingId: {
-          userId: actor.id,
-          listingId,
-        },
-      },
-      create: {
-        userId: actor.id,
-        listingId,
-      },
-      update: {},
-    });
-
+  if (!saved) {
+    await removeFavorite(actor.id, listingId);
     return;
   }
 
-  await getPrisma().favorite.deleteMany({
-    where: {
-      userId: actor.id,
-      listingId,
-    },
-  });
+  const listing = await getPublicListingMarker(listingId);
+  if (!listing) {
+    throw new Error("This listing is no longer available.");
+  }
+
+  await addFavorite(actor.id, listingId);
 }

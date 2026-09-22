@@ -3,6 +3,9 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
+import { createPersonalProfile } from "@/repositories/users";
+// better-auth's adapter needs the client itself; every other query in this
+// file goes through the repository layer.
 import { getPrisma } from "./prisma";
 import { sendAuthMail } from "./mail";
 
@@ -46,9 +49,7 @@ function makeAuth() {
       user: {
         create: {
           after: async (user) => {
-            await getPrisma().personalProfile.create({
-              data: { userId: user.id, displayName: user.name },
-            });
+            await createPersonalProfile(user.id, user.name);
           },
         },
       },

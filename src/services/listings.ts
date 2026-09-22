@@ -1,29 +1,30 @@
 import "server-only";
-import { getPrisma } from "@/lib/prisma";
 import { listingInput, validateAttributes } from "@/lib/validations/listing";
 import { Actor, canManageListing, canTransition } from "@/lib/permissions";
-import { Prisma } from "@/generated/prisma/client";
-import { removeListingThumbnail } from "@/lib/listing-images";
-import { basename, join } from "node:path";
-import { unlink } from "node:fs/promises";
-
-
-
+import { removeListingImages } from "@/lib/listing-images";
+import { recordAudit } from "@/repositories/audit";
+import { withTransaction } from "@/repositories/transaction";
+import { findCategoryForListing } from "@/repositories/catalog";
+import { findBusinessMembership } from "@/repositories/businesses";
+import { findUser, findUserWithProfile } from "@/repositories/users";
+import {
+  createListing,
+  deleteListingIfVersion,
+  findListingOwnership,
+  findListingOwnershipWithMedia,
+  replaceListingAttributes,
+  updateListingIfVersion,
+  type ListingWriteData,
+} from "@/repositories/listings";
 
 export async function saveListing(actor: Actor, raw: unknown) {
   const v = listingInput.parse(raw);
   if (actor.suspendedAt) throw new Error("Your account is suspended.");
-  return getPrisma().$transaction(async (tx) => {
-    const user = await tx.user.findUniqueOrThrow({
-      where: { id: actor.id },
-      include: { profile: true },
-    });
+  return withTransaction(async (tx) => {
+    const user = await findUserWithProfile(tx, actor.id);
     if (user.suspendedAt || !user.emailVerified)
       throw new Error("Verify your email before creating a listing.");
-    const category = await tx.category.findUnique({
-      where: { id: v.categoryId },
-      include: { attributes: true, children: true },
-    });
+    const category = await findCategoryForListing(tx, v.categoryId);
     if (
       !category?.active ||
       category.ownerPortal !== "SHITJAKOS" ||
@@ -38,15 +39,12 @@ export async function saveListing(actor: Actor, raw: unknown) {
       if (!user.profile) throw new Error("Personal profile missing.");
       personalProfileId = user.profile.id;
     } else {
-      const membership = await tx.businessMembership.findUnique({
-        where: { userId_businessId: { userId: actor.id, businessId: v.owner } },
-        include: { business: true },
-      });
+      const membership = await findBusinessMembership(tx, actor.id, v.owner);
       if (!membership || membership.business.suspendedAt)
         throw new Error("You cannot list for this business.");
       businessId = membership.businessId;
     }
-    const data = {
+    const data: ListingWriteData = {
       title: v.title,
       description: v.description,
       categoryId: v.categoryId,
@@ -59,10 +57,7 @@ export async function saveListing(actor: Actor, raw: unknown) {
       contactPhone: v.phoneVisible ? v.contactPhone : null,
     };
     if (v.id) {
-      const existing = await tx.listing.findUniqueOrThrow({
-        where: { id: v.id },
-        include: { personalProfile: true, business: { include: { memberships: true } } },
-      });
+      const existing = await findListingOwnership(tx, v.id);
       if (!canManageListing(actor, existing))
         throw new Error("You cannot edit this listing.");
       if (
@@ -72,47 +67,33 @@ export async function saveListing(actor: Actor, raw: unknown) {
         throw new Error("Listing ownership cannot be changed.");
       if (["SOLD", "CLOSED"].includes(existing.status))
         throw new Error("Closed listings cannot be edited.");
-      const changed = await tx.listing.updateMany({
-        where: { id: v.id, version: v.version },
-        data: { ...data, version: { increment: 1 } },
-      });
-      if (!changed.count)
+      if (!(await updateListingIfVersion(tx, v.id, v.version, data)))
         throw new Error("This listing changed in another tab. Reload before editing.");
-      await tx.listingAttributeValue.deleteMany({ where: { listingId: v.id } });
-      await tx.listingAttributeValue.createMany({
-        data: attributes.map((a) => ({ ...a, listingId: v.id! })),
+      await replaceListingAttributes(tx, v.id, attributes);
+      await recordAudit(tx, actor.id, "listing.edited", v.id, {
+        version: v.version + 1,
       });
-      await audit(tx, actor.id, "listing.edited", v.id, { version: v.version + 1 });
       return v.id;
     }
-    const item = await tx.listing.create({
-      data: {
-        ...data,
-        moderationStatus: "APPROVED",
-        createdById: actor.id,
-        personalProfileId,
-        businessId,
-        attributes: { create: attributes },
-      },
+    const item = await createListing(tx, {
+      data,
+      attributes,
+      createdById: actor.id,
+      personalProfileId,
+      businessId,
     });
-    await audit(tx, actor.id, "listing.created", item.id, { owner: v.owner });
+    await recordAudit(tx, actor.id, "listing.created", item.id, { owner: v.owner });
     return item.id;
   });
 }
+
 export async function transitionListing(
   actor: Actor,
   id: string,
   target: "PUBLISHED" | "PAUSED" | "SOLD" | "CLOSED",
 ) {
-  return getPrisma().$transaction(async (tx) => {
-    const item = await tx.listing.findUniqueOrThrow({
-      where: { id },
-      include: {
-        personalProfile: true,
-        business: { include: { memberships: true } },
-        media: true,
-      },
-    });
+  return withTransaction(async (tx) => {
+    const item = await findListingOwnershipWithMedia(tx, id);
     if (!canManageListing(actor, item))
       throw new Error("You cannot change this listing.");
     if (!canTransition(item.status, target))
@@ -128,90 +109,41 @@ export async function transitionListing(
       )
         throw new Error("Your business must be approved before publishing.");
     }
-    const updated = await tx.listing.updateMany({
-      where: { id, version: item.version },
-      data: {
-        status: target,
-        version: { increment: 1 },
-        ...(target === "PUBLISHED"
-          ? {
+    const updated = await updateListingIfVersion(tx, id, item.version, {
+      status: target,
+      ...(target === "PUBLISHED"
+        ? {
             moderationStatus: "APPROVED",
             publishedAt: new Date(),
             expiresAt: new Date(Date.now() + 30 * 86400000),
           }
-          : {}),
-        ...(target === "SOLD" ? { soldAt: new Date() } : {}),
-      },
+        : {}),
+      ...(target === "SOLD" ? { soldAt: new Date() } : {}),
     });
-    if (!updated.count) throw new Error("Listing changed. Please retry.");
-    await audit(tx, actor.id, "listing.status", id, { from: item.status, to: target });
+    if (!updated) throw new Error("Listing changed. Please retry.");
+    await recordAudit(tx, actor.id, "listing.status", id, {
+      from: item.status,
+      to: target,
+    });
   });
 }
-export async function audit(
-  tx: Prisma.TransactionClient,
-  actorId: string,
-  action: string,
-  targetId: string,
-  detail: Prisma.InputJsonValue,
-) {
-  await tx.auditEvent.create({ data: { actorId, action, targetId, detail } });
-}
-
 
 export async function deleteListing(actor: Actor, id: string) {
-  const media = await getPrisma().$transaction(async (tx) => {
-    const user = await tx.user.findUniqueOrThrow({
-      where: { id: actor.id },
-    });
-
-    const listing = await tx.listing.findUniqueOrThrow({
-      where: { id },
-      include: {
-        personalProfile: true,
-        business: { include: { memberships: true } },
-        media: true,
-      },
-    });
+  const media = await withTransaction(async (tx) => {
+    const user = await findUser(tx, actor.id);
+    const listing = await findListingOwnershipWithMedia(tx, id);
 
     if (!canManageListing(user, listing)) {
       throw new Error("You cannot delete this listing.");
     }
-
-    const deleted = await tx.listing.deleteMany({
-      where: {
-        id,
-        version: listing.version,
-      },
-    });
-
-    if (deleted.count !== 1) {
+    if (!(await deleteListingIfVersion(tx, id, listing.version))) {
       throw new Error("The listing changed. Reload and try again.");
     }
 
-    await audit(tx, actor.id, "listing.deleted", id, {
-      title: listing.title,
-    });
-
+    await recordAudit(tx, actor.id, "listing.deleted", id, { title: listing.title });
     return listing.media;
   });
 
   // Remove files only after the database transaction succeeds.
-  for (const image of media) {
-    const key = image.storageKey;
-
-    if (basename(key) !== key || key.includes("\\")) {
-      console.error("Skipped an invalid image storage key.");
-      continue;
-    }
-
-    try {
-      await unlink(join(process.cwd(), ".uploads", key));
-    } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-        console.error("Could not remove a deleted listing image.", error);
-      }
-    }
-
-    await removeListingThumbnail(key);
-  }
+  await removeListingImages(media.map((image) => image.storageKey));
 }

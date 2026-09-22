@@ -1,6 +1,5 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { getPrisma } from "@/lib/prisma";
 import type { Prisma } from "@/generated/prisma/client";
 import { Actor, isStaff } from "@/lib/permissions";
 import {
@@ -8,6 +7,22 @@ import {
   fieldBatchInput,
   fieldInput,
 } from "@/lib/validations/admin-catalog";
+import { recordAudit } from "@/repositories/audit";
+import { withTransaction } from "@/repositories/transaction";
+import {
+  createAttributeDefinition,
+  createCategory,
+  deleteAttributeDefinition,
+  deleteCategoryWithFields,
+  findAttributeDefinition,
+  findCategory,
+  findCategoryByEnglishName,
+  findCategoryForDeletion,
+  findCategoryForFields,
+  findCategoryWithFamily,
+  nextCategorySortOrder,
+  setCategoriesActive,
+} from "@/repositories/admin-catalog";
 
 const locales = ["sq", "en", "de"] as const;
 
@@ -28,52 +43,33 @@ export async function createCatalogCategory(actor: Actor, raw: unknown) {
   const input = categoryInput.parse(raw);
   const parentId = input.parentId || null;
 
-  return getPrisma().$transaction(async (tx) => {
-    const parent = parentId
-      ? await tx.category.findUnique({ where: { id: parentId } })
-      : null;
+  return withTransaction(async (tx) => {
+    const parent = parentId ? await findCategory(tx, parentId) : null;
     if (parentId && (!parent || !parent.active || parent.ownerPortal !== "SHITJAKOS")) {
       throw new Error("Choose an active category group.");
     }
     if (parent?.parentId)
       throw new Error("Categories can only have one subcategory level.");
 
-    const duplicate = await tx.category.findFirst({
-      where: {
-        parentId,
-        ownerPortal: "SHITJAKOS",
-        translations: { some: { locale: "en", name: input.names.en } },
-      },
-    });
+    const duplicate = await findCategoryByEnglishName(tx, parentId, input.names.en);
     if (duplicate)
       throw new Error("A category with this English name already exists here.");
 
-    const position = await tx.category.aggregate({
-      where: { parentId, ownerPortal: "SHITJAKOS" },
-      _max: { sortOrder: true },
-    });
     const id = randomUUID();
-    const slug = `custom-${keyOf(input.names.en).replaceAll("_", "-")}-${id.slice(0, 8)}`;
-    await tx.category.create({
-      data: {
-        id,
-        slug,
-        parentId,
-        ownerPortal: "SHITJAKOS",
-        icon: parent?.icon ?? input.icon,
-        sortOrder: (position._max.sortOrder ?? -1) + 1,
-        translations: {
-          create: locales.map((locale) => ({ locale, name: input.names[locale] })),
-        },
-      },
+    await createCategory(tx, {
+      id,
+      slug: `custom-${keyOf(input.names.en).replaceAll("_", "-")}-${id.slice(0, 8)}`,
+      parentId,
+      icon: parent?.icon ?? input.icon,
+      sortOrder: await nextCategorySortOrder(tx, parentId),
+      translations: locales.map((locale) => ({
+        locale,
+        name: input.names[locale],
+      })),
     });
-    await tx.auditEvent.create({
-      data: {
-        actorId: actor.id,
-        action: "category.created",
-        targetId: id,
-        detail: { parentId, names: input.names },
-      },
+    await recordAudit(tx, actor.id, "category.created", id, {
+      parentId,
+      names: input.names,
     });
     return id;
   });
@@ -105,14 +101,7 @@ async function createFieldsInTransaction(
     throw new Error("Every field in the batch needs a different English name.");
   }
 
-  const category = await tx.category.findUnique({
-    where: { id: categoryId },
-    include: {
-      children: true,
-      attributes: true,
-      _count: { select: { listings: true } },
-    },
-  });
+  const category = await findCategoryForFields(tx, categoryId);
   if (
     !category?.active ||
     category.ownerPortal !== "SHITJAKOS" ||
@@ -144,31 +133,27 @@ async function createFieldsInTransaction(
   const ids: string[] = [];
   for (const { input, key, options } of fields) {
     const id = randomUUID();
-    await tx.attributeDefinition.create({
-      data: {
-        id,
-        categoryId,
-        key,
-        type: input.type,
-        required: input.required,
-        filterable: input.filterable,
-        unit: input.type === "NUMBER" ? input.unit || null : null,
-        min: input.type === "NUMBER" ? input.min : null,
-        max: input.type === "NUMBER" ? input.max : null,
-        options,
-        sortOrder: sortOrder++,
-        translations: {
-          create: locales.map((locale) => ({ locale, label: input.names[locale] })),
-        },
-      },
+    await createAttributeDefinition(tx, {
+      id,
+      categoryId,
+      key,
+      type: input.type,
+      required: input.required,
+      filterable: input.filterable,
+      unit: input.type === "NUMBER" ? input.unit || null : null,
+      min: input.type === "NUMBER" ? input.min : null,
+      max: input.type === "NUMBER" ? input.max : null,
+      options,
+      sortOrder: sortOrder++,
+      translations: locales.map((locale) => ({
+        locale,
+        label: input.names[locale],
+      })),
     });
-    await tx.auditEvent.create({
-      data: {
-        actorId: actor.id,
-        action: "category-field.created",
-        targetId: id,
-        detail: { categoryId, names: input.names, type: input.type },
-      },
+    await recordAudit(tx, actor.id, "category-field.created", id, {
+      categoryId,
+      names: input.names,
+      type: input.type,
     });
     ids.push(id);
   }
@@ -178,7 +163,7 @@ async function createFieldsInTransaction(
 export async function createCatalogFields(actor: Actor, raw: unknown) {
   if (!isStaff(actor)) throw new Error("Admin access is required.");
   const input = fieldBatchInput.parse(raw);
-  return getPrisma().$transaction((tx) =>
+  return withTransaction((tx) =>
     createFieldsInTransaction(tx, actor, input.categoryId, input.fields),
   );
 }
@@ -198,11 +183,8 @@ export async function setCatalogCategoryActive(
 ) {
   if (!isStaff(actor)) throw new Error("Admin access is required.");
   if (!categoryId) throw new Error("Choose a category.");
-  return getPrisma().$transaction(async (tx) => {
-    const category = await tx.category.findUnique({
-      where: { id: categoryId },
-      include: { parent: true, children: true },
-    });
+  return withTransaction(async (tx) => {
+    const category = await findCategoryWithFamily(tx, categoryId);
     if (!category || category.ownerPortal !== "SHITJAKOS") {
       throw new Error("Category not found.");
     }
@@ -213,18 +195,14 @@ export async function setCatalogCategoryActive(
       category.id,
       ...(!category.parentId ? category.children.map((c) => c.id) : []),
     ];
-    await tx.category.updateMany({
-      where: { id: { in: affectedIds }, ownerPortal: "SHITJAKOS" },
-      data: { active, version: { increment: 1 } },
-    });
-    await tx.auditEvent.create({
-      data: {
-        actorId: actor.id,
-        action: active ? "category.restored" : "category.archived",
-        targetId: category.id,
-        detail: { affectedIds },
-      },
-    });
+    await setCategoriesActive(tx, affectedIds, active);
+    await recordAudit(
+      tx,
+      actor.id,
+      active ? "category.restored" : "category.archived",
+      category.id,
+      { affectedIds },
+    );
     return affectedIds;
   });
 }
@@ -232,15 +210,8 @@ export async function setCatalogCategoryActive(
 export async function deleteCatalogCategory(actor: Actor, categoryId: string) {
   if (!isStaff(actor)) throw new Error("Admin access is required.");
   if (!categoryId) throw new Error("Choose a category.");
-  return getPrisma().$transaction(async (tx) => {
-    const category = await tx.category.findUnique({
-      where: { id: categoryId },
-      include: {
-        children: true,
-        attributes: { include: { _count: { select: { values: true } } } },
-        _count: { select: { listings: true } },
-      },
-    });
+  return withTransaction(async (tx) => {
+    const category = await findCategoryForDeletion(tx, categoryId);
     if (!category || category.ownerPortal !== "SHITJAKOS") {
       throw new Error("Category not found.");
     }
@@ -255,15 +226,10 @@ export async function deleteCatalogCategory(actor: Actor, categoryId: string) {
         "A field in this subcategory has saved answers. Archive the category instead.",
       );
     }
-    await tx.attributeDefinition.deleteMany({ where: { categoryId } });
-    await tx.category.delete({ where: { id: categoryId } });
-    await tx.auditEvent.create({
-      data: {
-        actorId: actor.id,
-        action: "category.deleted",
-        targetId: categoryId,
-        detail: { parentId: category.parentId, slug: category.slug },
-      },
+    await deleteCategoryWithFields(tx, categoryId);
+    await recordAudit(tx, actor.id, "category.deleted", categoryId, {
+      parentId: category.parentId,
+      slug: category.slug,
     });
   });
 }
@@ -271,28 +237,18 @@ export async function deleteCatalogCategory(actor: Actor, categoryId: string) {
 export async function deleteCatalogField(actor: Actor, fieldId: string) {
   if (!isStaff(actor)) throw new Error("Admin access is required.");
   if (!fieldId) throw new Error("Choose a field.");
-  return getPrisma().$transaction(async (tx) => {
-    const field = await tx.attributeDefinition.findUnique({
-      where: { id: fieldId },
-      include: {
-        category: true,
-        _count: { select: { values: true } },
-      },
-    });
+  return withTransaction(async (tx) => {
+    const field = await findAttributeDefinition(tx, fieldId);
     if (!field || field.category.ownerPortal !== "SHITJAKOS") {
       throw new Error("Field not found.");
     }
     if (field._count.values) {
       throw new Error("This field has saved listing answers and cannot be deleted.");
     }
-    await tx.attributeDefinition.delete({ where: { id: fieldId } });
-    await tx.auditEvent.create({
-      data: {
-        actorId: actor.id,
-        action: "category-field.deleted",
-        targetId: fieldId,
-        detail: { categoryId: field.categoryId, key: field.key },
-      },
+    await deleteAttributeDefinition(tx, fieldId);
+    await recordAudit(tx, actor.id, "category-field.deleted", fieldId, {
+      categoryId: field.categoryId,
+      key: field.key,
     });
   });
 }

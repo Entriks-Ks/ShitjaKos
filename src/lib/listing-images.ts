@@ -1,9 +1,11 @@
 import "server-only";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import sharp from "sharp";
 
+const uploadDirectory = () => join(process.cwd(), ".uploads");
+const uploadPath = (key: string) => join(uploadDirectory(), key);
 const thumbnailDirectory = () => join(process.cwd(), ".uploads", "thumbnails");
 const pending = new Map<string, Promise<Buffer>>();
 
@@ -44,4 +46,34 @@ export async function readListingImage(key: string, thumbnail: boolean) {
 
 export async function removeListingThumbnail(key: string) {
   await unlink(join(thumbnailDirectory(), key)).catch(() => {});
+}
+
+export async function storeListingImage(image: Buffer) {
+  const key = `${randomUUID()}.webp`;
+  await mkdir(uploadDirectory(), { recursive: true });
+  await writeFile(uploadPath(key), image);
+  return key;
+}
+
+export async function removeListingImage(key: string) {
+  await unlink(uploadPath(key)).catch(() => {});
+  await removeListingThumbnail(key);
+}
+
+export async function removeListingImages(keys: string[]) {
+  for (const key of keys) {
+    // Keys come from the database; one holding a separator would escape .uploads.
+    if (basename(key) !== key || key.includes("\\")) {
+      console.error("Skipped an invalid image storage key.");
+      continue;
+    }
+    try {
+      await unlink(uploadPath(key));
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.error("Could not remove a deleted listing image.", error);
+      }
+    }
+    await removeListingThumbnail(key);
+  }
 }

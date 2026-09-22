@@ -2,8 +2,19 @@ import "server-only";
 
 import { createHmac, randomInt, randomUUID, timingSafeEqual } from "node:crypto";
 import { hashPassword } from "better-auth/crypto";
-import { getPrisma } from "@/lib/prisma";
 import { sendAuthMail } from "@/lib/mail";
+import { withTransaction } from "@/repositories/transaction";
+import {
+  consumePendingRegistration,
+  countFailedAttempt,
+  createVerifiedUser,
+  deletePendingRegistration,
+  findPendingRegistration,
+  findPendingRegistrationByEmail,
+  findUserIdByEmail,
+  refreshRegistrationCode,
+  upsertPendingRegistration,
+} from "@/repositories/registration";
 
 const CODE_LIFETIME_MS = 5 * 60 * 1000;
 const RESEND_WAIT_MS = 60 * 1000;
@@ -28,17 +39,12 @@ async function mailCode(email: string, code: string) {
 }
 
 export async function startRegistration(name: string, email: string, password: string) {
-  const db = getPrisma();
   const normalizedEmail = email.trim().toLowerCase();
-  if (
-    await db.user.findUnique({ where: { email: normalizedEmail }, select: { id: true } })
-  ) {
+  if (await findUserIdByEmail(normalizedEmail)) {
     return { error: "An account with this email already exists. Sign in or verify it." };
   }
 
-  const existing = await db.pendingRegistration.findUnique({
-    where: { email: normalizedEmail },
-  });
+  const existing = await findPendingRegistrationByEmail(normalizedEmail);
   if (existing && Date.now() - existing.lastSentAt.getTime() < RESEND_WAIT_MS) {
     return { error: "Please wait a minute before requesting another code." };
   }
@@ -47,32 +53,19 @@ export async function startRegistration(name: string, email: string, password: s
   const code = newCode();
   const now = new Date();
   const passwordHash = await hashPassword(password);
-  await db.pendingRegistration.upsert({
-    where: { email: normalizedEmail },
-    create: {
-      id,
-      email: normalizedEmail,
-      name,
-      passwordHash,
-      codeHash: hashCode(id, code),
-      expiresAt: new Date(now.getTime() + CODE_LIFETIME_MS),
-      lastSentAt: now,
-    },
-    update: {
-      id,
-      name,
-      passwordHash,
-      codeHash: hashCode(id, code),
-      expiresAt: new Date(now.getTime() + CODE_LIFETIME_MS),
-      lastSentAt: now,
-      attempts: 0,
-    },
+  await upsertPendingRegistration(normalizedEmail, {
+    id,
+    name,
+    passwordHash,
+    codeHash: hashCode(id, code),
+    expiresAt: new Date(now.getTime() + CODE_LIFETIME_MS),
+    lastSentAt: now,
   });
 
   try {
     await mailCode(normalizedEmail, code);
   } catch {
-    await db.pendingRegistration.deleteMany({ where: { id } });
+    await deletePendingRegistration(id);
     return { error: "The verification email could not be sent. Please try again." };
   }
 
@@ -80,10 +73,7 @@ export async function startRegistration(name: string, email: string, password: s
 }
 
 export async function resendRegistrationCode(registrationId: string, email: string) {
-  const db = getPrisma();
-  const pending = await db.pendingRegistration.findUnique({
-    where: { id: registrationId },
-  });
+  const pending = await findPendingRegistration(registrationId);
   if (!pending || pending.email !== email.trim().toLowerCase()) {
     return { error: "Registration not found. Please create your account again." };
   }
@@ -93,14 +83,10 @@ export async function resendRegistrationCode(registrationId: string, email: stri
 
   const code = newCode();
   const now = new Date();
-  await db.pendingRegistration.update({
-    where: { id: registrationId },
-    data: {
-      codeHash: hashCode(registrationId, code),
-      expiresAt: new Date(now.getTime() + CODE_LIFETIME_MS),
-      lastSentAt: now,
-      attempts: 0,
-    },
+  await refreshRegistrationCode(registrationId, {
+    codeHash: hashCode(registrationId, code),
+    expiresAt: new Date(now.getTime() + CODE_LIFETIME_MS),
+    lastSentAt: now,
   });
   try {
     await mailCode(pending.email, code);
@@ -115,10 +101,7 @@ export async function finishRegistration(
   email: string,
   code: string,
 ) {
-  const db = getPrisma();
-  const pending = await db.pendingRegistration.findUnique({
-    where: { id: registrationId },
-  });
+  const pending = await findPendingRegistration(registrationId);
   if (!pending || pending.email !== email.trim().toLowerCase()) {
     return { error: "Registration not found. Please create your account again." };
   }
@@ -135,43 +118,24 @@ export async function finishRegistration(
     receivedHash.length !== storedHash.length ||
     !timingSafeEqual(receivedHash, storedHash)
   ) {
-    await db.pendingRegistration.updateMany({
-      where: { id: registrationId, attempts: { lt: MAX_ATTEMPTS } },
-      data: { attempts: { increment: 1 } },
-    });
+    await countFailedAttempt(registrationId, MAX_ATTEMPTS);
     return { error: "Incorrect code. Please try again." };
   }
 
   try {
-    await db.$transaction(async (tx) => {
-      const consumed = await tx.pendingRegistration.deleteMany({
-        where: {
-          id: registrationId,
-          email: pending.email,
-          codeHash: pending.codeHash,
-          expiresAt: { gt: new Date() },
-          attempts: { lt: MAX_ATTEMPTS },
-        },
+    await withTransaction(async (tx) => {
+      const consumed = await consumePendingRegistration(tx, {
+        id: registrationId,
+        email: pending.email,
+        codeHash: pending.codeHash,
+        maxAttempts: MAX_ATTEMPTS,
       });
-      if (consumed.count !== 1) throw new Error("Registration code was already used.");
+      if (!consumed) throw new Error("Registration code was already used.");
 
-      const userId = randomUUID();
-      await tx.user.create({
-        data: {
-          id: userId,
-          email: pending.email,
-          name: pending.name,
-          emailVerified: true,
-          accounts: {
-            create: {
-              id: randomUUID(),
-              accountId: userId,
-              providerId: "credential",
-              password: pending.passwordHash,
-            },
-          },
-          profile: { create: { displayName: pending.name } },
-        },
+      await createVerifiedUser(tx, {
+        email: pending.email,
+        name: pending.name,
+        passwordHash: pending.passwordHash,
       });
     });
     return { success: true };

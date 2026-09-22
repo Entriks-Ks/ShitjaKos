@@ -1,5 +1,13 @@
 import "server-only";
+import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
+
+export function findCategoryForListing(tx: Prisma.TransactionClient, id: string) {
+  return tx.category.findUnique({
+    where: { id },
+    include: { attributes: true, children: true },
+  });
+}
 
 export function getCategories() {
   return getPrisma().category.findMany({

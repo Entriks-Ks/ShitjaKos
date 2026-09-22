@@ -1,11 +1,20 @@
 import "server-only";
-import { mkdir, unlink, writeFile } from "node:fs/promises";
-import { join } from "node:path";
-import { randomUUID } from "node:crypto";
 import sharp from "sharp";
-import { getPrisma } from "@/lib/prisma";
 import { Actor, canManageListing } from "@/lib/permissions";
-import { removeListingThumbnail } from "@/lib/listing-images";
+import { removeListingImage, storeListingImage } from "@/lib/listing-images";
+import { recordAudit } from "@/repositories/audit";
+import { withTransaction } from "@/repositories/transaction";
+import {
+  findListingOwnershipWithOrderedMedia,
+  getListingOwnershipDetails,
+  updateListingIfVersion,
+} from "@/repositories/listings";
+import {
+  countListingMedia,
+  createListingMedia,
+  deleteListingMedia,
+  setListingMediaPosition,
+} from "@/repositories/media";
 
 export class MediaOperationError extends Error {
   constructor(
@@ -16,20 +25,12 @@ export class MediaOperationError extends Error {
   }
 }
 
-function uploadPath(key: string) {
-  return join(process.cwd(), ".uploads", key);
-}
-
 export async function addListingPhoto(
   actor: Actor,
   listingId: string,
   file: FormDataEntryValue | null,
 ) {
-  const db = getPrisma();
-  const listing = await db.listing.findUnique({
-    where: { id: listingId },
-    include: { personalProfile: true, business: { include: { memberships: true } } },
-  });
+  const listing = await getListingOwnershipDetails(listingId);
   if (
     !listing ||
     !canManageListing(actor, listing) ||
@@ -53,36 +54,29 @@ export async function addListingPhoto(
       .resize(1600, 1600, { fit: "inside", withoutEnlargement: true })
       .webp({ quality: 82 })
       .toBuffer();
-    key = `${randomUUID()}.webp`;
-    await mkdir(join(process.cwd(), ".uploads"), { recursive: true });
-    await writeFile(uploadPath(key), image);
+    const storageKey = await storeListingImage(image);
+    key = storageKey;
 
-    const media = await db.$transaction(async (tx) => {
-      const locked = await tx.listing.updateMany({
-        where: { id: listingId, version: listing.version },
-        data: { version: { increment: 1 } },
-      });
-      if (!locked.count)
+    const media = await withTransaction(async (tx) => {
+      if (!(await updateListingIfVersion(tx, listingId, listing.version)))
         throw new MediaOperationError("Listing changed. Retry the photo upload.", 409);
-      const count = await tx.listingMedia.count({ where: { listingId } });
+      const count = await countListingMedia(tx, listingId);
       if (count >= 12)
         throw new MediaOperationError("A listing can have at most 12 images.", 400);
-      const item = await tx.listingMedia.create({
-        data: { listingId, storageKey: key!, altText: listing.title, position: count },
+      const item = await createListingMedia(tx, {
+        listingId,
+        storageKey,
+        altText: listing.title,
+        position: count,
       });
-      await tx.auditEvent.create({
-        data: {
-          actorId: actor.id,
-          action: "listing.photo-added",
-          targetId: listingId,
-          detail: { mediaId: item.id },
-        },
+      await recordAudit(tx, actor.id, "listing.photo-added", listingId, {
+        mediaId: item.id,
       });
       return item;
     });
     return media.id;
   } catch (error) {
-    if (key) await unlink(uploadPath(key)).catch(() => {});
+    if (key) await removeListingImage(key);
     throw error;
   }
 }
@@ -92,15 +86,7 @@ export async function deleteListingPhoto(
   listingId: string,
   mediaId: string,
 ) {
-  const db = getPrisma();
-  const listing = await db.listing.findUnique({
-    where: { id: listingId },
-    include: {
-      personalProfile: true,
-      business: { include: { memberships: true } },
-      media: { orderBy: { position: "asc" } },
-    },
-  });
+  const listing = await findListingOwnershipWithOrderedMedia(listingId);
   if (
     !listing ||
     !canManageListing(actor, listing) ||
@@ -112,32 +98,20 @@ export async function deleteListingPhoto(
   if (!media) throw new MediaOperationError("Photo not found.", 404);
 
   try {
-    await db.$transaction(async (tx) => {
-      const changed = await tx.listing.updateMany({
-        where: { id: listingId, version: listing.version },
-        data: { version: { increment: 1 } },
-      });
-      if (!changed.count)
+    await withTransaction(async (tx) => {
+      if (!(await updateListingIfVersion(tx, listingId, listing.version)))
         throw new MediaOperationError("Listing changed. Reload and retry.", 409);
-      await tx.listingMedia.delete({ where: { id: mediaId } });
+      await deleteListingMedia(tx, mediaId);
       for (const [position, item] of listing.media
         .filter((item) => item.id !== mediaId)
         .entries()) {
-        await tx.listingMedia.update({ where: { id: item.id }, data: { position } });
+        await setListingMediaPosition(tx, item.id, position);
       }
-      await tx.auditEvent.create({
-        data: {
-          actorId: actor.id,
-          action: "listing.photo-deleted",
-          targetId: listingId,
-          detail: { mediaId },
-        },
-      });
+      await recordAudit(tx, actor.id, "listing.photo-deleted", listingId, { mediaId });
     });
   } catch (error) {
     if (error instanceof MediaOperationError) throw error;
     throw new MediaOperationError("Listing changed. Reload and retry.", 409);
   }
-  await unlink(uploadPath(media.storageKey)).catch(() => {});
-  await removeListingThumbnail(media.storageKey);
+  await removeListingImage(media.storageKey);
 }

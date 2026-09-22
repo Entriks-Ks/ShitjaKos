@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getAuth } from "./auth";
-import { getPrisma } from "./prisma";
+import { findActorById, findUserWithMemberships } from "@/repositories/users";
 const getSession = cache(async () => {
   if (!process.env.DATABASE_URL || !process.env.BETTER_AUTH_SECRET) return null;
   return getAuth().api.getSession({ headers: await headers() });
@@ -13,10 +13,7 @@ const getSession = cache(async () => {
 export const currentActor = cache(async () => {
   const session = await getSession();
   if (!session) return null;
-  const user = await getPrisma().user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, role: true, suspendedAt: true },
-  });
+  const user = await findActorById(session.user.id);
   return user && !user.suspendedAt ? user : null;
 });
 // React cache shares this work only within the current server render/request.
@@ -24,13 +21,7 @@ export const currentActor = cache(async () => {
 export const currentUser = cache(async () => {
   const session = await getSession();
   if (!session) return null;
-  const user = await getPrisma().user.findUnique({
-    where: { id: session.user.id },
-    include: {
-      profile: true,
-      memberships: { include: { business: { include: { shop: true } } } },
-    },
-  });
+  const user = await findUserWithMemberships(session.user.id);
   return user && !user.suspendedAt ? user : null;
 });
 export async function requireUser() {
