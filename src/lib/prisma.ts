@@ -1,5 +1,5 @@
 import "server-only";
-import { PrismaPg } from "@prisma/adapter-pg";
+import { SerialPrismaPg } from "@/lib/serial-prisma-pg";
 import { PrismaClient } from "@/generated/prisma/client";
 import { databaseEnvSchema } from "@/lib/validations/env";
 
@@ -21,7 +21,7 @@ export function getPrisma(): PrismaClient {
     );
   }
 
-  const adapter = new PrismaPg({
+  const adapter = new SerialPrismaPg({
     connectionString: result.data.DATABASE_URL,
     max: 5,
     idleTimeoutMillis: 30000,
