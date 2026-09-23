@@ -1,6 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from "react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  MoreHorizontal,
+  Send,
+  Package,
+  Check,
+} from "lucide-react";
+import styles from "./messaging.module.css";
 import Link from "@/components/navigation-link";
 import type { ChatMessage, ChatView } from "@/types/messaging";
 import {
@@ -27,8 +36,10 @@ function ReportMessage({
   const [pending, startTransition] = useTransition();
   const locked = useRef(false);
   return (
-    <details className="mt-2 text-xs">
-      <summary className="cursor-pointer">Report message</summary>
+    <details className={styles.report}>
+      <summary aria-label="Message options">
+        <MoreHorizontal size={16} aria-hidden="true" />
+      </summary>
       <form
         className="mt-2 space-y-2"
         onSubmit={(event) => {
@@ -253,62 +264,88 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
     );
 
   return (
-    <section className="workspace-card space-y-4">
-      <header className="flex flex-wrap justify-between gap-3">
-        <div>
-          <Link href="/dashboard/messages" className="text-sm">
-            ← Messages
-          </Link>
-          <h1 className="mt-2">{view.otherName}</h1>
-          <p className="muted">{view.title}</p>
-          {view.listingId ? (
-            <Link className="text-sm" href={"/listings/" + view.listingId}>
-              View listing
-            </Link>
-          ) : (
-            <p className="muted">Listing removed. Conversation history retained.</p>
-          )}
-        </div>
-        <button
-          className="btn btn-outline"
-          disabled={blocking}
-          onClick={() => {
-            if (blockLock.current) return;
-            blockLock.current = true;
-            startBlock(async () => {
-              try {
-                const result = await blockConversationAction({
-                  conversationId: initial.id,
-                  blocked: !view.blockedByMe,
-                });
-                if (!result.ok) {
-                  setError(result.error);
-                  return;
-                }
-                const response = await fetch(
-                  "/api/v1/conversations/" +
-                    initial.id +
-                    "/messages?after=" +
-                    latest.current,
-                  { cache: "no-store" },
-                );
-                if (!response.ok) throw new Error("refresh");
-                accept(await response.json());
-              } catch {
-                setError("Could not refresh the conversation. Updates will retry.");
-              } finally {
-                blockLock.current = false;
-              }
-            });
-          }}
+    <section className={styles.thread} aria-label="Conversation">
+      <header className={styles.chatHeader}>
+        <Link
+          href="/dashboard/messages"
+          className={styles.iconButton}
+          aria-label="Back to messages"
         >
-          {view.blockedByMe ? "Unblock conversation" : "Block conversation"}
-        </button>
+          <ArrowLeft size={20} />
+        </Link>
+        <span className={styles.avatar} aria-hidden="true">
+          {view.otherName.trim().slice(0, 2).toUpperCase() || "?"}
+        </span>
+        <div className={styles.identity}>
+          <h1>{view.otherName}</h1>
+          <p>
+            {view.side === "BUYER"
+              ? "Your conversation with the seller"
+              : "Your conversation with the buyer"}
+          </p>
+        </div>
+        <details className={styles.options}>
+          <summary className={styles.iconButton} aria-label="Conversation options">
+            <MoreHorizontal size={22} />
+          </summary>
+          <button
+            className="btn btn-outline"
+            disabled={blocking}
+            onClick={() => {
+              if (blockLock.current) return;
+              blockLock.current = true;
+              startBlock(async () => {
+                try {
+                  const result = await blockConversationAction({
+                    conversationId: initial.id,
+                    blocked: !view.blockedByMe,
+                  });
+                  if (!result.ok) {
+                    setError(result.error);
+                    return;
+                  }
+                  const response = await fetch(
+                    "/api/v1/conversations/" +
+                      initial.id +
+                      "/messages?after=" +
+                      latest.current,
+                    { cache: "no-store" },
+                  );
+                  if (!response.ok) throw new Error("refresh");
+                  accept(await response.json());
+                } catch {
+                  setError("Could not refresh the conversation. Updates will retry.");
+                } finally {
+                  blockLock.current = false;
+                }
+              });
+            }}
+          >
+            {view.blockedByMe ? "Unblock conversation" : "Block conversation"}
+          </button>
+        </details>
       </header>
+      <div className={styles.listingBar}>
+        <Package size={20} aria-hidden="true" />
+        <div>
+          <span>About this listing</span>
+          <strong>{view.title}</strong>
+        </div>
+        {view.listingId ? (
+          <Link href={"/listings/" + view.listingId}>
+            View listing <ArrowUpRight size={16} />
+          </Link>
+        ) : (
+          <span>Listing removed</span>
+        )}
+      </div>
 
       <div
         ref={container}
-        className="h-[50vh] min-h-64 overflow-y-auto space-y-4 rounded-xl bg-stone-50 p-4"
+        className={styles.messages}
+        role="region"
+        aria-label="Message history"
+        tabIndex={0}
         onScroll={() => {
           const node = container.current!;
           atBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 50;
@@ -343,33 +380,46 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
             Load older messages
           </button>
         )}
-        {messages.map((message) => (
-          <article
-            key={message.id}
-            className={
-              "max-w-[90%] rounded-2xl p-3 " +
-              (message.mine
-                ? "ml-auto bg-emerald-100"
-                : "bg-white border border-stone-200")
-            }
-          >
-            <p className="text-xs font-medium mb-1">
-              {message.mine ? "You" : message.side === "SELLER" ? "Seller" : "Buyer"}
-            </p>
-            <p className="whitespace-pre-wrap break-words text-sm">{message.body}</p>
-            <time className="muted text-xs" dateTime={message.createdAt}>
-              {message.createdAt.slice(0, 16).replace("T", " ")} UTC
-            </time>
-            {message.side !== view.side && (
-              <ReportMessage conversationId={initial.id} messageId={message.id} />
+        {messages.map((message, index) => (
+          <Fragment key={message.id}>
+            {(index === 0 ||
+              message.createdAt.slice(0, 10) !==
+                messages[index - 1].createdAt.slice(0, 10)) && (
+              <div className={styles.dateDivider}>
+                <time dateTime={message.createdAt.slice(0, 10)}>
+                  {new Intl.DateTimeFormat("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    timeZone: "UTC",
+                  }).format(new Date(message.createdAt))}
+                </time>
+              </div>
             )}
-          </article>
+            <article
+              className={`${styles.bubble} ${message.mine ? styles.mine : styles.theirs}`}
+            >
+              <p className="text-xs font-medium mb-1">
+                {message.mine ? "You" : message.side === "SELLER" ? "Seller" : "Buyer"}
+              </p>
+              <p className="whitespace-pre-wrap break-words text-sm">{message.body}</p>
+              <div className={styles.messageMeta}>
+                <time dateTime={message.createdAt} title={message.createdAt}>
+                  {message.createdAt.slice(11, 16)} UTC
+                </time>
+                {message.mine && <Check size={13} aria-label="Sent" />}
+                {message.side !== view.side && (
+                  <ReportMessage conversationId={initial.id} messageId={message.id} />
+                )}
+              </div>
+            </article>
+          </Fragment>
         ))}
         {request &&
           !messages.some(
             (message) => message.mine && message.clientId === request.clientId,
           ) && (
-            <article className="ml-auto max-w-[90%] rounded-2xl bg-emerald-50 p-3 opacity-75">
+            <article className={`${styles.bubble} ${styles.mine} ${styles.pending}`}>
               <p className="whitespace-pre-wrap break-words text-sm">{request.body}</p>
               <p role="status" className="text-xs">
                 {request.failed ? "Not confirmed — retry below" : "Sending…"}
@@ -390,19 +440,19 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
         </p>
       )}
       <form
-        className="space-y-3"
+        className={styles.composer}
         onSubmit={(event) => {
           event.preventDefault();
           send();
         }}
       >
-        <div className="flex flex-wrap gap-2" aria-label="Quick replies">
+        <div className={styles.quickReplies} aria-label="Quick replies">
           {["Is this still available?", "When can I collect it?", "Thank you!"].map(
             (text) => (
               <button
                 key={text}
                 type="button"
-                className="btn btn-outline"
+                className={styles.quickReply}
                 disabled={!!request || !view.canSend}
                 onClick={() => setBody(text)}
               >
@@ -411,36 +461,40 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
             ),
           )}
         </div>
-        <label className="field">
-          Your message
-          <textarea
-            value={body}
-            onChange={(event) => setBody(event.target.value)}
-            rows={3}
-            required
-            maxLength={4000}
-            disabled={!!request || !view.canSend}
-          />
-        </label>
-        <div className="flex gap-3">
-          <button
-            className="btn btn-primary"
-            disabled={sending || !view.canSend || (!request && !body.trim())}
-          >
-            {sending ? "Sending…" : request?.failed ? "Retry message" : "Send"}
-          </button>
-          {request?.failed && (
+        <div className={styles.composeBox}>
+          <label className={styles.messageInput}>
+            <span className="sr-only">Your message</span>
+            <textarea
+              placeholder="Write a message…"
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              rows={2}
+              required
+              maxLength={4000}
+              disabled={!!request || !view.canSend}
+            />
+          </label>
+          <div className={styles.sendActions}>
             <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => setRequest(null)}
+              className={styles.sendButton}
+              disabled={sending || !view.canSend || (!request && !body.trim())}
             >
-              Edit draft
+              <Send size={17} aria-hidden="true" />
+              {sending ? "Sending…" : request?.failed ? "Retry message" : "Send"}
             </button>
-          )}
+            {request?.failed && (
+              <button
+                type="button"
+                className="btn btn-outline"
+                onClick={() => setRequest(null)}
+              >
+                Edit draft
+              </button>
+            )}
+          </div>
         </div>
-        <p className="muted text-xs">
-          Text only. Do not send passwords, verification codes, or payment credentials.
+        <p className={styles.composeHint}>
+          Keep your conversations here. Never share passwords or verification codes.
         </p>
       </form>
     </section>

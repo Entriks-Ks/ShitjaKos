@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "@/components/navigation-link";
 import { notFound } from "next/navigation";
-import { MapPin, ShieldCheck, Phone, Store } from "lucide-react";
+import { MapPin, ShieldCheck, Phone, Store, Heart, MessageCircle } from "lucide-react";
+import messageStyles from "@/components/messaging/message-seller.module.css";
 import { Header } from "@/components/header";
 import { ListingCard } from "@/components/listing-card";
 import { FavoriteButton } from "@/components/favorite-button";
@@ -15,6 +16,7 @@ import {
 } from "@/repositories/listings";
 import { localeOf, money, translated } from "@/lib/catalog";
 import { MessageSeller } from "@/components/messaging/message-seller";
+import { ShareListingButton } from "@/components/share-listing-button";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false, follow: true } };
@@ -157,14 +159,40 @@ export default async function Page({
                   Manage your listing
                 </Link>
               )}
-              {visible &&
-                (user ? (
-                  <FavoriteButton listingId={id} initialSaved={favorites.has(id)} />
-                ) : (
-                  <Link href="/login" className="btn btn-outline mt-6 w-full">
-                    Sign in to save this listing
-                  </Link>
-                ))}
+              {visible && (
+                <div className={messageStyles.actions}>
+                  {user ? (
+                    <FavoriteButton
+                      listingId={id}
+                      initialSaved={favorites.has(id)}
+                      buttonClassName="btn btn-outline w-full"
+                    />
+                  ) : (
+                    <Link
+                      href="/login"
+                      className="btn btn-outline w-full"
+                      aria-label="Sign in to save this listing"
+                    >
+                      <Heart size={18} aria-hidden="true" />
+                      Save listing
+                    </Link>
+                  )}
+                  {!owner &&
+                    (user ? (
+                      <MessageSeller listingId={id} listingTitle={item.title} />
+                    ) : (
+                      <Link
+                        href="/login"
+                        className="btn btn-outline w-full"
+                        aria-label="Sign in to message the seller"
+                      >
+                        <MessageCircle size={18} aria-hidden="true" />
+                        Message seller
+                      </Link>
+                    ))}
+                  <ShareListingButton title={item.title} />
+                </div>
+              )}
             </div>
             <section className="panel mt-5">
               <div className="flex gap-3 items-center">
@@ -204,15 +232,6 @@ export default async function Page({
                   The seller has not shared a public phone number.
                 </p>
               )}
-              {visible &&
-                !owner &&
-                (user ? (
-                  <MessageSeller listingId={id} />
-                ) : (
-                  <Link href="/login" className="btn btn-primary w-full mt-5">
-                    Sign in to message the seller
-                  </Link>
-                ))}
             </section>
             <div className="notice mt-5">
               <strong>Meet safely.</strong>

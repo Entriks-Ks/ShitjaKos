@@ -9,10 +9,12 @@ export function FavoriteButton({
   listingId,
   initialSaved,
   compact = false,
+  buttonClassName,
 }: {
   listingId: string;
   initialSaved: boolean;
   compact?: boolean;
+  buttonClassName?: string;
 }) {
   const [saved, setSaved] = useState(initialSaved);
   const [error, setError] = useState("");
@@ -48,7 +50,11 @@ export function FavoriteButton({
     <div className={compact ? "card-favorite-control" : undefined}>
       <button
         type="button"
-        className={compact ? "card-favorite-button" : "btn btn-outline mt-6 w-full"}
+        className={
+          compact
+            ? "card-favorite-button"
+            : (buttonClassName ?? "btn btn-outline mt-6 w-full")
+        }
         aria-pressed={saved}
         aria-busy={pending}
         aria-label={
