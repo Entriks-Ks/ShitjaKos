@@ -2,7 +2,7 @@ import { Search } from "lucide-react";
 import { SearchForm } from "@/components/search-form";
 import { SearchCategoryMenu } from "@/components/search-category-menu";
 import { SearchCityMenu } from "@/components/search-city-menu";
-import { cities, copy, Locale, translated } from "@/lib/catalog";
+import { copy, Locale, translated } from "@/lib/catalog";
 import type { getCategories } from "@/repositories/catalog";
 
 type Category = Awaited<ReturnType<typeof getCategories>>[number];
@@ -19,6 +19,7 @@ export function ListingSearchBar({
     q?: string;
     category?: string;
     city?: string;
+    country?: string;
   };
   className?: string;
 }) {
@@ -55,12 +56,14 @@ export function ListingSearchBar({
       <div className="searchbar-field searchbar-city">
         <span className="searchbar-field-label">{t.location}</span>
         <SearchCityMenu
+          locale={locale}
           label={t.location}
-          allLabel={t.allCities}
+          allInCountry={t.allInCountry}
+          changeCountryLabel={t.changeCountry}
           searchLabel={t.citySearch}
           emptyLabel={t.cityEmpty}
-          defaultValue={params.city ?? ""}
-          cities={cities}
+          defaultCity={params.city ?? ""}
+          defaultCountry={params.country ?? ""}
         />
       </div>
       <button className="searchbar-submit" type="submit">

@@ -1,4 +1,4 @@
-export const cities = [
+const kosovoCities = [
   "Prishtina",
   "Prizren",
   "Ferizaj",
@@ -8,8 +8,86 @@ export const cities = [
   "Mitrovica",
   "Vushtrri",
   "Podujeva",
+  "Drenas",
   "Other",
 ] as const;
+const albaniaCities = [
+  "Tirana",
+  "Durres",
+  "Vlore",
+  "Shkoder",
+  "Elbasan",
+  "Fier",
+  "Korce",
+  "Berat",
+] as const;
+const macedoniaCities = [
+  "Skopje",
+  "Tetovo",
+  "Gostivar",
+  "Kumanovo",
+  "Bitola",
+  "Ohrid",
+  "Prilep",
+  "Struga",
+] as const;
+const montenegroCities = [
+  "Podgorica",
+  "Ulcinj",
+  "Bar",
+  "Budva",
+  "Niksic",
+  "Herceg Novi",
+] as const;
+
+export const countries = [
+  {
+    id: "xk",
+    names: { sq: "Kosovë", en: "Kosovo", de: "Kosovo" },
+    cities: kosovoCities,
+  },
+  {
+    id: "al",
+    names: { sq: "Shqipëri", en: "Albania", de: "Albanien" },
+    cities: albaniaCities,
+  },
+  {
+    id: "mk",
+    names: { sq: "Maqedonia e Veriut", en: "North Macedonia", de: "Nordmazedonien" },
+    cities: macedoniaCities,
+  },
+  {
+    id: "me",
+    names: { sq: "Mali i Zi", en: "Montenegro", de: "Montenegro" },
+    cities: montenegroCities,
+  },
+] as const;
+
+export type CountryId = (typeof countries)[number]["id"];
+export const cities = [
+  ...kosovoCities,
+  ...albaniaCities,
+  ...macedoniaCities,
+  ...montenegroCities,
+] as const;
+
+export function countryById(id?: string) {
+  return countries.find((country) => country.id === id);
+}
+
+export function countryForCity(city?: string) {
+  if (!city) return undefined;
+  return countries.find((country) =>
+    (country.cities as readonly string[]).includes(city),
+  );
+}
+
+export function countryName(
+  country: (typeof countries)[number],
+  locale: string,
+) {
+  return country.names[locale as Locale] ?? country.names.en;
+}
 export const locales = ["sq", "en", "de"] as const;
 export type Locale = (typeof locales)[number];
 export function localeOf(value?: string): Locale {
@@ -43,7 +121,9 @@ export const copy = {
     private: "Privat",
     business: "Biznes",
     verified: "Biznes i verifikuar",
-    location: "Qyteti",
+    location: "Vendi",
+    changeCountry: "Ndrysho vendin",
+    allInCountry: "Gjithë {country}",
     query: "Çfarë po kërkon?",
     categoryField: "Kategoritë",
     allCategories: "Të gjitha kategoritë",
@@ -85,7 +165,9 @@ export const copy = {
     private: "Private",
     business: "Business",
     verified: "Verified business",
-    location: "City",
+    location: "Location",
+    changeCountry: "Change country",
+    allInCountry: "All of {country}",
     query: "What are you looking for?",
     categoryField: "Categories",
     allCategories: "All categories",
@@ -127,7 +209,9 @@ export const copy = {
     private: "Privat",
     business: "Gewerblich",
     verified: "Geprüftes Gewerbe",
-    location: "Stadt",
+    location: "Ort",
+    changeCountry: "Land ändern",
+    allInCountry: "Ganz {country}",
     query: "Was suchst du?",
     categoryField: "Kategorien",
     allCategories: "Alle Kategorien",

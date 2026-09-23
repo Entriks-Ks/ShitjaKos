@@ -1,7 +1,8 @@
 "use client";
 import { useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { cities, translated, optionLabel } from "@/lib/catalog";
+import { translated, optionLabel } from "@/lib/catalog";
+import { CountryCityFields } from "@/components/country-city-fields";
 import { saveListingAction, statusAction } from "@/actions/listings";
 import type { getCategories } from "@/repositories/catalog";
 import type { ListingInput } from "@/lib/validations/listing";
@@ -206,7 +207,7 @@ export function ListingForm({
             </div>
           </div>
         )}
-        <div className="grid sm:grid-cols-3 gap-5">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <label className="field">
             Price / wanted budget (€)
             <input
@@ -229,14 +230,7 @@ export function ListingForm({
               ))}
             </select>
           </label>
-          <label className="field">
-            City
-            <select name="city" defaultValue={initial?.city ?? "Prishtina"}>
-              {cities.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-          </label>
+          <CountryCityFields defaultCity={initial?.city ?? "Prishtina"} />
         </div>
         <label className="flex gap-2 text-sm items-center">
           <input type="checkbox" name="negotiable" defaultChecked={initial?.negotiable} />

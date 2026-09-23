@@ -4,7 +4,7 @@ import { Suspense, type ReactNode } from "react";
 import Link from "@/components/navigation-link";
 import { Headphones, MapPin, ShieldCheck, Store } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { cities, copy, localeOf } from "@/lib/catalog";
+import { copy, localeOf } from "@/lib/catalog";
 
 const footerCopy = {
   sq: {
@@ -73,7 +73,12 @@ function FooterInner() {
   const t = copy[locale];
   const f = footerCopy[locale];
   const lang = `?lang=${locale}`;
-  const cityLinks = cities.filter((city) => city !== "Other").slice(0, 6);
+  const cityLinks = [
+    { city: "Prishtina", country: "xk", name: "Prishtina" },
+    { city: "Tirana", country: "al", name: "Tirana" },
+    { city: "Skopje", country: "mk", name: locale === "sq" ? "Shkupi" : "Skopje" },
+    { city: "Podgorica", country: "me", name: "Podgorica" },
+  ];
 
   return (
     <footer className="site-footer">
@@ -117,12 +122,12 @@ function FooterInner() {
             <Link href="/dashboard">{t.account}</Link>
           </FooterColumn>
           <FooterColumn title={f.citiesTitle}>
-            {cityLinks.map((city) => (
+            {cityLinks.map((place) => (
               <Link
-                key={city}
-                href={`/search?city=${encodeURIComponent(city)}&lang=${locale}`}
+                key={place.city}
+                href={`/search?city=${encodeURIComponent(place.city)}&country=${place.country}&lang=${locale}`}
               >
-                {city}
+                {place.name}
               </Link>
             ))}
           </FooterColumn>

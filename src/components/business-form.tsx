@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { businessAction, updateBusinessAction } from "@/actions/businesses";
 import { cities } from "@/lib/catalog";
+import { CountryCityFields } from "@/components/country-city-fields";
 
 type BusinessInitial = {
   id: string;
@@ -75,14 +76,7 @@ export function BusinessForm({ initial }: { initial?: BusinessInitial }) {
           Public phone
           <input name="phone" type="tel" required defaultValue={initial?.phone ?? ""} />
         </label>
-        <label className="field">
-          City
-          <select name="city" defaultValue={initial?.city ?? cities[0]}>
-            {cities.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
-          </select>
-        </label>
+        <CountryCityFields defaultCity={initial?.city ?? cities[0]} />
         <label className="field">
           Shop address
           <input name="address" maxLength={200} defaultValue={initial?.address ?? ""} />

@@ -4,7 +4,14 @@ import { useEffect, useId, useRef, useState } from "react";
 import Link from "@/components/navigation-link";
 import { SlidersHorizontal, X } from "lucide-react";
 import { SearchForm } from "@/components/search-form";
-import { cities, copy, Locale, optionLabel, translated } from "@/lib/catalog";
+import {
+  copy,
+  countries,
+  countryName,
+  Locale,
+  optionLabel,
+  translated,
+} from "@/lib/catalog";
 import { SearchParams } from "@/lib/search-navigation";
 import type { getCategories } from "@/repositories/catalog";
 
@@ -127,6 +134,7 @@ export function SearchFilters({
             <input type="hidden" name="lang" value={locale} />
             {p.q && <input type="hidden" name="q" value={p.q} />}
             {p.category && <input type="hidden" name="category" value={p.category} />}
+            {p.country && <input type="hidden" name="country" value={p.country} />}
 
             <div className="filter-dialog-grid">
               <label className="field">
@@ -141,9 +149,13 @@ export function SearchFilters({
               <label className="field">
                 {t.location}
                 <select name="city" defaultValue={p.city ?? ""}>
-                  <option value="">Gjithë Kosova</option>
-                  {cities.map((city) => (
-                    <option key={city}>{city}</option>
+                  <option value="">{t.allCities}</option>
+                  {countries.map((country) => (
+                    <optgroup key={country.id} label={countryName(country, locale)}>
+                      {country.cities.map((city) => (
+                        <option key={city}>{city}</option>
+                      ))}
+                    </optgroup>
                   ))}
                 </select>
               </label>

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Check, Save } from "lucide-react";
-import { cities } from "@/lib/catalog";
+import { CountryCityFields } from "@/components/country-city-fields";
 import { ProfileInput } from "@/lib/validations/profile";
 import { updateProfileAction } from "@/app/(account)/dashboard/profile/actions";
 
@@ -79,14 +79,10 @@ export function ProfileForm({ initial }: { initial: ProfileInput }) {
             Private account detail. Choose phone visibility separately on each listing.
           </small>
         </label>
-        <label className="field">
-          City
-          <select value={values.city} onChange={(e) => change("city", e.target.value)}>
-            {cities.map((city) => (
-              <option key={city}>{city}</option>
-            ))}
-          </select>
-        </label>
+        <CountryCityFields
+          value={values.city}
+          onCityChange={(city) => change("city", city)}
+        />
         <label className="field sm:col-span-2">
           About you
           <textarea

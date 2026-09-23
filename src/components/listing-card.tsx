@@ -2,7 +2,7 @@ import Link from "@/components/navigation-link";
 import Image from "next/image";
 import { MapPin, Package, Heart } from "lucide-react";
 import { FavoriteButton } from "@/components/favorite-button";
-import { Locale, money, translated } from "@/lib/catalog";
+import { countryForCity, countryName, Locale, money, translated } from "@/lib/catalog";
 export type CardListing = {
   id: string;
   title: string;
@@ -26,6 +26,8 @@ export function ListingCard({
 }) {
   const kind =
     item.intent === "WANTED" ? "Kërkohet · Wanted" : item.business ? "Biznes" : "Privat";
+  const country = countryForCity(item.city);
+  const place = country ? `${item.city}, ${countryName(country, locale)}` : item.city;
   return (
     <article className="listing-card">
       <Link className="listing-card-main" href={`/listings/${item.id}?lang=${locale}`}>
@@ -52,7 +54,7 @@ export function ListingCard({
           <p className="listing-card-price">{money(item.priceCents)}</p>
           <p className="listing-card-city">
             <MapPin size={13} />
-            {item.city}
+            {place}
           </p>
         </div>
       </Link>

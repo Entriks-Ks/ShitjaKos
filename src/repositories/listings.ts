@@ -1,6 +1,7 @@
 import "server-only";
 import { getPrisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
+import { countryById } from "@/lib/catalog";
 
 export function publicWhere(): Prisma.ListingWhereInput {
   return {
@@ -214,6 +215,10 @@ export async function searchListings(
       OR: [{ categoryId: params.category }, { category: { parentId: params.category } }],
     });
   if (params.city) filters.push({ city: params.city });
+  else if (params.country) {
+    const country = countryById(params.country);
+    if (country) filters.push({ city: { in: [...country.cities] } });
+  }
   if (params.seller === "private") filters.push({ personalProfileId: { not: null } });
   if (params.seller === "business" || params.seller === "verified")
     filters.push({ businessId: { not: null } });
