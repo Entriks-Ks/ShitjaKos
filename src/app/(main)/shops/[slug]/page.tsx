@@ -71,9 +71,7 @@ export default async function Page({
             <ShieldCheck size={14} /> BUSINESS REVIEWED
           </p>
           <h1>{shop.business.publicName}</h1>
-          {shop.tagline.trim() ? (
-            <p className="muted max-w-2xl">{shop.tagline}</p>
-          ) : null}
+          {shop.tagline.trim() ? <p className="muted max-w-2xl">{shop.tagline}</p> : null}
           <p className="muted max-w-2xl">{shop.business.description}</p>
           <div className="flex flex-wrap gap-5 mt-5 text-sm">
             <span className="flex items-center gap-1">
@@ -112,7 +110,9 @@ export default async function Page({
               <ShopFact
                 icon={Mail}
                 label="Email"
-                value={<a href={`mailto:${shop.business.email}`}>{shop.business.email}</a>}
+                value={
+                  <a href={`mailto:${shop.business.email}`}>{shop.business.email}</a>
+                }
               />
               <ShopFact
                 icon={CalendarDays}

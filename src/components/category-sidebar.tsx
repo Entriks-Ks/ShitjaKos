@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "@/components/navigation-link";
 import { ChevronDown } from "lucide-react";
 import { CategoryIcon } from "@/components/category-icon";
@@ -50,13 +50,20 @@ export function CategorySidebar({
     return selected.parentId ?? selected.id;
   }, [categories, params.category]);
 
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expansionOverride, setExpansionOverride] = useState<{
+    groupId: string;
+    expanded: boolean;
+  } | null>(null);
 
-  useEffect(() => {
-    if (!params.category || !selectedGroupId) return;
+  const selectedHiddenGroupId = useMemo(() => {
+    if (!params.category || !selectedGroupId) {
+      return null;
+    }
+
     const children = childrenByParent.get(selectedGroupId) ?? [];
     const index = children.findIndex((category) => category.id === params.category);
-    if (index >= PREVIEW_COUNT) setExpandedId(selectedGroupId);
+
+    return index >= PREVIEW_COUNT ? selectedGroupId : null;
   }, [params.category, selectedGroupId, childrenByParent]);
 
   return (
@@ -76,7 +83,10 @@ export function CategorySidebar({
           </Link>
           {groups.map((group) => {
             const children = childrenByParent.get(group.id) ?? [];
-            const expanded = expandedId === group.id;
+            const expanded =
+              expansionOverride?.groupId === group.id
+                ? expansionOverride.expanded
+                : selectedHiddenGroupId === group.id;
             const visible = expanded ? children : children.slice(0, PREVIEW_COUNT);
             const hiddenCount = Math.max(0, children.length - PREVIEW_COUNT);
 
@@ -88,7 +98,11 @@ export function CategorySidebar({
                     href={categoryUrl(params, group.id)}
                     aria-current={params.category === group.id ? "page" : undefined}
                     onClick={() => {
-                      if (hiddenCount > 0) setExpandedId(group.id);
+                      if (hiddenCount > 0)
+                        setExpansionOverride({
+                          groupId: group.id,
+                          expanded: true,
+                        });
                     }}
                   >
                     <CategoryIcon name={group.icon} size={17} />
@@ -101,7 +115,10 @@ export function CategorySidebar({
                       aria-expanded={expanded}
                       aria-label={expanded ? lessLabel : moreLabel}
                       onClick={() =>
-                        setExpandedId((current) => (current === group.id ? null : group.id))
+                        setExpansionOverride({
+                          groupId: group.id,
+                          expanded: !expanded,
+                        })
                       }
                     >
                       <ChevronDown
@@ -130,7 +147,12 @@ export function CategorySidebar({
                         <button
                           type="button"
                           className="category-more"
-                          onClick={() => setExpandedId(group.id)}
+                          onClick={() =>
+                            setExpansionOverride({
+                              groupId: group.id,
+                              expanded: !expanded,
+                            })
+                          }
                         >
                           {moreLabel} · {hiddenCount}
                         </button>

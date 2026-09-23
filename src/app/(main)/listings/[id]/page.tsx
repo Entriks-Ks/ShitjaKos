@@ -14,6 +14,7 @@ import {
   getSimilarListings,
 } from "@/repositories/listings";
 import { localeOf, money, translated } from "@/lib/catalog";
+import { MessageSeller } from "@/components/messaging/message-seller";
 
 export const dynamic = "force-dynamic";
 export const metadata = { robots: { index: false, follow: true } };
@@ -203,6 +204,15 @@ export default async function Page({
                   The seller has not shared a public phone number.
                 </p>
               )}
+              {visible &&
+                !owner &&
+                (user ? (
+                  <MessageSeller listingId={id} />
+                ) : (
+                  <Link href="/login" className="btn btn-primary w-full mt-5">
+                    Sign in to message the seller
+                  </Link>
+                ))}
             </section>
             <div className="notice mt-5">
               <strong>Meet safely.</strong>

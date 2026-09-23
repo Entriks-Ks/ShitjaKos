@@ -42,8 +42,8 @@ export default async function Page() {
           </Link>
           <h1 className="mt-3">Categories &amp; listing fields</h1>
           <p className="muted max-w-3xl">
-            Build the catalog in order: category → subcategory → fields. Names and
-            choices need Albanian, English and German labels.
+            Build the catalog in order: category → subcategory → fields. Names and choices
+            need Albanian, English and German labels.
           </p>
         </header>
 

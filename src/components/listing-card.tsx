@@ -25,11 +25,7 @@ export function ListingCard({
   saved?: boolean;
 }) {
   const kind =
-    item.intent === "WANTED"
-      ? "Kërkohet · Wanted"
-      : item.business
-        ? "Biznes"
-        : "Privat";
+    item.intent === "WANTED" ? "Kërkohet · Wanted" : item.business ? "Biznes" : "Privat";
   return (
     <article className="listing-card">
       <Link className="listing-card-main" href={`/listings/${item.id}?lang=${locale}`}>

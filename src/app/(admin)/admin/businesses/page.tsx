@@ -1,31 +1,31 @@
 import { AdminAccountsScreen } from "@/components/admin-accounts-screen";
 
 export const metadata = {
-    title: "Manage businesses",
-    robots: { index: false, follow: false },
+  title: "Manage businesses",
+  robots: { index: false, follow: false },
 };
 
 export default async function Page({
-    searchParams,
+  searchParams,
 }: {
-    searchParams: Promise<{
-        q?: string;
-        page?: string;
-    }>;
+  searchParams: Promise<{
+    q?: string;
+    page?: string;
+  }>;
 }) {
-    const params = await searchParams;
-    const requestedPage = Number(params.page);
+  const params = await searchParams;
+  const requestedPage = Number(params.page);
 
-    const page =
-        Number.isSafeInteger(requestedPage) && requestedPage > 0
-            ? Math.min(requestedPage, 100_000)
-            : 1;
+  const page =
+    Number.isSafeInteger(requestedPage) && requestedPage > 0
+      ? Math.min(requestedPage, 100_000)
+      : 1;
 
-    return (
-        <AdminAccountsScreen
-            kind="business"
-            query={(params.q ?? "").trim().slice(0, 100)}
-            page={page}
-        />
-    );
+  return (
+    <AdminAccountsScreen
+      kind="business"
+      query={(params.q ?? "").trim().slice(0, 100)}
+      page={page}
+    />
+  );
 }

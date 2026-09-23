@@ -18,10 +18,6 @@ const suspensionInput = z.object({
   reason: z.string().trim().min(5).max(1000),
 });
 
-
-
-
-
 export async function changeAccountSuspension(actor: Actor, raw: unknown) {
   const input = suspensionInput.parse(raw);
 

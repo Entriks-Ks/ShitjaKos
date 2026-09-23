@@ -12,7 +12,6 @@ import { getPrisma } from "./prisma";
 import { sendAuthMail } from "./mail";
 import { suspensionSessionHooks } from "@/lib/suspension-hooks";
 
-
 function makeMobileAuth() {
   if (!process.env.BETTER_AUTH_SECRET)
     throw new Error("BETTER_AUTH_SECRET is required. Run npm run setup:local.");
@@ -284,8 +283,8 @@ export async function mobileVerifyEmail(
   const pending =
     (registrationId.trim()
       ? await getPrisma().pendingRegistration.findUnique({
-        where: { id: registrationId.trim() },
-      })
+          where: { id: registrationId.trim() },
+        })
       : null) ??
     (await getPrisma().pendingRegistration.findUnique({
       where: { email: normalizedEmail },

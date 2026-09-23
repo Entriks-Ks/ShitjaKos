@@ -187,11 +187,13 @@ export function SearchFilters({
                 {labels.condition}
                 <select name="condition" defaultValue={p.condition ?? ""}>
                   <option value="">All conditions</option>
-                  {["NEW", "LIKE_NEW", "USED", "DEFECTIVE", "FOR_PARTS"].map((condition) => (
-                    <option key={condition} value={condition}>
-                      {condition.replaceAll("_", " ")}
-                    </option>
-                  ))}
+                  {["NEW", "LIKE_NEW", "USED", "DEFECTIVE", "FOR_PARTS"].map(
+                    (condition) => (
+                      <option key={condition} value={condition}>
+                        {condition.replaceAll("_", " ")}
+                      </option>
+                    ),
+                  )}
                 </select>
               </label>
               {attributes[0] && (

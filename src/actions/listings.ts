@@ -49,4 +49,3 @@ export async function deleteListingAction(listingId: string) {
     return { error: actionErrorMessage(error) };
   }
 }
-

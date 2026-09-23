@@ -57,64 +57,64 @@ export default async function Home({
       <Header locale={locale} signedIn={!!user} />
       <main className="wrap">
         <div className="home-showcase">
-        <section className="hero">
-          <div className="hero-art" aria-hidden="true">
-            <Image
-              src="/images/main-image-made.jpg"
-              alt=""
-              fill
-              preload
-              unoptimized
-              sizes="(max-width: 767px) 100vw, 1240px"
-              className="object-cover"
-            />
-          </div>
-          <h1>
-            {t.headline}
-            <br />
-            <span>{t.subhead}</span>
-          </h1>
-          <p className="muted max-w-lg">{t.intro}</p>
-          <ListingSearchBar locale={locale} categories={categories} params={p} />
-          <div className="hero-trust">
-            <span>
-              <ShieldCheck size={16} strokeWidth={1.8} />
-              {t.heroTrust1}
-            </span>
-            <span>
-              <Tag size={16} strokeWidth={1.8} />
-              {t.heroTrust2}
-            </span>
-            <span>
-              <Users size={16} strokeWidth={1.8} />
-              {t.heroTrust3}
-            </span>
-          </div>
-        </section>
-        <section id="categories" className="home-categories-panel">
-          <div className="home-categories-head">
-            <h2>{t.categories}</h2>
-            <p className="home-categories-note">Për çdo ditë. Për këdo.</p>
-          </div>
-          <div className="home-categories">
-            {categories
-              .filter((c) => !c.parentId)
-              .map((c) => (
-                <Link
-                  key={c.id}
-                  className="category-orb"
-                  href={searchUrl({ category: c.id, lang: locale })}
-                >
-                  <span className="category-orb-icon">
-                    <CategoryIcon name={c.icon} size={26} />
-                  </span>
-                  <span className="category-orb-name">
-                    {translated(c.translations, locale)}
-                  </span>
-                </Link>
-              ))}
-          </div>
-        </section>
+          <section className="hero">
+            <div className="hero-art" aria-hidden="true">
+              <Image
+                src="/images/main-image-made.jpg"
+                alt=""
+                fill
+                preload
+                unoptimized
+                sizes="(max-width: 767px) 100vw, 1240px"
+                className="object-cover"
+              />
+            </div>
+            <h1>
+              {t.headline}
+              <br />
+              <span>{t.subhead}</span>
+            </h1>
+            <p className="muted max-w-lg">{t.intro}</p>
+            <ListingSearchBar locale={locale} categories={categories} params={p} />
+            <div className="hero-trust">
+              <span>
+                <ShieldCheck size={16} strokeWidth={1.8} />
+                {t.heroTrust1}
+              </span>
+              <span>
+                <Tag size={16} strokeWidth={1.8} />
+                {t.heroTrust2}
+              </span>
+              <span>
+                <Users size={16} strokeWidth={1.8} />
+                {t.heroTrust3}
+              </span>
+            </div>
+          </section>
+          <section id="categories" className="home-categories-panel">
+            <div className="home-categories-head">
+              <h2>{t.categories}</h2>
+              <p className="home-categories-note">Për çdo ditë. Për këdo.</p>
+            </div>
+            <div className="home-categories">
+              {categories
+                .filter((c) => !c.parentId)
+                .map((c) => (
+                  <Link
+                    key={c.id}
+                    className="category-orb"
+                    href={searchUrl({ category: c.id, lang: locale })}
+                  >
+                    <span className="category-orb-icon">
+                      <CategoryIcon name={c.icon} size={26} />
+                    </span>
+                    <span className="category-orb-name">
+                      {translated(c.translations, locale)}
+                    </span>
+                  </Link>
+                ))}
+            </div>
+          </section>
         </div>
         <section id="results" className="home-listings">
           <div className="home-listings-head">
@@ -199,8 +199,8 @@ export default async function Home({
           <div className="home-decor-copy">
             <p className="eyebrow">
               {translated(
-                categories.find((category) => category.id === "electronics")?.translations ??
-                  [],
+                categories.find((category) => category.id === "electronics")
+                  ?.translations ?? [],
                 locale,
               ) || "Elektronikë"}
             </p>
@@ -217,7 +217,8 @@ export default async function Home({
           <div className="home-decor-copy">
             <p className="eyebrow">
               {translated(
-                categories.find((category) => category.id === "family")?.translations ?? [],
+                categories.find((category) => category.id === "family")?.translations ??
+                  [],
                 locale,
               ) || "Familje, fëmijë dhe bebe"}
             </p>

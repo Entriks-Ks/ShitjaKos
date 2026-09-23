@@ -65,3 +65,13 @@ export async function upsertPersonalProfile(
     update: profile,
   });
 }
+
+export function findUserSuspension(
+  id: string,
+  client: Prisma.TransactionClient = getPrisma(),
+) {
+  return client.user.findUnique({
+    where: { id },
+    select: { suspendedAt: true },
+  });
+}

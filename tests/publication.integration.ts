@@ -87,7 +87,12 @@ try {
   });
   const businessListing = await saveListing(actor, { ...input, owner: businessId });
   await db.listingMedia.create({
-    data: { listingId: businessListing, storageKey: `${businessId}.webp`, position: 0, altText: "Test photo" },
+    data: {
+      listingId: businessListing,
+      storageKey: `${businessId}.webp`,
+      position: 0,
+      altText: "Test photo",
+    },
   });
   await assert.rejects(
     transitionListing(actor, businessListing, "PUBLISHED"),

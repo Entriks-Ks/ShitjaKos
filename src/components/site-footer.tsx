@@ -62,7 +62,8 @@ const footerCopy = {
     openShop: "Shop eröffnen",
     favorites: "Favoriten",
     safety: "Trefft euch öffentlich. Prüft den Artikel vor der Zahlung.",
-    tagline: "Ein Ort für neue Möglichkeiten. Von der Gemeinschaft, für die Gemeinschaft.",
+    tagline:
+      "Ein Ort für neue Möglichkeiten. Von der Gemeinschaft, für die Gemeinschaft.",
   },
 } as const;
 
@@ -88,7 +89,11 @@ function FooterInner() {
       <section className="footer-main">
         <div className="wrap footer-grid">
           <div className="footer-brand">
-            <Link href={`/${lang}`} className="brand footer-logo" aria-label="ShitjaKos home">
+            <Link
+              href={`/${lang}`}
+              className="brand footer-logo"
+              aria-label="ShitjaKos home"
+            >
               shitja<span>kos</span>
               <i>.</i>
             </Link>
@@ -113,7 +118,10 @@ function FooterInner() {
           </FooterColumn>
           <FooterColumn title={f.citiesTitle}>
             {cityLinks.map((city) => (
-              <Link key={city} href={`/search?city=${encodeURIComponent(city)}&lang=${locale}`}>
+              <Link
+                key={city}
+                href={`/search?city=${encodeURIComponent(city)}&lang=${locale}`}
+              >
                 {city}
               </Link>
             ))}

@@ -27,7 +27,11 @@ export function Header({
     </Link>
   );
   const favoritesControl = (
-    <Link className="header-icon-link" href="/dashboard/favorites" aria-label={t.favorites}>
+    <Link
+      className="header-icon-link"
+      href="/dashboard/favorites"
+      aria-label={t.favorites}
+    >
       <Heart size={22} strokeWidth={1.5} />
       <span>{t.favorites}</span>
     </Link>
@@ -78,10 +82,7 @@ export function Header({
             </Suspense>
           </div>
         </div>
-        <nav
-          aria-label="Mobile navigation"
-          className="wrap site-nav-mobile"
-        >
+        <nav aria-label="Mobile navigation" className="wrap site-nav-mobile">
           <Link
             href={`/?lang=${locale}#categories`}
             className="site-nav-link"
@@ -104,7 +105,12 @@ export function Header({
 function LanguageToggleFallback({ locale }: { locale: Locale }) {
   return (
     <div className="lang-toggle">
-      <button type="button" aria-expanded={false} aria-haspopup="menu" aria-label="Language">
+      <button
+        type="button"
+        aria-expanded={false}
+        aria-haspopup="menu"
+        aria-label="Language"
+      >
         <Globe size={16} strokeWidth={1.8} />
         <span>{locale.toUpperCase()}</span>
         <ChevronDown className="lang-chevron" size={14} strokeWidth={2} />

@@ -2,7 +2,6 @@ import "server-only";
 import { getPrisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 
-
 export function publicWhere(): Prisma.ListingWhereInput {
   return {
     status: "PUBLISHED",

@@ -108,7 +108,9 @@ export function SearchCityMenu({
             >
               <MapPin size={15} aria-hidden="true" />
               <span>{allLabel}</span>
-              {!selected ? <Check className="search-city-check" size={14} aria-hidden="true" /> : null}
+              {!selected ? (
+                <Check className="search-city-check" size={14} aria-hidden="true" />
+              ) : null}
             </button>
           ) : null}
           {options.map((city) => {
@@ -124,7 +126,9 @@ export function SearchCityMenu({
               >
                 <MapPin size={15} aria-hidden="true" />
                 <span>{city}</span>
-                {picked ? <Check className="search-city-check" size={14} aria-hidden="true" /> : null}
+                {picked ? (
+                  <Check className="search-city-check" size={14} aria-hidden="true" />
+                ) : null}
               </button>
             );
           })}
