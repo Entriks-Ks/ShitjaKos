@@ -65,31 +65,6 @@ export function ListingResults({
     </div>
   );
 
-  if (compact) {
-    return (
-      <>
-        {grid}
-        {result.pages > 1 ? (
-          <nav aria-label="Pagination" className="results-pager">
-            {result.page > 1 && (
-              <Link className="btn btn-outline" href={pageUrl(result.page - 1)}>
-                {t.previous}
-              </Link>
-            )}
-            <span className="pill">
-              {result.page} / {result.pages}
-            </span>
-            {result.page < result.pages && (
-              <Link className="btn btn-outline" href={pageUrl(result.page + 1)}>
-                {t.next}
-              </Link>
-            )}
-          </nav>
-        ) : null}
-      </>
-    );
-  }
-
   const prevBtn =
     result.page > 1 ? (
       <Link
@@ -118,6 +93,23 @@ export function ListingResults({
         <ChevronRight size={18} />
       </span>
     );
+
+  if (compact) {
+    return (
+      <>
+        {grid}
+        {result.pages > 1 ? (
+          <nav aria-label="Pagination" className="results-pager">
+            {prevBtn}
+            <span className="home-results-page">
+              {result.page} / {result.pages}
+            </span>
+            {nextBtn}
+          </nav>
+        ) : null}
+      </>
+    );
+  }
 
   return (
     <div className="home-results-wrap">

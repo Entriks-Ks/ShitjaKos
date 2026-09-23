@@ -196,7 +196,10 @@ export function getSimilarListings(categoryId: string, excludeId: string) {
     orderBy: { publishedAt: "desc" },
   });
 }
-export async function searchListings(params: Record<string, string | undefined>) {
+export async function searchListings(
+  params: Record<string, string | undefined>,
+  pageSize = 12,
+) {
   const where: Prisma.ListingWhereInput = publicWhere();
   const filters: Prisma.ListingWhereInput[] = [];
   if (params.q?.trim())
@@ -245,19 +248,20 @@ export async function searchListings(params: Record<string, string | undefined>)
       : params.sort === "price-desc"
         ? { priceCents: "desc" }
         : { publishedAt: "desc" };
+  const size = pageSize;
   const readPage = (page: number) =>
     getPrisma().listing.findMany({
       where: finalWhere,
       include: listingInclude,
       orderBy: [sort, { id: "asc" }],
-      take: 12,
-      skip: (page - 1) * 12,
+      take: size,
+      skip: (page - 1) * size,
     });
   const [count, requestedItems] = await Promise.all([
     getPrisma().listing.count({ where: finalWhere }),
     readPage(requestedPage),
   ]);
-  const pages = Math.max(1, Math.ceil(count / 12));
+  const pages = Math.max(1, Math.ceil(count / size));
   const page = Math.min(pages, requestedPage);
   const items = page === requestedPage ? requestedItems : await readPage(page);
   // Contact fields are deliberately omitted from public cards.

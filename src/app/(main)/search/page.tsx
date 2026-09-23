@@ -41,7 +41,7 @@ export default async function SearchPage({
   const t = copy[locale];
   const [categories, result, user] = await Promise.all([
     getCategories(),
-    searchListings(params),
+    searchListings(params, 15),
     currentUser(),
   ]);
   const favoriteIds = user

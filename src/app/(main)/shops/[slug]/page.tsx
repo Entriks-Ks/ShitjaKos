@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/header";
 import { ListingCard } from "@/components/listing-card";
@@ -5,7 +6,39 @@ import { getPublicShop, getPublicShopListings } from "@/repositories/shops";
 import { getFavoriteListingIds } from "@/repositories/favorites";
 import { localeOf } from "@/lib/catalog";
 import { currentActor as currentUser } from "@/lib/session";
-import { ShieldCheck, MapPin } from "lucide-react";
+import {
+  Building2,
+  CalendarDays,
+  Clock,
+  Locate,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+function ShopFact({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: LucideIcon;
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="shop-info-item">
+      <span className="shop-info-icon">
+        <Icon size={15} strokeWidth={1.8} />
+      </span>
+      <div>
+        <dt>{label}</dt>
+        <dd>{value}</dd>
+      </div>
+    </div>
+  );
+}
 export const dynamic = "force-dynamic";
 export default async function Page({
   params,
@@ -38,6 +71,9 @@ export default async function Page({
             <ShieldCheck size={14} /> BUSINESS REVIEWED
           </p>
           <h1>{shop.business.publicName}</h1>
+          {shop.tagline.trim() ? (
+            <p className="muted max-w-2xl">{shop.tagline}</p>
+          ) : null}
           <p className="muted max-w-2xl">{shop.business.description}</p>
           <div className="flex flex-wrap gap-5 mt-5 text-sm">
             <span className="flex items-center gap-1">
@@ -48,13 +84,57 @@ export default async function Page({
             <a href={`mailto:${shop.business.email}`}>{shop.business.email}</a>
           </div>
         </section>
-        <div className="grid lg:grid-cols-[240px_1fr] gap-8 mt-9">
-          <aside className="panel h-fit">
-            <h2 className="text-lg mb-4">Shop information</h2>
-            <p className="muted">{shop.address || shop.business.city}</p>
-            <p className="muted mt-3">
-              {shop.openingHours || "Contact the shop for opening hours."}
-            </p>
+        <div className="shop-body">
+          <aside className="panel shop-info h-fit">
+            <h2>Shop information</h2>
+            <dl className="shop-info-list">
+              <ShopFact
+                icon={MapPin}
+                label="Address"
+                value={shop.address.trim() || shop.business.city}
+              />
+              <ShopFact icon={Locate} label="City" value={shop.business.city} />
+              <ShopFact
+                icon={Clock}
+                label="Opening hours"
+                value={shop.openingHours.trim() || "Contact the shop for opening hours."}
+              />
+              <ShopFact
+                icon={Building2}
+                label="Legal name"
+                value={shop.business.legalName}
+              />
+              <ShopFact
+                icon={Phone}
+                label="Phone"
+                value={<a href={`tel:${shop.business.phone}`}>{shop.business.phone}</a>}
+              />
+              <ShopFact
+                icon={Mail}
+                label="Email"
+                value={<a href={`mailto:${shop.business.email}`}>{shop.business.email}</a>}
+              />
+              <ShopFact
+                icon={CalendarDays}
+                label="Member since"
+                value={shop.business.createdAt.toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "long",
+                  year: "numeric",
+                })}
+              />
+              {shop.business.reviewedAt ? (
+                <ShopFact
+                  icon={ShieldCheck}
+                  label="Reviewed"
+                  value={shop.business.reviewedAt.toLocaleDateString("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })}
+                />
+              ) : null}
+            </dl>
           </aside>
           <section>
             <h2 className="mb-5">Available listings ({items.length})</h2>
