@@ -25,8 +25,8 @@ export function conversationSide(actor: Actor, conversation: AccessContext) {
     conversation.sellerKind === "PERSONAL"
       ? conversation.sellerUserId === actor.id
       : !!conversation.business?.memberships.some(
-          (m) => m.userId === actor.id && ["OWNER", "MANAGER"].includes(m.role),
-        );
+        (m) => m.userId === actor.id && ["OWNER", "STAFF"].includes(m.role),
+      );
   const buyer = conversation.buyerId === actor.id;
   if (buyer && seller) throw new ChatError("Conversation access needs review.", 403);
   if (buyer) return "BUYER" as const;

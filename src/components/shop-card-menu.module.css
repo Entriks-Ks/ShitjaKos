@@ -1,0 +1,77 @@
+.menu {
+  position: relative;
+  margin-left: auto;
+  align-self: flex-start;
+  flex-shrink: 0;
+}
+.menu > summary {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  list-style: none;
+  border: 0;
+  border-radius: 11px;
+  color: #84907c;
+  cursor: pointer;
+  background: transparent;
+}
+.menu > summary::-webkit-details-marker {
+  display: none;
+}
+.menu > summary:hover,
+.menu[open] > summary {
+  background: #edf1e6;
+}
+.menu > summary:focus-visible,
+.panel > a:focus-visible {
+  outline: 2px solid #6b7b59;
+  outline-offset: 3px;
+}
+.panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 200px;
+  max-width: calc(100vw - 48px);
+  z-index: 20;
+  padding: 6px;
+  border: 1px solid #e1e7dc;
+  border-radius: 13px;
+  background: #fff;
+  box-shadow: 0 10px 30px #2030181a;
+}
+.panel > a,
+.deleteRow :global(.delete-control-button) {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 44px;
+  padding: 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+}
+.panel > a {
+  color: #35432e;
+}
+.panel > a:hover {
+  background: #f1f4ed;
+}
+.deleteRow {
+  border-top: 1px solid #edf0e9;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.deleteRow:first-child {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+.deleteRow :global(.delete-control-button):hover {
+  background: #fff1f0;
+}

@@ -1,8 +1,8 @@
 import Link from "@/components/navigation-link";
-import { Plus, Store, MapPin, ArrowUpRight, Pencil } from "lucide-react";
+import { Plus, Store, MapPin, ArrowUpRight } from "lucide-react";
 import { StatusBadge } from "@/components/workspace-ui";
 import type { requireUser } from "@/lib/session";
-import { DeleteBusinessButton } from "@/components/delete-business-button";
+import { ShopCardMenu } from "@/components/shop-card-menu";
 
 type Memberships = Awaited<ReturnType<typeof requireUser>>["memberships"];
 
@@ -27,10 +27,24 @@ export function AccountShops({ memberships }: { memberships: Memberships }) {
                 <Store size={23} />
               </span>
               <div className="shop-account-details">
-                <h3>{business.publicName}</h3>
+                <h3>
+                  {business.reviewStatus === "APPROVED" &&
+                  business.shop &&
+                  !business.suspendedAt ? (
+                    <Link
+                      className="shop-account-title-link"
+                      href={`/shops/${business.shop.slug}`}
+                    >
+                      {business.publicName}
+                      <ArrowUpRight size={16} aria-hidden="true" />
+                    </Link>
+                  ) : (
+                    business.publicName
+                  )}
+                </h3>
                 <p>
                   <MapPin size={13} />
-                  {business.city} · {role === "OWNER" ? "Owner" : "Manager"}
+                  {business.city} · {role === "OWNER" ? "Owner" : "Staff"}
                 </p>
                 <StatusBadge
                   tone={
@@ -48,33 +62,20 @@ export function AccountShops({ memberships }: { memberships: Memberships }) {
                       : "Awaiting review"}
                 </StatusBadge>
               </div>
-              <div className="shop-account-actions">
-                {role === "OWNER" && !business.suspendedAt && (
-                  <Link
-                    href={`/business/${business.id}/edit`}
-                    className="shop-edit-link"
-                    aria-label={`Edit ${business.publicName}`}
-                  >
-                    <Pencil size={15} aria-hidden="true" />
-                    Edit business
-                  </Link>
-                )}
-                {role === "OWNER" && (
-                  <DeleteBusinessButton
-                    businessId={business.id}
-                    name={business.publicName}
-                  />
-                )}
-                {business.reviewStatus === "APPROVED" && business.shop ? (
-                  <Link className="text-action" href={`/shops/${business.shop.slug}`}>
-                    Visit shop <ArrowUpRight size={16} />
-                  </Link>
-                ) : (
-                  <small>
-                    An independent admin reviews the business before it becomes public.
-                  </small>
-                )}
-              </div>
+              {role === "OWNER" && (
+                <ShopCardMenu
+                  businessId={business.id}
+                  name={business.publicName}
+                  suspended={Boolean(business.suspendedAt)}
+                />
+              )}
+              {business.reviewStatus !== "APPROVED" && (
+                <small className="shop-account-review-note">
+                  {business.reviewStatus === "PENDING"
+                    ? "Your shop will be public once its review is complete."
+                    : "This shop is not public because its review was declined."}
+                </small>
+              )}
             </article>
           ))}
         </div>

@@ -182,7 +182,7 @@ export function findInboxPage(tx: Tx, userId: string, page: number) {
         {
           business: {
             memberships: {
-              some: { userId, role: { in: ["OWNER", "MANAGER"] } },
+              some: { userId, role: { in: ["OWNER", "STAFF"] } },
             },
           },
         },

@@ -109,7 +109,7 @@ model PersonalProfile {
 
 enum BusinessRole {
   OWNER
-  MANAGER
+  STAFF
 }
 
 enum ReviewStatus {
@@ -135,16 +135,31 @@ model Business {
   shop          Shop?
   listings      Listing[]
   conversations Conversation[]
+  staffInvitations BusinessStaffInvitation[]
 }
 
 model BusinessMembership {
   userId     String
   businessId String
-  role       BusinessRole @default(OWNER)
+  role       BusinessRole
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   business   Business     @relation(fields: [businessId], references: [id], onDelete: Restrict)
 
   @@id([userId, businessId])
+}
+
+model BusinessStaffInvitation {
+  id          String   @id @default(cuid())
+  businessId  String
+  email       String
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, email])
+  @@index([email, expiresAt])
 }
 
 model Shop {

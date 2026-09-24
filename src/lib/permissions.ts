@@ -28,7 +28,7 @@ export function canManageListing(
     !actor.suspendedAt &&
     (listing.personalProfile?.userId === actor.id ||
       !!listing.business?.memberships.some(
-        (m) => m.userId === actor.id && ["OWNER", "MANAGER"].includes(m.role),
+        (m) => m.userId === actor.id && ["OWNER", "STAFF"].includes(m.role),
       ))
   );
 }

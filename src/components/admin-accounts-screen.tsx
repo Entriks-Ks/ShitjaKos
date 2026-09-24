@@ -51,7 +51,7 @@ export async function AdminAccountsScreen({
         labels.push("Business owner");
       }
 
-      if (user.memberships.some((item) => item.role === "MANAGER")) {
+      if (user.memberships.some((item) => item.role === "STAFF")) {
         labels.push("Business staff");
       }
 
@@ -81,9 +81,8 @@ export async function AdminAccountsScreen({
       email: business.email,
       detail: [
         business.legalName,
-        `Owners: ${
-          business.memberships.map((membership) => membership.user.name).join(", ") ||
-          "None"
+        `Owners: ${business.memberships.map((membership) => membership.user.name).join(", ") ||
+        "None"
         }`,
       ].join(" · "),
       labels: [business.reviewStatus],

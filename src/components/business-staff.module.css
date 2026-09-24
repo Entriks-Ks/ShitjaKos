@@ -1,0 +1,277 @@
+.page {
+  max-width: 850px;
+  padding-top: 36px;
+  padding-bottom: 56px;
+  display: grid;
+  gap: 24px;
+}
+.heading h1 {
+  margin: 6px 0 10px;
+  font-size: clamp(26px, 4vw, 34px);
+  letter-spacing: -0.7px;
+}
+.heading > p:last-child {
+  max-width: 580px;
+  line-height: 1.7;
+  font-size: 14px;
+}
+.compose,
+.panel,
+.invitationCard {
+  border: 1px solid #e2e8dc;
+  border-radius: 20px;
+  background: #fff;
+}
+.compose {
+  padding: 28px;
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 18px;
+  background: linear-gradient(130deg, #f4f7ef, #fff 75%);
+}
+.compose h2 {
+  font-size: 19px;
+  margin-bottom: 7px;
+  letter-spacing: -0.3px;
+}
+.compose > div > p {
+  font-size: 13px;
+  line-height: 1.7;
+  max-width: 520px;
+}
+.compose > form,
+.accessNote {
+  grid-column: 2;
+}
+.input {
+  display: block;
+  width: 100%;
+  background: #fff;
+  border: 1px solid #d5ddcd;
+  border-radius: 11px;
+  padding: 12px 14px;
+  font-size: 14px;
+}
+.input:focus {
+  outline: 2px solid #7c9463;
+  outline-offset: 2px;
+}
+.emblem {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: #e9efdf;
+  color: #627a49;
+  flex-shrink: 0;
+}
+.primary,
+.quiet {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.primary {
+  border: 1px solid #52693d;
+  color: white;
+  background: #52693d;
+}
+.primary:hover {
+  background: #425731;
+}
+.quiet {
+  background: transparent;
+  color: #6c7566;
+  border: 1px solid transparent;
+}
+.quiet:hover {
+  background: #f0f3ec;
+  color: #35452c;
+}
+.primary:focus-visible,
+.quiet:focus-visible {
+  outline: 2px solid #718b58;
+  outline-offset: 3px;
+}
+.primary:disabled,
+.quiet:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+.accessNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  color: #79836f;
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+.accessNote svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.panel {
+  padding: 0 24px;
+}
+.panelHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 0 16px;
+}
+.panelHeading h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 16px;
+}
+.panelHeading svg {
+  color: #7c8b70;
+}
+.count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  padding: 0 6px;
+  font-size: 12px;
+  background: #f0f3eb;
+  color: #657956;
+  vertical-align: middle;
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 0;
+  flex-wrap: wrap;
+}
+.row > div:first-child {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: #f0f2eb;
+  color: #72815f;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.person {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.person h3 {
+  font-size: 14px;
+  margin-bottom: 3px;
+}
+.badge {
+  display: inline-flex;
+  color: #657752;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f0f4e9;
+  border-radius: 6px;
+  padding: 3px 8px;
+  margin-top: 7px;
+}
+.empty {
+  display: grid;
+  justify-items: center;
+  padding: 24px 12px 32px;
+  color: #88947c;
+  text-align: center;
+  gap: 8px;
+}
+.empty p {
+  color: #536047;
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0;
+}
+.empty span {
+  font-size: 12px;
+}
+.invitationCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  padding: 24px;
+}
+.invitationBody {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.kicker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  font-weight: 600;
+  color: #879576;
+  margin-bottom: 7px;
+}
+.invitationBody h3 {
+  font-size: 18px;
+  color: #33432b;
+  margin: 0 0 7px;
+}
+.invitationBody > p {
+  font-size: 13px;
+  color: #7a8373;
+  line-height: 1.6;
+}
+.invitationActions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 3px;
+}
+@media (max-width: 600px) {
+  .compose {
+    padding: 20px;
+    gap: 14px;
+  }
+  .compose > form,
+  .accessNote {
+    grid-column: 1 / -1;
+  }
+  .panel {
+    padding: 0 18px;
+  }
+  .invitationCard {
+    padding: 20px;
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .invitationActions {
+    flex-basis: 100%;
+    flex-direction: row;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    border-top: 1px solid #edf0e7;
+    padding-top: 16px;
+  }
+  .row > form {
+    max-width: 100%;
+  }
+}

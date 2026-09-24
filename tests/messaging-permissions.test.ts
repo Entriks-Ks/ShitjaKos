@@ -16,7 +16,7 @@ const business = {
   business: {
     memberships: [
       { userId: "owner", role: "OWNER" },
-      { userId: "manager", role: "MANAGER" },
+      { userId: "manager", role: "STAFF" },
     ],
   },
 };
@@ -29,7 +29,7 @@ test("personal conversation allows only its buyer and seller", () => {
 test("an unrelated admin cannot read private messages", () => {
   assert.throws(() => conversationSide(actor("admin", "ADMIN"), personal));
 });
-test("current business owners and managers can access the shared inbox", () => {
+test("current business owners and staff can access the shared inbox", () => {
   assert.equal(conversationSide(actor("owner"), business), "SELLER");
   assert.equal(conversationSide(actor("manager"), business), "SELLER");
 });
