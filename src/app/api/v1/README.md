@@ -14,16 +14,16 @@ endpoint; `/api/v1` contains the application's data and feature endpoints. Use H
 in production. The v1 feature endpoints validate bearer tokens created by the mobile
 authentication endpoint without changing website authentication.
 
-| Action          | Body                                                               |
-| --------------- | ------------------------------------------------------------------ |
-| sign-up         | name, email, password (12–128 characters)                          |
-| verify-email    | email, code, registrationId, password (optional automatic sign-in) |
-| resend-code     | email, registrationId                                              |
-| sign-in         | email, password                                                    |
-| session         | {} with Authorization header                                       |
-| sign-out        | {} with Authorization header                                       |
-| forgot-password | email                                                              |
-| reset-password  | email, code, password, confirm                                     |
+| Action          | What it does                                                         | Body                                                               | Important result                              |
+| --------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------ | --------------------------------------------- |
+| sign-up         | Starts registration and emails a six-digit verification code.        | name, email, password (12–128 characters)                          | `registrationId`; no user exists yet          |
+| verify-email    | Checks the code, creates the user, and attempts to sign them in.     | email, code, registrationId, password (optional automatic sign-in) | `token` when automatic sign-in succeeds       |
+| resend-code     | Replaces the pending registration code and sends a new email.        | email, registrationId                                              | The same registration remains pending         |
+| sign-in         | Checks credentials and creates a mobile session.                     | email, password                                                    | `token` used by protected `/api/v1` endpoints |
+| session         | Reads the current mobile session.                                    | `{}` with the current mobile session                               | `session.user` or `null`                      |
+| sign-out        | Revokes the current mobile session.                                  | `{}` with the current mobile session                               | `{ok:true}`                                   |
+| forgot-password | Sends a six-digit password-reset code when the account can be reset. | email                                                              | `{ok:true,email}`                             |
+| reset-password  | Validates the reset code and replaces the password.                  | email, code, password, confirm                                     | `{ok:true}`                                   |
 
 Registration returns `registrationId`; the user is created only when the code is verified.
 Sign-in returns `{ok:true,signedIn:true,token:"..."}`. Store this token in OS secure
@@ -69,61 +69,135 @@ An invalid bearer never falls back to a valid website cookie.
   is returned only when phoneVisible is true. Approved shop contact information is public.
 - Mobile mutations invalidate relevant website caches as well.
 
-## Endpoint inventory
+## How the mobile app uses the API
 
-| Method    | Path                                                   |
-| --------- | ------------------------------------------------------ |
-| GET       | `/api/v1/me`                                           |
-| PUT       | `/api/v1/me`                                           |
-| GET       | `/api/v1/me/listings`                                  |
-| GET       | `/api/v1/me/businesses`                                |
-| GET       | `/api/v1/me/invitations`                               |
-| GET       | `/api/v1/favorites`                                    |
-| PUT       | `/api/v1/favorites/:id`                                |
-| GET       | `/api/v1/categories`                                   |
-| GET       | `/api/v1/locations`                                    |
-| GET       | `/api/v1/listings`                                     |
-| POST      | `/api/v1/listings`                                     |
-| GET       | `/api/v1/listings/:id`                                 |
-| PUT       | `/api/v1/listings/:id`                                 |
-| DELETE    | `/api/v1/listings/:id`                                 |
-| GET       | `/api/v1/listings/:id/edit`                            |
-| PUT       | `/api/v1/listings/:id/status`                          |
-| POST      | `/api/v1/listings/:id/media`                           |
-| DELETE    | `/api/v1/listings/:id/media/:mediaId`                  |
-| GET       | `/api/v1/media/:id`                                    |
-| GET       | `/api/v1/shops`                                        |
-| GET       | `/api/v1/shops/:slug`                                  |
-| POST      | `/api/v1/businesses`                                   |
-| GET       | `/api/v1/businesses/:id`                               |
-| PATCH     | `/api/v1/businesses/:id`                               |
-| DELETE    | `/api/v1/businesses/:id`                               |
-| GET       | `/api/v1/businesses/:id/staff`                         |
-| DELETE    | `/api/v1/businesses/:id/staff/:userId`                 |
-| POST      | `/api/v1/businesses/:id/invitations`                   |
-| DELETE    | `/api/v1/businesses/:id/invitations/:invitationId`     |
-| POST      | `/api/v1/businesses/:id/invitations/:invitationId`     |
-| PUT       | `/api/v1/conversations/:id/read`                       |
-| PUT       | `/api/v1/conversations/:id/block`                      |
-| POST      | `/api/v1/conversations/:id/messages/:messageId/report` |
-| GET       | `/api/v1/admin/users`                                  |
-| GET       | `/api/v1/admin/businesses`                             |
-| GET       | `/api/v1/admin/reviews`                                |
-| GET       | `/api/v1/admin/audits`                                 |
-| PUT       | `/api/v1/admin/businesses/:id/review`                  |
-| GET       | `/api/v1/admin/categories`                             |
-| POST      | `/api/v1/admin/categories`                             |
-| PATCH     | `/api/v1/admin/categories/:id`                         |
-| DELETE    | `/api/v1/admin/categories/:id`                         |
-| POST      | `/api/v1/admin/categories/:id/fields`                  |
-| DELETE    | `/api/v1/admin/fields/:id`                             |
-| GET, POST | `/api/v1/conversations`                                |
-| GET, POST | `/api/v1/conversations/:id/messages`                   |
-| PUT       | `/api/v1/admin/users/:id/suspension`                   |
-| PUT       | `/api/v1/admin/businesses/:id/suspension`              |
+### App start
 
-All /admin routes require an active verified global ADMIN, not business OWNER/STAFF.
-Audit data is admin-only. No automatic admin bypass exists for private conversations.
+1. Load the saved token from Keychain/Keystore.
+2. If there is no token, show the signed-out experience. Public browsing still works.
+3. If there is a token, call `GET /api/v1/me` to refresh the account and profile.
+4. A `401` means the token is missing, expired, revoked, or invalid. Delete it locally and
+   show sign-in. A `403` means the account exists but cannot perform that operation, for
+   example because it is suspended or lacks the required role.
+5. Load `GET /api/v1/categories` and `GET /api/v1/locations` for listing and search forms.
+
+### Buyer flow
+
+1. Search with `GET /api/v1/listings`.
+2. Open one result with `GET /api/v1/listings/:id`.
+3. Render its image URLs through `GET /api/v1/media/:mediaId`.
+4. Save it with `PUT /api/v1/favorites/:id` or contact the seller with
+   `POST /api/v1/conversations`.
+5. Continue the chat through `/api/v1/conversations/:id/messages` and mark received
+   messages read.
+
+### Seller flow
+
+1. Load categories because their field definitions determine the dynamic form.
+2. Create a draft with `POST /api/v1/listings`; retain the returned listing ID.
+3. Upload photos one at a time to `/api/v1/listings/:id/media`.
+4. Publish with `PUT /api/v1/listings/:id/status` using `{"status":"PUBLISHED"}`.
+5. Load `GET /api/v1/listings/:id/edit` before editing. Send its current `version` with
+   the complete form to `PUT /api/v1/listings/:id` so stale edits are rejected.
+
+### Business owner flow
+
+1. Create a business with `POST /api/v1/businesses`. It starts in pending review.
+2. Read memberships and review state from `GET /api/v1/me/businesses`.
+3. An OWNER can edit business settings, invite staff, cancel invitations, and remove
+   STAFF. STAFF can manage business inventory according to service permissions but cannot
+   edit or delete the business or control its staff.
+4. The public shop appears only through the public shop endpoints when existing business
+   approval and visibility rules allow it.
+
+## Endpoint reference
+
+`Public` means no token is required. `User` means an active signed-in user. `Owner` means
+the listing or business permission check must pass. `Admin` means an active verified global
+`ADMIN`; business `OWNER` and `STAFF` are not global admins.
+
+### Account and saved listings
+
+| Method | Path                     | Access | What it does                                                                 | Input / result                                                                             |
+| ------ | ------------------------ | ------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| GET    | `/api/v1/me`             | User   | Loads the signed-in account and its personal profile for the account screen. | Returns identity and profile data without password, session, or account secrets.           |
+| PUT    | `/api/v1/me`             | User   | Updates the user's editable profile.                                         | Complete profile body: `name`, `displayName`, `city`, `bio`, `phone`; returns `{ok:true}`. |
+| GET    | `/api/v1/me/listings`    | User   | Loads listings the current user may manage for the dashboard.                | `page`, `limit`; returns paginated listing cards, including non-public owned listings.     |
+| GET    | `/api/v1/favorites`      | User   | Loads the current user's saved listings.                                     | `page`, `limit`; returns only favorites that are still publicly visible.                   |
+| PUT    | `/api/v1/favorites/:id`  | User   | Saves or removes one listing from favorites.                                 | Body `{"saved":true}` or `false`; returns the resulting `saved` value.                     |
+| GET    | `/api/v1/me/businesses`  | User   | Loads businesses the user belongs to and their OWNER/STAFF membership role.  | `page`, `limit`; used to choose a business owner when creating inventory.                  |
+| GET    | `/api/v1/me/invitations` | User   | Loads pending staff invitations addressed to the verified account email.     | Returns `{items:[...]}` for the invitation inbox.                                          |
+
+### Public discovery
+
+| Method | Path                   | Access | What it does                                                                   | Input / result                                                                                        |
+| ------ | ---------------------- | ------ | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/categories`   | Public | Returns the active category tree and dynamic listing-field definitions.        | Flat `items` array with `parentId`; the app builds groups/subcategories from those relationships.     |
+| GET    | `/api/v1/locations`    | Public | Returns the supported countries and their cities for search and listing forms. | Returns `{countries:[...]}` with localized country names and city arrays.                             |
+| GET    | `/api/v1/listings`     | Public | Searches public, approved, unexpired listings from active categories/sellers.  | Search filters plus pagination; returns safe listing cards and never exposes a private contact phone. |
+| GET    | `/api/v1/listings/:id` | Public | Loads one public listing-detail screen.                                        | Returns description, attributes, seller summary, photos, and phone only when `phoneVisible` is true.  |
+| GET    | `/api/v1/media/:id`    | Mixed  | Streams one listing photo.                                                     | Public photos work without auth; authorized owners can also load their private draft photos.          |
+| GET    | `/api/v1/shops`        | Public | Lists public shops for the shop directory.                                     | `page`, `limit`; returns paginated shop summaries.                                                    |
+| GET    | `/api/v1/shops/:slug`  | Public | Loads a public shop profile and its inventory.                                 | `page`, `limit`; returns business contact details and a nested paginated `listings` result.           |
+
+### Listing management
+
+| Method | Path                                  | Access | What it does                                                                       | Input / result                                                                                        |
+| ------ | ------------------------------------- | ------ | ---------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| POST   | `/api/v1/listings`                    | User   | Creates a personal or authorized business listing as a draft.                      | Complete listing body; returns `201 {id}`. It refuses a submitted `id` to prevent accidental editing. |
+| GET    | `/api/v1/listings/:id/edit`           | Owner  | Loads the complete editable listing, including private drafts and current version. | Returns form values, attributes, media, status, ownership choice, and optimistic-lock `version`.      |
+| PUT    | `/api/v1/listings/:id`                | Owner  | Replaces editable listing data after ownership and current-version checks.         | Complete form plus positive integer `version`; returns `{id}` or `409` if another edit won the race.  |
+| DELETE | `/api/v1/listings/:id`                | Owner  | Permanently deletes an owned listing and cleans up its stored photos.              | No body; returns `{ok:true}`.                                                                         |
+| PUT    | `/api/v1/listings/:id/status`         | Owner  | Moves a listing through its allowed lifecycle.                                     | Body status: `PUBLISHED`, `PAUSED`, `SOLD`, or `CLOSED`; returns `{id,status}`.                       |
+| POST   | `/api/v1/listings/:id/media`          | Owner  | Validates, decodes, re-encodes, and attaches one listing photo.                    | Multipart `file`; returns `201 {id}` for the new media record.                                        |
+| DELETE | `/api/v1/listings/:id/media/:mediaId` | Owner  | Removes one photo that belongs to the specified listing.                           | No body; returns `{ok:true}`.                                                                         |
+
+### Businesses and staff
+
+| Method | Path                                               | Access       | What it does                                                              | Input / result                                                                             |
+| ------ | -------------------------------------------------- | ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| POST   | `/api/v1/businesses`                               | User         | Creates a business, OWNER membership, and shop data pending admin review. | Business/shop form; returns `201 {id}`.                                                    |
+| GET    | `/api/v1/businesses/:id`                           | Member       | Loads private business settings plus the caller's membership role.        | Returns `404` to non-members so private business existence/details are not exposed.        |
+| PATCH  | `/api/v1/businesses/:id`                           | OWNER        | Updates business and shop settings.                                       | Any supported subset of the business form; returns `{ok:true}`.                            |
+| DELETE | `/api/v1/businesses/:id`                           | OWNER        | Deletes an eligible empty business after the service checks dependencies. | Returns `{ok:true}` or a business-rule error explaining what must be removed first.        |
+| GET    | `/api/v1/businesses/:id/staff`                     | OWNER        | Loads the staff roster and pending invitations for staff management.      | Returns the existing service shape for members and invitations.                            |
+| POST   | `/api/v1/businesses/:id/invitations`               | OWNER        | Creates or replaces a STAFF invitation and attempts to email it.          | Body `{"email":"person@example.com"}`; returns saved invitation data and any mail warning. |
+| DELETE | `/api/v1/businesses/:id/invitations/:invitationId` | OWNER        | Cancels a pending invitation belonging to that business.                  | Returns the service result.                                                                |
+| POST   | `/api/v1/businesses/:id/invitations/:invitationId` | Invited user | Accepts or declines the invitation addressed to the signed-in email.      | Body `{"decision":"accept"}` or `{"decision":"decline"}`; acceptance creates a STAFF role. |
+| DELETE | `/api/v1/businesses/:id/staff/:userId`             | OWNER        | Removes a STAFF member from that business.                                | Cannot remove an OWNER; returns the service result.                                        |
+
+### Conversations
+
+| Method | Path                                                   | Access      | What it does                                                                  | Input / result                                                                                 |
+| ------ | ------------------------------------------------------ | ----------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/conversations`                                | User        | Loads the caller's buyer and seller inbox with unread information.            | `page`; returns the chat inbox and whether another page exists.                                |
+| POST   | `/api/v1/conversations`                                | Buyer       | Opens or reuses a conversation for one listing and sends its first message.   | `listingId`, `body`, UUID `clientId`; returns `201` with the conversation/message result.      |
+| GET    | `/api/v1/conversations/:id/messages`                   | Participant | Loads a conversation and a page of messages visible to the caller.            | Use `before` for older messages or `after` for new messages, never both; returns a `ChatView`. |
+| POST   | `/api/v1/conversations/:id/messages`                   | Participant | Sends another message while enforcing block, suspension, and messaging rules. | `body`, UUID `clientId`; retry with the same client ID to prevent duplicate messages.          |
+| PUT    | `/api/v1/conversations/:id/read`                       | Participant | Advances the caller's read position without changing the other participant's. | Body `{"sequence":NUMBER}`; returns `{ok:true}`.                                               |
+| PUT    | `/api/v1/conversations/:id/block`                      | Participant | Blocks or unblocks the other side for this conversation relationship.         | Body `{"blocked":true}` or `false`; returns `{ok:true}`.                                       |
+| POST   | `/api/v1/conversations/:id/messages/:messageId/report` | Participant | Reports a specific message for later moderation/audit handling.               | Body `{"reason":"5 to 1000 characters"}`; returns `{ok:true}`.                                 |
+
+### Administration
+
+| Method | Path                                      | Access | What it does                                                                  | Input / result                                                                                    |
+| ------ | ----------------------------------------- | ------ | ----------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/admin/users`                     | Admin  | Searches user accounts for the account-management screen.                     | `q`, `page`; returns 20 users per page and user/business relationship information.                |
+| PUT    | `/api/v1/admin/users/:id/suspension`      | Admin  | Suspends or restores one non-protected user account and records the decision. | Body `suspended` and reason; suspended users cannot use protected features.                       |
+| GET    | `/api/v1/admin/businesses`                | Admin  | Searches businesses for review and account management.                        | `q`, `page`; returns 20 businesses per page with owner/membership context.                        |
+| PUT    | `/api/v1/admin/businesses/:id/suspension` | Admin  | Suspends or restores a business and records the reason.                       | Body `suspended` and reason; suspension hides/restricts business activity through existing rules. |
+| GET    | `/api/v1/admin/reviews`                   | Admin  | Loads pending business applications the reviewer is allowed to decide.        | `page`, `limit`; excludes the reviewer's own businesses.                                          |
+| PUT    | `/api/v1/admin/businesses/:id/review`     | Admin  | Approves or rejects a pending business and records the decision.              | Body `decision` (`APPROVED`/`REJECTED`) and `reason` (5–1000 characters).                         |
+| GET    | `/api/v1/admin/audits`                    | Admin  | Loads the immutable audit trail for administrative investigation.             | `page`, `limit`; returns newest audit events in pages.                                            |
+| GET    | `/api/v1/admin/categories`                | Admin  | Loads active and archived taxonomy entries, fields, and usage counts.         | Used by the catalog-management screen; unlike the public endpoint it includes archived entries.   |
+| POST   | `/api/v1/admin/categories`                | Admin  | Creates a top-level category or a subcategory.                                | `parentId`, localized `names`, and icon; returns `201 {id}`.                                      |
+| PATCH  | `/api/v1/admin/categories/:id`            | Admin  | Archives or restores a category without deleting its historical records.      | Body `{"active":false}` or `true`; returns `{ok:true}`.                                           |
+| DELETE | `/api/v1/admin/categories/:id`            | Admin  | Permanently deletes a category only when dependency rules allow it.           | Returns `{ok:true}` or a business-rule error when listings/children prevent deletion.             |
+| POST   | `/api/v1/admin/categories/:id/fields`     | Admin  | Adds one to twenty dynamic fields to a subcategory in one request.            | Body `{fields:[...]}`; returns `201 {ids:[...]}`.                                                 |
+| DELETE | `/api/v1/admin/fields/:id`                | Admin  | Deletes a dynamic field only when no saved listing answer depends on it.      | Returns `{ok:true}` or a dependency error.                                                        |
+
+Admin authorization is checked from the current database record on every protected call.
+There is no admin bypass for private conversations or user-owned listing operations.
 
 ## Browse
 
