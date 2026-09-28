@@ -119,22 +119,22 @@ enum ReviewStatus {
 }
 
 model Business {
-  id            String               @id @default(cuid())
-  legalName     String
-  publicName    String
-  city          String
-  phone         String
-  email         String
-  description   String
-  reviewStatus  ReviewStatus         @default(PENDING)
-  reviewedAt    DateTime?
-  suspendedAt   DateTime?
-  createdAt     DateTime             @default(now())
-  updatedAt     DateTime             @updatedAt
-  memberships   BusinessMembership[]
-  shop          Shop?
-  listings      Listing[]
-  conversations Conversation[]
+  id               String                    @id @default(cuid())
+  legalName        String
+  publicName       String
+  city             String
+  phone            String
+  email            String
+  description      String
+  reviewStatus     ReviewStatus              @default(PENDING)
+  reviewedAt       DateTime?
+  suspendedAt      DateTime?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  memberships      BusinessMembership[]
+  shop             Shop?
+  listings         Listing[]
+  conversations    Conversation[]
   staffInvitations BusinessStaffInvitation[]
 }
 
@@ -163,15 +163,15 @@ model BusinessStaffInvitation {
 }
 
 model Shop {
-  id           String   @id @default(cuid())
-  businessId   String   @unique
-  slug         String   @unique
-  tagline        String   @default("")
-  address        String   @default("")
-  openingHours   String   @default("")
-  logoKey        String?
-  backgroundKey  String?
-  business       Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  id            String   @id @default(cuid())
+  businessId    String   @unique
+  slug          String   @unique
+  tagline       String   @default("")
+  address       String   @default("")
+  openingHours  String   @default("")
+  logoKey       String?
+  backgroundKey String?
+  business      Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
 }
 
 model Category {
@@ -285,6 +285,7 @@ model Listing {
   createdBy         User                    @relation("Creator", fields: [createdById], references: [id], onDelete: Restrict)
   category          Category                @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   attributes        ListingAttributeValue[]
+  additionalData    ListingAdditionalData[]
   media             ListingMedia[]
   conversations     Conversation[]
 
@@ -313,6 +314,17 @@ model ListingMedia {
   listing    Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
 
   @@unique([listingId, position])
+}
+
+model ListingAdditionalData {
+  listingId String
+  position  Int
+  name      String
+  value     String
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([listingId, position])
 }
 
 model Favorite {

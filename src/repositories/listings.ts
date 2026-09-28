@@ -74,6 +74,12 @@ export type ListingAttributeWrite = {
   value: Prisma.InputJsonValue;
 };
 
+export type ListingAdditionalDataWrite = {
+  name: string;
+  value: string;
+  position: number;
+};
+
 export function findListingOwnership(tx: Prisma.TransactionClient, id: string) {
   return tx.listing.findUniqueOrThrow({
     where: { id },
@@ -111,6 +117,7 @@ export function createListing(
   input: {
     data: ListingWriteData;
     attributes: ListingAttributeWrite[];
+    additionalData: ListingAdditionalDataWrite[];
     createdById: string;
     personalProfileId: string | null;
     businessId: string | null;
@@ -124,6 +131,7 @@ export function createListing(
       personalProfileId: input.personalProfileId,
       businessId: input.businessId,
       attributes: { create: input.attributes },
+      additionalData: { create: input.additionalData, },
     },
   });
 }
@@ -171,6 +179,7 @@ export function getListingPreview(id: string) {
       personalProfile: true,
       business: { include: { shop: true, memberships: true } },
       attributes: { include: { attribute: { include: { translations: true } } } },
+      additionalData: { orderBy: { position: "asc", }, },
       media: { orderBy: { position: "asc" } },
     },
   });
@@ -184,6 +193,9 @@ export function getEditableListing(id: string) {
       business: { include: { memberships: true } },
       media: { orderBy: { position: "asc" } },
       attributes: true,
+      additionalData: {
+        orderBy: { position: "asc", }
+      },
     },
   });
 }
@@ -278,4 +290,29 @@ export async function searchListings(
     page,
     pages,
   };
+}
+
+
+
+export async function replaceListingAdditionalData(
+  tx: Prisma.TransactionClient,
+  listingId: string,
+  additionalData: ListingAdditionalDataWrite[],
+) {
+  await tx.listingAdditionalData.deleteMany({
+    where: { listingId },
+  });
+
+  if (!additionalData.length) {
+    return;
+  }
+
+  await tx.listingAdditionalData.createMany({
+    data: additionalData.map((row) => ({
+      listingId,
+      name: row.name,
+      value: row.value,
+      position: row.position,
+    })),
+  });
 }

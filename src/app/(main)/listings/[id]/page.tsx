@@ -41,9 +41,9 @@ export default async function Page({
   const favoriteIds =
     visible && user
       ? await getFavoriteListingIds(user.id, [
-          id,
-          ...similar.map((listing) => listing.id),
-        ])
+        id,
+        ...similar.map((listing) => listing.id),
+      ])
       : [];
   const favorites = new Set(favoriteIds);
   return (
@@ -128,7 +128,35 @@ export default async function Page({
                     </dd>
                   </div>
                 ))}
-              </dl>
+              </dl>{item.additionalData.length > 0 && (
+                <section className="mt-8 border-t border-stone-200 pt-6">
+                  <h2>Additional data</h2>
+
+                  <div className="mt-4 overflow-hidden rounded-xl border border-stone-200">
+                    <table className="w-full border-collapse text-sm">
+                      <tbody>
+                        {item.additionalData.map((row) => (
+                          <tr
+                            key={`${row.position}-${row.name}`}
+                            className="border-b border-stone-200 last:border-0"
+                          >
+                            <th
+                              scope="row"
+                              className="w-2/5 bg-stone-50 px-4 py-3 text-left font-medium text-stone-600"
+                            >
+                              {row.name}
+                            </th>
+
+                            <td className="px-4 py-3 text-stone-900">
+                              {row.value}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
             </article>
           </section>
           <aside>

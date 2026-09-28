@@ -47,6 +47,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
               attributes: Object.fromEntries(
                 item.attributes.map((a) => [a.attributeId, a.value]),
               ),
+              additionalData: item.additionalData.map((row) => ({
+                name: row.name,
+                value: row.value,
+              })),
               media: item.media.map((m) => ({ id: m.id, altText: m.altText })),
               status: item.status,
               moderationStatus: item.moderationStatus,

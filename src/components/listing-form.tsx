@@ -1,5 +1,5 @@
 "use client";
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { translated, optionLabel } from "@/lib/catalog";
 import { CountryCityFields } from "@/components/country-city-fields";
@@ -7,12 +7,17 @@ import { saveListingAction, statusAction } from "@/actions/listings";
 import type { getCategories } from "@/repositories/catalog";
 import type { ListingInput } from "@/lib/validations/listing";
 import Image from "next/image";
+
+
 type Initial = ListingInput & {
   media: { id: string; altText: string }[];
   status: string;
   moderationStatus: string;
 };
-const subscribe = () => () => {};
+
+
+
+const subscribe = () => () => { };
 export function ListingForm({
   categories,
   businesses,
@@ -29,6 +34,28 @@ export function ListingForm({
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+
+  type AdditionalDataRow = {
+    key: string;
+    name: string;
+    value: string;
+  };
+
+  const nextAdditionalKey = useRef(0);
+
+  const [additionalData, setAdditionalData] = useState<
+    AdditionalDataRow[]
+  >(() =>
+    (initial?.additionalData ?? []).map((row, index) => ({
+      key: `existing-${index}`,
+      name: row.name,
+      value: row.value,
+    })),
+  );
+
+
+
   const category = categories.find((c) => c.id === categoryId);
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -51,6 +78,10 @@ export function ListingForm({
         phoneVisible: f.has("phoneVisible"),
         contactPhone: String(f.get("contactPhone") ?? ""),
         attributes,
+        additionalData: additionalData.map((row) => ({
+          name: row.name,
+          value: row.value,
+        })),
       });
       if (result.error) setError(result.error);
       else {
@@ -123,6 +154,131 @@ export function ListingForm({
               ))}
           </select>
         </label>
+        <section className="rounded-xl border border-stone-200 bg-stone-50 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-sm">
+                Additional data
+              </h3>
+
+              <p className="muted mt-1">
+                Add optional information that is specific to this
+                listing.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="btn btn-outline"
+              disabled={additionalData.length >= 20}
+              onClick={() => {
+                const key =
+                  `new-${nextAdditionalKey.current++}`;
+
+                setAdditionalData((current) => [
+                  ...current,
+                  {
+                    key,
+                    name: "",
+                    value: "",
+                  },
+                ]);
+              }}
+            >
+              Add row
+            </button>
+          </div>
+
+          {additionalData.length > 0 && (
+            <div className="mt-5 overflow-x-auto rounded-xl border border-stone-200 bg-white">
+              <table className="w-full min-w-[520px] border-collapse text-sm">
+                <thead>
+                  <tr className="border-b border-stone-200 bg-stone-50 text-left">
+                    <th className="px-4 py-3 font-medium">
+                      Name
+                    </th>
+
+                    <th className="px-4 py-3 font-medium">
+                      Value
+                    </th>
+
+                    <th className="w-24 px-4 py-3">
+                      <span className="sr-only">Actions</span>
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {additionalData.map((row, index) => (
+                    <tr
+                      key={row.key}
+                      className="border-b border-stone-100 last:border-0"
+                    >
+                      <td className="p-3">
+                        <input
+                          aria-label={`Additional data name ${index + 1}`}
+                          required
+                          minLength={2}
+                          maxLength={60}
+                          placeholder="e.g. Material"
+                          value={row.name}
+                          onChange={(event) => {
+                            const name = event.target.value;
+
+                            setAdditionalData((current) =>
+                              current.map((item) =>
+                                item.key === row.key
+                                  ? { ...item, name }
+                                  : item,
+                              ),
+                            );
+                          }}
+                        />
+                      </td>
+
+                      <td className="p-3">
+                        <input
+                          aria-label={`Additional data value ${index + 1}`}
+                          required
+                          maxLength={300}
+                          placeholder="e.g. Solid wood"
+                          value={row.value}
+                          onChange={(event) => {
+                            const value = event.target.value;
+
+                            setAdditionalData((current) =>
+                              current.map((item) =>
+                                item.key === row.key
+                                  ? { ...item, value }
+                                  : item,
+                              ),
+                            );
+                          }}
+                        />
+                      </td>
+
+                      <td className="p-3 text-right">
+                        <button
+                          type="button"
+                          className="text-sm font-medium text-red-700"
+                          onClick={() =>
+                            setAdditionalData((current) =>
+                              current.filter(
+                                (item) => item.key !== row.key,
+                              ),
+                            )
+                          }
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
         <label className="field">
           Title
           <input

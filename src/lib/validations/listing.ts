@@ -19,10 +19,42 @@ export const listingInput = z
     phoneVisible: z.boolean(),
     contactPhone: z.string().trim().max(30),
     attributes: z.record(z.string(), z.unknown()),
+    additionalData: z
+      .array(
+        z.object({
+          name: z.string().trim().min(2).max(60),
+          value: z.string().trim().min(1).max(300),
+        }),
+      )
+      .max(20, "You can add at most 20 additional rows.")
+      .default([]),
   })
-  .refine((v) => !v.phoneVisible || /^\+?[\d\s()-]{7,25}$/.test(v.contactPhone), {
-    message: "Add a valid contact phone or turn phone visibility off.",
-    path: ["contactPhone"],
+  .refine(
+    (listing) =>
+      !listing.phoneVisible ||
+      /^\+?[\d\s()-]{7,25}$/.test(listing.contactPhone),
+    {
+      message:
+        "Add a valid contact phone or turn phone visibility off.",
+      path: ["contactPhone"],
+    },
+  )
+  .superRefine((listing, context) => {
+    const names = new Set<string>();
+
+    listing.additionalData.forEach((row, index) => {
+      const normalizedName = row.name.toLowerCase();
+
+      if (names.has(normalizedName)) {
+        context.addIssue({
+          code: "custom",
+          message: "Additional data names must be unique.",
+          path: ["additionalData", index, "name"],
+        });
+      }
+
+      names.add(normalizedName);
+    });
   });
 export type ListingInput = z.infer<typeof listingInput>;
 type Definition = {

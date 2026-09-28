@@ -12,6 +12,7 @@ import {
   deleteListingIfVersion,
   findListingOwnership,
   findListingOwnershipWithMedia,
+  replaceListingAdditionalData,
   replaceListingAttributes,
   updateListingIfVersion,
   type ListingWriteData,
@@ -33,6 +34,13 @@ export async function saveListing(actor: Actor, raw: unknown) {
     )
       throw new Error("Choose an available subcategory.");
     const attributes = validateAttributes(category.attributes, v.attributes);
+    const additionalData = v.additionalData.map(
+      (row, position) => ({
+        name: row.name,
+        value: row.value,
+        position,
+      }),
+    );
     let personalProfileId: string | null = null;
     let businessId: string | null = null;
     if (v.owner === "personal") {
@@ -70,6 +78,11 @@ export async function saveListing(actor: Actor, raw: unknown) {
       if (!(await updateListingIfVersion(tx, v.id, v.version, data)))
         throw new Error("This listing changed in another tab. Reload before editing.");
       await replaceListingAttributes(tx, v.id, attributes);
+      await replaceListingAdditionalData(
+        tx,
+        v.id,
+        additionalData,
+      );
       await recordAudit(tx, actor.id, "listing.edited", v.id, {
         version: v.version + 1,
       });
@@ -78,6 +91,7 @@ export async function saveListing(actor: Actor, raw: unknown) {
     const item = await createListing(tx, {
       data,
       attributes,
+      additionalData,
       createdById: actor.id,
       personalProfileId,
       businessId,
@@ -113,10 +127,10 @@ export async function transitionListing(
       status: target,
       ...(target === "PUBLISHED"
         ? {
-            moderationStatus: "APPROVED",
-            publishedAt: new Date(),
-            expiresAt: new Date(Date.now() + 30 * 86400000),
-          }
+          moderationStatus: "APPROVED",
+          publishedAt: new Date(),
+          expiresAt: new Date(Date.now() + 30 * 86400000),
+        }
         : {}),
       ...(target === "SOLD" ? { soldAt: new Date() } : {}),
     });

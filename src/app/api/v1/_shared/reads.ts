@@ -25,10 +25,10 @@ export function listingCard(item: Card) {
     publishedAt: item.publishedAt,
     seller: item.business
       ? {
-          kind: "BUSINESS",
-          name: item.business.publicName,
-          slug: item.business.shop?.slug ?? null,
-        }
+        kind: "BUSINESS",
+        name: item.business.publicName,
+        slug: item.business.shop?.slug ?? null,
+      }
       : { kind: "PERSONAL", name: item.personalProfile?.displayName ?? "Seller" },
     media: item.media.map((m) => ({
       id: m.id,
@@ -100,12 +100,13 @@ export async function readListing(id: string) {
     contactPhone: item.phoneVisible ? item.contactPhone : null,
     seller: item.business
       ? {
-          kind: "BUSINESS",
-          name: item.business.publicName,
-          slug: item.business.shop?.slug ?? null,
-        }
+        kind: "BUSINESS",
+        name: item.business.publicName,
+        slug: item.business.shop?.slug ?? null,
+      }
       : { kind: "PERSONAL", name: item.personalProfile?.displayName ?? "Seller" },
     media: item.media.map((m) => ({ ...m, url: `/api/v1/media/${m.id}` })),
+    additionalData: item.additionalData,
   };
 }
 export async function readListingForEdit(actor: Actor, id: string) {
@@ -133,6 +134,10 @@ export async function readListingForEdit(actor: Actor, id: string) {
       url: `/api/v1/media/${m.id}`,
     })),
     status: item.status,
+    additionalData: item.additionalData.map((row) => ({
+      name: row.name,
+      value: row.value,
+    })),
   };
 }
 const searchInput = pagination.extend({

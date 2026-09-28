@@ -90,6 +90,16 @@ export function apiPublicListing(id: string) {
         attributes: { select: { attributeId: true, value: true } },
         personalProfile: { select: { displayName: true } },
         business: { select: { publicName: true, shop: { select: { slug: true } } } },
+        additionalData: {
+          orderBy: {
+            position: "asc",
+          },
+          select: {
+            name: true,
+            value: true,
+            position: true,
+          },
+        },
       },
     }),
   );
