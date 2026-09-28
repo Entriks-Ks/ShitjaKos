@@ -2576,6 +2576,33 @@ input[type="checkbox"] {
   overflow: visible;
   border-bottom: 0;
 }
+.listing-banner {
+  background: #f4f7f2;
+  border-bottom: 1px solid #e7eee7;
+  padding: 44px 0 38px;
+  text-align: center;
+}
+.listing-banner h1 {
+  margin: 0;
+  font-size: clamp(2.1rem, 4vw, 3rem);
+  color: #173f35;
+}
+.listing-banner-path {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 13px;
+  color: #7d8c82;
+}
+.listing-banner-path a:hover {
+  color: #235641;
+}
+.listing-banner-path [aria-current="page"] {
+  color: #173f35;
+}
 .searchbar-banner {
   margin-top: 0;
   max-width: none;

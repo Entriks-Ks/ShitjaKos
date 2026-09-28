@@ -9,9 +9,15 @@ import { startConversationAction } from "@/actions/messaging";
 export function MessageSeller({
   listingId,
   listingTitle,
+  buttonClassName = "btn btn-outline w-full",
+  label = "Message seller",
+  showIcon = true,
 }: {
   listingId: string;
   listingTitle: string;
+  buttonClassName?: string;
+  label?: string;
+  showIcon?: boolean;
 }) {
   const router = useRouter();
   const [body, setBody] = useState("Hello, is this still available?");
@@ -27,15 +33,15 @@ export function MessageSeller({
     <>
       <button
         type="button"
-        className="btn btn-outline w-full"
+        className={buttonClassName}
         aria-haspopup="dialog"
         onClick={() => {
           dialog.current?.showModal();
           input.current?.focus();
         }}
       >
-        <MessageCircle size={18} aria-hidden="true" />
-        Message seller
+        {showIcon && <MessageCircle size={18} aria-hidden="true" />}
+        {label}
       </button>
       <dialog
         ref={dialog}

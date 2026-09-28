@@ -1,0 +1,153 @@
+.block {
+  margin-top: 56px;
+}
+
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 22px;
+  border-bottom: 1px solid #e7eee7;
+}
+
+.tab {
+  margin: 0 0 -1px;
+  padding: 12px 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: #8a958a;
+  font-size: 15px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.tab[aria-selected="true"] {
+  color: #173f35;
+  border-bottom-color: #173f35;
+}
+
+.tab:focus-visible {
+  outline: 3px solid #4b9c6c;
+  outline-offset: 4px;
+}
+
+.panel {
+  background: #fff;
+  border: 1px solid #e4ebe4;
+  border-radius: 16px;
+  padding: 22px 22px 8px;
+  overflow: hidden;
+}
+
+.story {
+  padding: 28px 30px 26px;
+}
+
+.text {
+  margin: 0;
+  white-space: pre-wrap;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #33433b;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 22px 0 0;
+  padding-top: 22px;
+  border-top: 1px solid #edf1ea;
+}
+
+.fact {
+  position: relative;
+  margin: 0;
+  padding: 16px 18px 16px 20px;
+  background: linear-gradient(180deg, #f8faf5 0%, #f3f6f0 100%);
+  border: 1px solid #e6ece0;
+  border-radius: 14px;
+}
+
+.fact::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 3px;
+  border-radius: 99px;
+  background: #9eb483;
+}
+
+.fact dt {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a8a7e;
+}
+
+.fact dd {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.35;
+  color: #173f35;
+  overflow-wrap: anywhere;
+}
+
+.empty {
+  margin: 8px 6px 22px;
+  color: #7d8c82;
+  font-size: 14px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  text-align: left;
+  padding: 13px 16px;
+  font-size: 14px;
+}
+
+.table thead th {
+  background: #173f35;
+  color: #f4f7f2;
+  font-weight: 700;
+}
+
+.table tbody td:first-child {
+  width: 36%;
+  color: #5c6b62;
+  font-weight: 600;
+  background: #f6faf6;
+}
+
+.table tbody tr {
+  border-bottom: 1px solid #eef2ea;
+}
+
+.table tbody tr:last-child {
+  border-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .story {
+    padding: 22px 18px 20px;
+  }
+
+  .text {
+    font-size: 15px;
+  }
+
+  .facts {
+    grid-template-columns: 1fr;
+  }
+}

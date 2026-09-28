@@ -10,11 +10,13 @@ export function FavoriteButton({
   initialSaved,
   compact = false,
   buttonClassName,
+  label,
 }: {
   listingId: string;
   initialSaved: boolean;
   compact?: boolean;
   buttonClassName?: string;
+  label?: string;
 }) {
   const [saved, setSaved] = useState(initialSaved);
   const [error, setError] = useState("");
@@ -52,7 +54,7 @@ export function FavoriteButton({
         type="button"
         className={
           compact
-            ? "card-favorite-button"
+            ? (buttonClassName ?? "card-favorite-button")
             : (buttonClassName ?? "btn btn-outline mt-6 w-full")
         }
         aria-pressed={saved}
@@ -67,7 +69,7 @@ export function FavoriteButton({
         onClick={handleClick}
       >
         <Heart size={18} fill={saved ? "currentColor" : "none"} />
-        {!compact && (pending ? "Saving…" : saved ? "Saved" : "Save listing")}
+        {!compact && (pending ? "Saving…" : saved ? "Saved" : (label ?? "Save listing"))}
       </button>
 
       {error && (

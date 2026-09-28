@@ -1,0 +1,100 @@
+.gallery {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.stage {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  background: #edf1ea;
+  border: 0;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px #14282014;
+}
+
+.photo,
+.thumbPhoto {
+  object-fit: cover;
+}
+
+.empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  color: #a3aea3;
+}
+
+.arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  color: #eef4ee;
+  background: #12362e;
+  box-shadow: 0 8px 20px #173f3533;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.arrow:hover {
+  background: #1b4a3e;
+}
+
+.arrow:focus-visible {
+  outline: 3px solid #4b9c6c;
+  outline-offset: 2px;
+}
+
+.prev {
+  left: 12px;
+}
+
+.next {
+  right: 12px;
+}
+
+.thumbs {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  padding-bottom: 2px;
+}
+
+.thumbs::-webkit-scrollbar {
+  height: 6px;
+}
+
+.thumbs::-webkit-scrollbar-thumb {
+  background: #c5d3c6;
+  border-radius: 999px;
+}
+
+.thumb {
+  position: relative;
+  flex: 0 0 88px;
+  width: 88px;
+  height: 88px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  cursor: pointer;
+  scroll-snap-align: start;
+}
+
+.thumb[data-active="true"] {
+  border-color: #235641;
+}
