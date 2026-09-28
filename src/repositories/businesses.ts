@@ -10,7 +10,9 @@ export function getBusinessDeletionContext(
     where: { userId_businessId: { userId, businessId } },
     include: {
       user: true,
-      business: { include: { _count: { select: { listings: true } } } },
+      business: {
+        include: { shop: true, _count: { select: { listings: true } } },
+      },
     },
   });
 }

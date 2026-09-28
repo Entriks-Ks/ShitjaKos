@@ -1,12 +1,14 @@
 import Link from "@/components/navigation-link";
+import Image from "next/image";
 import { Plus, Store, MapPin, ArrowUpRight } from "lucide-react";
 import { StatusBadge } from "@/components/workspace-ui";
 import type { requireUser } from "@/lib/session";
 import { ShopCardMenu } from "@/components/shop-card-menu";
 
 type Memberships = Awaited<ReturnType<typeof requireUser>>["memberships"];
+type ShopCards = (Memberships[number] & { logoSrc: string | null })[];
 
-export function AccountShops({ memberships }: { memberships: Memberships }) {
+export function AccountShops({ memberships }: { memberships: ShopCards }) {
   return (
     <section id="shops" className="workspace-section">
       <div className="section-heading">
@@ -21,10 +23,21 @@ export function AccountShops({ memberships }: { memberships: Memberships }) {
       </div>
       {memberships.length ? (
         <div className="shop-account-grid">
-          {memberships.map(({ business, role }) => (
+          {memberships.map(({ business, role, logoSrc }) => (
             <article className="workspace-card shop-account-card" key={business.id}>
               <span className="shop-emblem">
-                <Store size={23} />
+                {logoSrc ? (
+                  <Image
+                    unoptimized
+                    width={47}
+                    height={47}
+                    className="shop-emblem-photo"
+                    src={logoSrc}
+                    alt=""
+                  />
+                ) : (
+                  <Store size={23} />
+                )}
               </span>
               <div className="shop-account-details">
                 <h3>

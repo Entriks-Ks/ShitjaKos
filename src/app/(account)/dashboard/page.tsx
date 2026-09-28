@@ -8,6 +8,7 @@ import { EmptyState, StatCard, StatusBadge } from "@/components/workspace-ui";
 import { requireUser } from "@/lib/session";
 import { getOwnedListings } from "@/repositories/dashboard";
 import { money } from "@/lib/catalog";
+import { shopLogosForMemberships } from "@/services/shop-images";
 
 export const metadata = { title: "My account", robots: { index: false, follow: false } };
 
@@ -54,7 +55,7 @@ export default async function DashboardPage() {
           note="Businesses you own or manage"
         />
       </div>
-      <AccountShops memberships={user.memberships} />
+      <AccountShops memberships={await shopLogosForMemberships(user.memberships)} />
       <section className="workspace-section">
         <div className="section-heading">
           <div>

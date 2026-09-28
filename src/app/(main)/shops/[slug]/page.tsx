@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
+import Image from "next/image";
 import { Header } from "@/components/header";
 import { ListingCard } from "@/components/listing-card";
 import { getPublicShop, getPublicShopListings } from "@/repositories/shops";
+import { shopBrandSrcs } from "@/services/shop-images";
 import { getFavoriteListingIds } from "@/repositories/favorites";
 import { localeOf } from "@/lib/catalog";
 import { currentActor as currentUser } from "@/lib/session";
@@ -51,7 +53,8 @@ export default async function Page({
   const locale = localeOf((await searchParams).lang);
   const shop = await getPublicShop(slug);
   if (!shop) notFound();
-  const [user, items] = await Promise.all([
+  const [{ logoSrc, backgroundSrc }, user, items] = await Promise.all([
+    shopBrandSrcs(shop),
     currentUser(),
     getPublicShopListings(shop.businessId),
   ]);
@@ -66,11 +69,37 @@ export default async function Page({
     <>
       <Header locale={locale} signedIn={!!user} />
       <main className="wrap py-10">
-        <section className="hero mt-0">
+        <section
+          className={`hero mt-0 shop-hero${backgroundSrc ? " shop-hero-has-bg" : ""}`}
+        >
+          {backgroundSrc ? (
+            <div className="shop-hero-art relative" aria-hidden="true">
+              <Image
+                unoptimized
+                fill
+                sizes="100vw"
+                className="object-cover"
+                src={backgroundSrc}
+                alt=""
+              />
+            </div>
+          ) : null}
           <p className="eyebrow flex items-center gap-1">
             <ShieldCheck size={14} /> BUSINESS REVIEWED
           </p>
-          <h1>{shop.business.publicName}</h1>
+          <div className="shop-hero-heading">
+            {logoSrc ? (
+              <Image
+                unoptimized
+                width={72}
+                height={72}
+                className="shop-hero-logo"
+                src={logoSrc}
+                alt=""
+              />
+            ) : null}
+            <h1>{shop.business.publicName}</h1>
+          </div>
           {shop.tagline.trim() ? <p className="muted max-w-2xl">{shop.tagline}</p> : null}
           <p className="muted max-w-2xl">{shop.business.description}</p>
           <div className="flex flex-wrap gap-5 mt-5 text-sm">

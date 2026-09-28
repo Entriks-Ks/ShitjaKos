@@ -2,6 +2,7 @@ import { AccountShops } from "@/components/account-shops";
 import { BusinessStaffInvitations } from "@/components/business-staff-invitations";
 import { requireUser } from "@/lib/session";
 import { getMyStaffInvitations } from "@/services/business-staff";
+import { shopLogosForMemberships } from "@/services/shop-images";
 
 export const metadata = {
   title: "My shops",
@@ -27,7 +28,7 @@ export default async function ShopsPage() {
 
       <BusinessStaffInvitations invitations={invitations} />
 
-      <AccountShops memberships={user.memberships} />
+      <AccountShops memberships={await shopLogosForMemberships(user.memberships)} />
     </>
   );
 }

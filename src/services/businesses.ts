@@ -13,20 +13,25 @@ import {
   removeEmptyBusiness,
   updateBusinessDetails,
 } from "@/repositories/businesses";
+import { removeShopImage } from "@/lib/shop-images";
 
 export async function deleteBusiness(actor: Actor, businessId: string) {
-  return withTransaction(async (tx) => {
+  const images = await withTransaction(async (tx) => {
     const membership = await getBusinessDeletionContext(tx, businessId, actor.id);
     assertBusinessDeletionAllowed(
       membership?.user ?? actor,
       membership,
       membership?.business._count.listings ?? 0,
     );
+    const shop = membership!.business.shop;
     await removeEmptyBusiness(tx, businessId);
     await recordAudit(tx, actor.id, "business.deleted", businessId, {
       publicName: membership!.business.publicName,
     });
+    return { logoKey: shop?.logoKey, backgroundKey: shop?.backgroundKey };
   });
+  if (images.logoKey) await removeShopImage("logo", images.logoKey);
+  if (images.backgroundKey) await removeShopImage("background", images.backgroundKey);
 }
 
 const input = z.object({

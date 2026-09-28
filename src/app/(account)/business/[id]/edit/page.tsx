@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session";
 import { BusinessForm } from "@/components/business-form";
 import Link from "@/components/navigation-link";
+import { shopBrandSrcs } from "@/services/shop-images";
 
 export default async function Page({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -38,6 +39,10 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
           description: business.description,
           address: business.shop?.address ?? "",
           openingHours: business.shop?.openingHours ?? "",
+          ...(await shopBrandSrcs({
+            logoKey: business.shop?.logoKey,
+            backgroundKey: business.shop?.backgroundKey,
+          })),
         }}
       />
     </main>

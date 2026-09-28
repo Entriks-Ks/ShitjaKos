@@ -1,0 +1,6 @@
+BEGIN;
+
+ALTER TABLE "Shop" ADD COLUMN "logoKey" TEXT;
+ALTER TABLE "Shop" ADD COLUMN "backgroundKey" TEXT;
+
+COMMIT;

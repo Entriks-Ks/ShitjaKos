@@ -166,10 +166,12 @@ model Shop {
   id           String   @id @default(cuid())
   businessId   String   @unique
   slug         String   @unique
-  tagline      String   @default("")
-  address      String   @default("")
-  openingHours String   @default("")
-  business     Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
+  tagline        String   @default("")
+  address        String   @default("")
+  openingHours   String   @default("")
+  logoKey        String?
+  backgroundKey  String?
+  business       Business @relation(fields: [businessId], references: [id], onDelete: Restrict)
 }
 
 model Category {
