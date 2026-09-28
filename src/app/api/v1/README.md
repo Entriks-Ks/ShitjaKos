@@ -9,10 +9,10 @@ through the existing transaction helper. Do not call Server Actions from mobile.
 
 ## Authentication
 
-POST JSON to `/api/v1/auth/:action`. The existing `/api/mobile/auth/:action`
-URL is unchanged; new mobile integrations should use v1. Use HTTPS in production.
-V1 extends the existing auth configuration with bearer support locally, without
-changing the original mobile or website authentication configuration.
+POST JSON to `/api/mobile/auth/:action`. Authentication stays on the existing mobile
+endpoint; `/api/v1` contains the application's data and feature endpoints. Use HTTPS
+in production. The v1 feature endpoints validate bearer tokens created by the mobile
+authentication endpoint without changing website authentication.
 
 | Action          | Body                                                               |
 | --------------- | ------------------------------------------------------------------ |

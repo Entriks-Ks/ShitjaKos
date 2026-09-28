@@ -49,28 +49,9 @@ await check("/api/v1/me", 401, { headers: { Authorization: "Basic invalid" } });
 await check("/api/v1/me", 401, {
   headers: { Authorization: "Bearer v1-smoke-invalid-session-token" },
 });
-const sessionResponse = await check("/api/v1/auth/session", 200, {
-  method: "POST",
-  headers: {
-    Authorization: "Bearer v1-smoke-invalid-session-token",
-    "Content-Type": "application/json",
-  },
-  body: "{}",
-});
-assert.equal((await sessionResponse.json()).session, null);
 await check("/api/v1/me", 403, { headers: { Origin: "https://untrusted.invalid" } });
 await check("/api/v1/listings?limit=99999", 400);
 await check("/api/v1/shops?page=-1", 400);
-await check("/api/v1/auth/sign-in", 400, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: "{",
-});
-await check("/api/v1/auth/sign-in", 413, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: "x".repeat(66000),
-});
 await check("/api/v1/locations", 200);
 const publicResponse = await check("/api/v1/listings?limit=1", 200);
 const result = await publicResponse.json();
