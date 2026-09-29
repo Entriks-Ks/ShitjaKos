@@ -2031,6 +2031,7 @@ h2 {
   gap: 5px;
   padding: 14px 15px 15px;
   min-width: 0;
+  text-align: left;
 }
 .listing-card-category {
   margin: 0;
@@ -2065,6 +2066,7 @@ h2 {
   margin: 2px 0 0;
   display: inline-flex;
   align-items: center;
+  align-self: flex-start;
   gap: 5px;
   font-size: 12px;
   font-weight: 500;
@@ -2576,24 +2578,13 @@ input[type="checkbox"] {
   overflow: visible;
   border-bottom: 0;
 }
-.listing-banner {
-  background: #f4f7f2;
-  border-bottom: 1px solid #e7eee7;
-  padding: 44px 0 38px;
-  text-align: center;
-}
-.listing-banner h1 {
-  margin: 0;
-  font-size: clamp(2.1rem, 4vw, 3rem);
-  color: #173f35;
-}
 .listing-banner-path {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
   gap: 8px;
-  margin-top: 12px;
+  margin: 0 0 14px;
   font-size: 13px;
   color: #7d8c82;
 }

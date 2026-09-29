@@ -54,31 +54,22 @@
 
 .facts {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin: 22px 0 0;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0;
+  margin: 24px 0 0;
   padding-top: 22px;
   border-top: 1px solid #edf1ea;
 }
 
 .fact {
-  position: relative;
   margin: 0;
-  padding: 16px 18px 16px 20px;
-  background: linear-gradient(180deg, #f8faf5 0%, #f3f6f0 100%);
-  border: 1px solid #e6ece0;
-  border-radius: 14px;
+  padding: 0 22px;
+  border-left: 1px solid #edf1ea;
 }
 
-.fact::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 12px;
-  bottom: 12px;
-  width: 3px;
-  border-radius: 99px;
-  background: #9eb483;
+.fact:first-child {
+  padding-left: 0;
+  border-left: 0;
 }
 
 .fact dt {
@@ -87,7 +78,7 @@
   font-weight: 650;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #7a8a7e;
+  color: #8a958a;
 }
 
 .fact dd {
@@ -149,5 +140,12 @@
 
   .facts {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .fact,
+  .fact:first-child {
+    padding: 0;
+    border-left: 0;
   }
 }

@@ -112,10 +112,10 @@
   width: 100%;
   min-height: 40px;
   padding: 0 8px;
-  border: 1px solid #e4ebe4;
+  border: 0;
   border-radius: 999px;
-  background: #fff;
-  color: #173f35;
+  background: #3d7a55;
+  color: #fff;
   font-family: inherit;
   font-size: 11px;
   font-weight: 650;
@@ -127,8 +127,7 @@
 
 .tool:hover,
 .tool[aria-pressed="true"] {
-  border-color: #173f35;
-  background: #173f35;
+  background: #326348;
   color: #fff;
 }
 
@@ -207,8 +206,8 @@
 
 .contactBtns {
   display: grid;
-  gap: 10px;
-  margin-top: 18px;
+  gap: 8px;
+  margin-top: 16px;
 }
 
 .contactMain,
@@ -218,13 +217,12 @@
   justify-content: center;
   gap: 8px;
   width: 100%;
-  min-height: 50px;
-  padding: 0 18px;
-  border-radius: 16px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-radius: 12px;
   font-family: inherit;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 650;
-  letter-spacing: 0.01em;
   text-decoration: none;
   cursor: pointer;
 }
@@ -232,28 +230,29 @@
 .contactMain {
   margin-top: 0;
   border: 0;
-  background: #173f35;
-  color: #f4f7f2;
+  background: #3d7a55;
+  color: #fff;
 }
 
 .contactMain:hover {
-  background: #102e27;
-  color: #f4f7f2;
+  background: #326348;
+  color: #fff;
 }
 
 .contactPhone {
-  border: 1.5px solid #173f35;
+  border: 1px solid #cfdcc8;
   background: #fff;
-  color: #173f35;
+  color: #2f5c43;
 }
 
 .contactPhone:hover {
-  background: #173f35;
-  color: #f4f7f2;
+  background: #eef4ea;
+  color: #2f5c43;
 }
 
 .related {
   margin-top: 80px;
+  text-align: center;
 }
 
 .relatedEyebrow {
@@ -281,6 +280,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
   gap: 22px;
+  text-align: left;
 }
 
 @media (max-width: 1024px) {

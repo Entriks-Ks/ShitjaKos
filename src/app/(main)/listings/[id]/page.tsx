@@ -60,21 +60,16 @@ export default async function Page({
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
-      <section className="listing-banner">
-        <div className="wrap">
-          <h1>{t.listingPage}</h1>
-          <nav aria-label="Breadcrumb" className="listing-banner-path">
-            <Link href={`/?lang=${locale}`}>{t.home}</Link>
-            <span aria-hidden="true">/</span>
-            <Link href={`/search?lang=${locale}&category=${item.categoryId}`}>
-              {categoryName}
-            </Link>
-            <span aria-hidden="true">/</span>
-            <span aria-current="page">{item.title}</span>
-          </nav>
-        </div>
-      </section>
       <main className="wrap py-8">
+        <nav aria-label="Breadcrumb" className="listing-banner-path">
+          <Link href={`/?lang=${locale}`}>{t.home}</Link>
+          <span aria-hidden="true">/</span>
+          <Link href={`/search?lang=${locale}&category=${item.categoryId}`}>
+            {categoryName}
+          </Link>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">{item.title}</span>
+        </nav>
         {!visible && (
           <p className="notice mb-5">
             Private preview — {item.status}. This listing is not public.
