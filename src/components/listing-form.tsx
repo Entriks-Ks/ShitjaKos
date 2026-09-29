@@ -68,7 +68,6 @@ export function ListingForm({
         version: initial?.version ?? 1,
         categoryId,
         owner: String(f.get("owner")),
-        intent: String(f.get("intent")),
         title: String(f.get("title")),
         description: String(f.get("description")),
         price: String(f.get("price")),
@@ -101,13 +100,6 @@ export function ListingForm({
           <h2>{initial ? "Edit your listing" : "What would you like to list?"}</h2>
         </div>
         <div className="grid sm:grid-cols-2 gap-5">
-          <label className="field">
-            Listing intent
-            <select name="intent" defaultValue={initial?.intent ?? "FOR_SALE"}>
-              <option value="FOR_SALE">For sale</option>
-              <option value="WANTED">Wanted — looking to buy</option>
-            </select>
-          </label>
           <label className="field">
             Publish as
             <select

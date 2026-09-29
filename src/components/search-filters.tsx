@@ -19,7 +19,6 @@ const advancedKeys = [
   "seller",
   "min",
   "max",
-  "intent",
   "sort",
   "condition",
   "attribute",
@@ -178,14 +177,6 @@ export function SearchFilters({
                   step="0.01"
                   defaultValue={p.max}
                 />
-              </label>
-              <label className="field">
-                {labels.intent}
-                <select name="intent" defaultValue={p.intent ?? ""}>
-                  <option value="">All</option>
-                  <option value="FOR_SALE">For sale</option>
-                  <option value="WANTED">Wanted</option>
-                </select>
               </label>
               <label className="field">
                 {labels.sort}

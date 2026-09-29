@@ -6,7 +6,10 @@ export const listingInput = z
     version: z.coerce.number().int().min(1).default(1),
     categoryId: z.string().min(1),
     owner: z.string().min(1),
-    intent: z.enum(["FOR_SALE", "WANTED"]),
+    intent: z
+      .enum(["FOR_SALE", "WANTED"])
+      .optional()
+      .default("FOR_SALE"),
     title: z.string().trim().min(5).max(120),
     description: z.string().trim().min(20).max(6000),
     price: z

@@ -18,6 +18,11 @@ import {
   type ListingWriteData,
 } from "@/repositories/listings";
 
+
+
+
+
+
 export async function saveListing(actor: Actor, raw: unknown) {
   const v = listingInput.parse(raw);
   if (actor.suspendedAt) throw new Error("Your account is suspended.");
@@ -56,7 +61,7 @@ export async function saveListing(actor: Actor, raw: unknown) {
       title: v.title,
       description: v.description,
       categoryId: v.categoryId,
-      intent: v.intent,
+      intent: "FOR_SALE",
       priceCents: Math.round(Number(v.price) * 100),
       city: v.city,
       condition: v.condition,
@@ -101,6 +106,14 @@ export async function saveListing(actor: Actor, raw: unknown) {
   });
 }
 
+
+
+
+
+
+
+
+
 export async function transitionListing(
   actor: Actor,
   id: string,
@@ -141,6 +154,11 @@ export async function transitionListing(
     });
   });
 }
+
+
+
+
+
 
 export async function deleteListing(actor: Actor, id: string) {
   const media = await withTransaction(async (tx) => {
