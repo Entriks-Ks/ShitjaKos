@@ -11,9 +11,11 @@ import {
   ArrowUpRight,
   MessageSquare,
 } from "lucide-react";
+import { useMessageNotifications } from "@/hooks/use-message-notifications";
 
 export function WorkspaceNav({ admin = false }: { admin?: boolean }) {
   const path = usePathname();
+  const { unread } = useMessageNotifications();
   const links = admin
     ? [
         { href: "/admin", name: "Review queue", icon: ShieldCheck },
@@ -37,7 +39,15 @@ export function WorkspaceNav({ admin = false }: { admin?: boolean }) {
       {links.map(({ href, name, icon: Icon }) => (
         <Link key={href} href={href} aria-current={path === href ? "page" : undefined}>
           <Icon size={18} />
-          {name}
+          <span className="workspace-nav-name">{name}</span>
+          {href === "/dashboard/messages" && unread > 0 ? (
+            <span
+              className="workspace-nav-badge"
+              aria-label={`${unread} unread messages`}
+            >
+              {unread > 99 ? "99+" : unread}
+            </span>
+          ) : null}
         </Link>
       ))}
       <Link className="workspace-back" href="/">

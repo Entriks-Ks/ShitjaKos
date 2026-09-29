@@ -4,6 +4,27 @@ import Link from "@/components/navigation-link";
 import { Plus, ArrowUpRight, ChevronDown, Globe, Heart, User } from "lucide-react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { copy, Locale, locales } from "@/lib/catalog";
+import { useMessageNotifications } from "@/hooks/use-message-notifications";
+
+function SignedInAccountControl({ label }: { label: string }) {
+  const { unread } = useMessageNotifications();
+
+  return (
+    <Link
+      className="header-icon-link header-account-link"
+      href="/dashboard"
+      aria-label={unread > 0 ? `${label}, ${unread} unread messages` : label}
+    >
+      <User size={22} strokeWidth={1.5} />
+      <span>{label}</span>
+      {unread > 0 ? (
+        <strong className="header-account-badge" aria-hidden="true">
+          {unread > 99 ? "99+" : unread}
+        </strong>
+      ) : null}
+    </Link>
+  );
+}
 
 export function Header({
   locale = "sq",
@@ -16,14 +37,12 @@ export function Header({
   const pathname = usePathname();
   const categoriesActive = pathname === "/";
   const shopsActive = pathname === "/shops" || pathname.startsWith("/shops/");
-  const accountControl = (
-    <Link
-      className="header-icon-link"
-      href={signedIn ? "/dashboard" : "/login"}
-      aria-label={signedIn ? t.account : t.login}
-    >
+  const accountControl = signedIn ? (
+    <SignedInAccountControl label={t.account} />
+  ) : (
+    <Link className="header-icon-link" href="/login" aria-label={t.login}>
       <User size={22} strokeWidth={1.5} />
-      <span>{signedIn ? t.account : t.login}</span>
+      <span>{t.login}</span>
     </Link>
   );
   const favoritesControl = (

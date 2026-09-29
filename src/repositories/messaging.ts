@@ -214,6 +214,118 @@ export function countUnread(
   });
 }
 
+type UnreadSummaryRow = {
+  totalUnread: number;
+  messageId: string;
+  conversationId: string;
+  title: string;
+  otherName: string;
+  preview: string;
+  createdAt: Date;
+};
+
+export async function findUnreadMessageSummary(tx: Tx, userId: string) {
+  const rows = await tx.$queryRaw<UnreadSummaryRow[]>`
+    WITH accessible AS (
+      SELECT
+        conversation.*,
+        CASE
+          WHEN conversation."buyerId" = ${userId} THEN 'BUYER'
+          ELSE 'SELLER'
+        END AS side
+      FROM "Conversation" AS conversation
+      WHERE
+        (
+          conversation."buyerId" = ${userId}
+          AND NOT (
+            conversation."sellerUserId" = ${userId}
+            OR EXISTS (
+              SELECT 1
+              FROM "BusinessMembership" AS membership
+              WHERE membership."businessId" = conversation."businessId"
+                AND membership."userId" = ${userId}
+                AND membership.role IN (
+                  'OWNER'::"BusinessRole",
+                  'STAFF'::"BusinessRole"
+                )
+            )
+          )
+        )
+        OR
+        (
+          conversation."buyerId" <> ${userId}
+          AND (
+            conversation."sellerUserId" = ${userId}
+            OR EXISTS (
+              SELECT 1
+              FROM "BusinessMembership" AS membership
+              WHERE membership."businessId" = conversation."businessId"
+                AND membership."userId" = ${userId}
+                AND membership.role IN (
+                  'OWNER'::"BusinessRole",
+                  'STAFF'::"BusinessRole"
+                )
+            )
+          )
+        )
+    ), unread AS (
+      SELECT
+        message.id AS "messageId",
+        message."conversationId",
+        accessible."listingTitle" AS title,
+        CASE
+          WHEN accessible.side = 'BUYER'
+            THEN COALESCE(business."publicName", accessible."sellerName")
+          ELSE buyer.name
+        END AS "otherName",
+        LEFT(message.body, 120) AS preview,
+        message."createdAt"
+      FROM accessible
+      JOIN "Message" AS message
+        ON message."conversationId" = accessible.id
+      JOIN "User" AS buyer
+        ON buyer.id = accessible."buyerId"
+      LEFT JOIN "Business" AS business
+        ON business.id = accessible."businessId"
+      LEFT JOIN "ConversationReadState" AS read_state
+        ON read_state."conversationId" = accessible.id
+        AND read_state."userId" = ${userId}
+      WHERE message.sequence > COALESCE(read_state."lastSequence", 0)
+        AND (
+          (accessible.side = 'BUYER' AND message."senderSide" = 'SELLER'::"MessageSide")
+          OR
+          (accessible.side = 'SELLER' AND message."senderSide" = 'BUYER'::"MessageSide")
+        )
+    )
+    SELECT
+      COUNT(*) OVER()::int AS "totalUnread",
+      unread."messageId",
+      unread."conversationId",
+      unread.title,
+      unread."otherName",
+      unread.preview,
+      unread."createdAt"
+    FROM unread
+    ORDER BY unread."createdAt" DESC, unread."messageId" DESC
+    LIMIT 1
+  `;
+
+  const latest = rows[0];
+  return {
+    unread: Number(latest?.totalUnread ?? 0),
+    latest: latest
+      ? {
+          messageId: latest.messageId,
+          conversationId: latest.conversationId,
+          title: latest.title,
+          otherName: latest.otherName,
+          preview: latest.preview,
+          createdAt: latest.createdAt.toISOString(),
+        }
+      : null,
+  };
+}
+
 export function setConversationBlock(
   tx: Tx,
   conversationId: string,

@@ -31,6 +31,14 @@
   color: #31573c;
   font-weight: 650;
 }
+.filters .enableAlerts {
+  margin-left: 4px;
+  border: 1px solid #dce4d7;
+  color: #31573c;
+}
+.filters .enableAlerts:hover {
+  background: #f5f8ef;
+}
 .filters span {
   font-size: 11px;
   margin-left: 5px;

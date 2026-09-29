@@ -123,6 +123,23 @@
   background: #eaf0df;
   color: #31573c;
 }
+.workspace-nav-name {
+  min-width: 0;
+}
+.workspace-nav-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #235641;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1;
+}
 .workspace-nav .workspace-back {
   color: #778077;
   margin-top: 8px;
@@ -1279,6 +1296,26 @@ h2 {
 }
 .header-icon-link:hover {
   color: #235641;
+}
+.header-account-link {
+  position: relative;
+}
+.header-account-badge {
+  position: absolute;
+  top: -5px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: #c8493e;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
 }
 .brand {
   font-size: 29px;

@@ -171,6 +171,7 @@ the listing or business permission check must pass. `Admin` means an active veri
 | Method | Path                                                   | Access      | What it does                                                                  | Input / result                                                                                 |
 | ------ | ------------------------------------------------------ | ----------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
 | GET    | `/api/v1/conversations`                                | User        | Loads the caller's buyer and seller inbox with unread information.            | `page`; returns the chat inbox and whether another page exists.                                |
+| GET    | `/api/v1/notifications`                                | User        | Loads the total unread-message count and the newest unread-message preview.   | Returns `unread` plus `latest`; used for header and account badges without loading the inbox.  |
 | POST   | `/api/v1/conversations`                                | Buyer       | Opens or reuses a conversation for one listing and sends its first message.   | `listingId`, `body`, UUID `clientId`; returns `201` with the conversation/message result.      |
 | GET    | `/api/v1/conversations/:id/messages`                   | Participant | Loads a conversation and a page of messages visible to the caller.            | Use `before` for older messages or `after` for new messages, never both; returns a `ChatView`. |
 | POST   | `/api/v1/conversations/:id/messages`                   | Participant | Sends another message while enforcing block, suspension, and messaging rules. | `body`, UUID `clientId`; retry with the same client ID to prevent duplicate messages.          |
@@ -280,6 +281,7 @@ POST /conversations: listingId, body, clientId (a UUID).
 POST /conversations/:id/messages: body, clientId (a UUID).
 Retain the same clientId when retrying a message to avoid duplication.
 GET /conversations?page=1 returns items/hasMore.
+GET /notifications returns the caller's total unread count and latest unread message.
 GET /conversations/:id/messages accepts before OR after sequence, never both;
 returns the existing ChatView object (messages, hasMore, canSend, etc.).
 PUT /conversations/:id/read: `{"sequence":1}`.

@@ -18,6 +18,7 @@ import {
   blockConversationAction,
   reportMessageAction,
 } from "@/actions/messaging";
+import { refreshMessageNotifications } from "@/hooks/use-message-notifications";
 
 function mergeMessages(previous: ChatMessage[], incoming: ChatMessage[]) {
   const byId = new Map(previous.map((message) => [message.id, message]));
@@ -206,8 +207,10 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
             conversationId: initial.id,
             sequence: readThrough,
           });
-          if (result.ok && !cancelled)
+          if (result.ok && !cancelled) {
             lastRead.current = Math.max(lastRead.current, readThrough);
+            refreshMessageNotifications();
+          }
         } catch {
           /* Read state can be retried on the next visible update. */
         }

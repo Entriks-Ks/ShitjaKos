@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import Link from "@/components/navigation-link";
 import { ArrowUpRight, MessageCircle, Search } from "lucide-react";
 import styles from "./messaging.module.css";
+import {
+  requestBrowserNotificationPermission,
+  useMessageNotifications,
+} from "@/hooks/use-message-notifications";
 
 type InboxData = {
   items: {
@@ -17,11 +21,12 @@ type InboxData = {
 };
 
 export function MessagingInbox({ initial, page }: { initial: InboxData; page: number }) {
+  const { permission } = useMessageNotifications();
   const [data, setData] = useState(initial);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
-  const unreadCount = data.items.filter((item) => item.unread > 0).length;
+  const unreadCount = data.items.reduce((total, item) => total + item.unread, 0);
   const items = data.items.filter(
     (item) =>
       (!unreadOnly || item.unread > 0) &&
@@ -85,6 +90,15 @@ export function MessagingInbox({ initial, page }: { initial: InboxData; page: nu
           >
             Unread <span>{unreadCount}</span>
           </button>
+          {permission === "default" ? (
+            <button
+              type="button"
+              className={styles.enableAlerts}
+              onClick={() => void requestBrowserNotificationPermission()}
+            >
+              Enable browser alerts
+            </button>
+          ) : null}
         </div>
         <label className={styles.search}>
           <Search size={17} aria-hidden="true" />

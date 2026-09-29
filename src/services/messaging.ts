@@ -222,6 +222,13 @@ export async function getChatInbox(actor: Actor, page = 1) {
   });
 }
 
+export async function getMessageNotificationSummary(actor: Actor) {
+  return withTransaction(async (tx) => {
+    const current = await activeActor(tx, actor);
+    return records.findUnreadMessageSummary(tx, current.id);
+  });
+}
+
 export async function markChatRead(actor: Actor, raw: unknown) {
   const input = readMessageInput.parse(raw);
   return withTransaction(async (tx) => {
