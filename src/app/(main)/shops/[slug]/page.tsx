@@ -6,17 +6,17 @@ import { ListingCard } from "@/components/listing-card";
 import { getPublicShop, getPublicShopListings } from "@/repositories/shops";
 import { shopBrandSrcs } from "@/services/shop-images";
 import { getFavoriteListingIds } from "@/repositories/favorites";
-import { localeOf } from "@/lib/catalog";
+import { copy, localeOf } from "@/lib/catalog";
 import { currentActor as currentUser } from "@/lib/session";
 import {
   Building2,
   CalendarDays,
   Clock,
-  Locate,
   Mail,
   MapPin,
   Phone,
   ShieldCheck,
+  Store,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -30,8 +30,8 @@ function ShopFact({
   value: ReactNode;
 }) {
   return (
-    <div className="shop-info-item">
-      <span className="shop-info-icon">
+    <div className="shop-info-row">
+      <span className="shop-info-row-icon">
         <Icon size={15} strokeWidth={1.8} />
       </span>
       <div>
@@ -41,7 +41,9 @@ function ShopFact({
     </div>
   );
 }
+
 export const dynamic = "force-dynamic";
+
 export default async function Page({
   params,
   searchParams,
@@ -51,6 +53,7 @@ export default async function Page({
 }) {
   const { slug } = await params;
   const locale = localeOf((await searchParams).lang);
+  const t = copy[locale];
   const shop = await getPublicShop(slug);
   if (!shop) notFound();
   const [{ logoSrc, backgroundSrc }, user, items] = await Promise.all([
@@ -65,110 +68,125 @@ export default async function Page({
       )
     : [];
   const favorites = new Set(favoriteIds);
+  const dateText = (value: Date) =>
+    value.toLocaleDateString(locale === "en" ? "en-GB" : locale === "de" ? "de-DE" : "sq-AL", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+  const street = shop.address.trim();
+
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
-      <main className="wrap py-10">
-        <section
-          className={`hero mt-0 shop-hero${backgroundSrc ? " shop-hero-has-bg" : ""}`}
-        >
-          {backgroundSrc ? (
-            <div className="shop-hero-art relative" aria-hidden="true">
+      <main className="wrap shop-page">
+        <section className="shop-hero">
+          <div className="shop-cover">
+            {backgroundSrc ? (
               <Image
                 unoptimized
                 fill
                 sizes="100vw"
-                className="object-cover"
+                className="shop-cover-photo"
                 src={backgroundSrc}
                 alt=""
               />
-            </div>
-          ) : null}
-          <p className="eyebrow flex items-center gap-1">
-            <ShieldCheck size={14} /> BUSINESS REVIEWED
-          </p>
-          <div className="shop-hero-heading">
+            ) : null}
+            <div className="shop-cover-shade" aria-hidden="true" />
+            <p className="shop-verified">
+              <ShieldCheck size={15} strokeWidth={2.2} />
+              {t.verified}
+            </p>
+          </div>
+
+          <header className="shop-profile">
             {logoSrc ? (
               <Image
                 unoptimized
-                width={72}
-                height={72}
-                className="shop-hero-logo"
+                width={120}
+                height={120}
+                className="shop-profile-logo"
                 src={logoSrc}
                 alt=""
               />
-            ) : null}
-            <h1>{shop.business.publicName}</h1>
-          </div>
-          {shop.tagline.trim() ? <p className="muted max-w-2xl">{shop.tagline}</p> : null}
-          <p className="muted max-w-2xl">{shop.business.description}</p>
-          <div className="flex flex-wrap gap-5 mt-5 text-sm">
-            <span className="flex items-center gap-1">
-              <MapPin size={15} />
-              {shop.business.city}
-            </span>
-            <a href={`tel:${shop.business.phone}`}>{shop.business.phone}</a>
-            <a href={`mailto:${shop.business.email}`}>{shop.business.email}</a>
-          </div>
+            ) : (
+              <div className="shop-profile-logo shop-profile-logo-empty">
+                <Store size={36} />
+              </div>
+            )}
+            <div className="shop-profile-copy">
+              <h1>{shop.business.publicName}</h1>
+              {shop.tagline.trim() ? <p className="shop-profile-tagline">{shop.tagline}</p> : null}
+              <div className="shop-profile-meta">
+                <p className="shop-profile-contacts">
+                  <span>
+                    <MapPin size={14} />
+                    {shop.business.city}
+                  </span>
+                  <a href={`tel:${shop.business.phone}`}>
+                    <Phone size={14} />
+                    {shop.business.phone}
+                  </a>
+                  <a href={`mailto:${shop.business.email}`}>
+                    <Mail size={14} />
+                    {shop.business.email}
+                  </a>
+                </p>
+                <span className="shop-company">
+                  <span className="shop-company-mark">
+                    <Store size={12} />
+                  </span>
+                  {t.company}
+                </span>
+              </div>
+            </div>
+          </header>
         </section>
+
         <div className="shop-body">
-          <aside className="panel shop-info h-fit">
-            <h2>Shop information</h2>
+          <aside className="panel shop-info">
+            <h2>{t.shopInfo}</h2>
+            {shop.business.description.trim() ? (
+              <p className="shop-info-about">{shop.business.description}</p>
+            ) : null}
             <dl className="shop-info-list">
-              <ShopFact
-                icon={MapPin}
-                label="Address"
-                value={shop.address.trim() || shop.business.city}
-              />
-              <ShopFact icon={Locate} label="City" value={shop.business.city} />
-              <ShopFact
-                icon={Clock}
-                label="Opening hours"
-                value={shop.openingHours.trim() || "Contact the shop for opening hours."}
-              />
-              <ShopFact
-                icon={Building2}
-                label="Legal name"
-                value={shop.business.legalName}
-              />
-              <ShopFact
-                icon={Phone}
-                label="Phone"
-                value={<a href={`tel:${shop.business.phone}`}>{shop.business.phone}</a>}
-              />
-              <ShopFact
-                icon={Mail}
-                label="Email"
-                value={
-                  <a href={`mailto:${shop.business.email}`}>{shop.business.email}</a>
-                }
-              />
+              {street ? (
+                <ShopFact
+                  icon={MapPin}
+                  label={t.address}
+                  value={
+                    <>
+                      {street}
+                      <span className="shop-info-sub">{shop.business.city}</span>
+                    </>
+                  }
+                />
+              ) : null}
+              {shop.openingHours.trim() ? (
+                <ShopFact icon={Clock} label={t.openingHours} value={shop.openingHours} />
+              ) : null}
+              <ShopFact icon={Building2} label={t.legalName} value={shop.business.legalName} />
               <ShopFact
                 icon={CalendarDays}
-                label="Member since"
-                value={shop.business.createdAt.toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
+                label={t.memberSince}
+                value={dateText(shop.business.createdAt)}
               />
               {shop.business.reviewedAt ? (
                 <ShopFact
                   icon={ShieldCheck}
-                  label="Reviewed"
-                  value={shop.business.reviewedAt.toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
+                  label={t.reviewedOn}
+                  value={dateText(shop.business.reviewedAt)}
                 />
               ) : null}
             </dl>
           </aside>
           <section>
-            <h2 className="mb-5">Available listings ({items.length})</h2>
+            <div className="shop-listings-head">
+              <h2>{t.availableListings}</h2>
+              <span className="shop-listings-count">{items.length}</span>
+            </div>
             {items.length ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+              <div className="shop-listings-grid">
                 {items.map((item) => (
                   <ListingCard
                     key={item.id}
@@ -180,7 +198,7 @@ export default async function Page({
                 ))}
               </div>
             ) : (
-              <div className="empty">This shop has no active listings yet.</div>
+              <div className="empty">{t.shopEmptyListings}</div>
             )}
           </section>
         </div>

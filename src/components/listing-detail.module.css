@@ -24,17 +24,30 @@
   gap: 8px;
   font-size: 11px;
   font-weight: 650;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: #8a958a;
 }
 
-.title {
-  margin: 10px 0 0;
-  font-size: clamp(1.85rem, 3vw, 2.45rem);
+.intentTag {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #e8f1ea;
+  color: #226d45;
+  font-size: 11px;
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.045em;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.title {
+  margin: 12px 0 0;
+  font-size: clamp(1.35rem, 2.2vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.03em;
   color: #142820;
   overflow-wrap: anywhere;
 }
@@ -44,10 +57,10 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 10px;
-  margin: 16px 0 0;
-  font-size: clamp(1.7rem, 2.4vw, 2.1rem);
+  margin: 14px 0 0;
+  font-size: clamp(1.4rem, 2vw, 1.7rem);
   font-weight: 750;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
   color: #173f35;
   line-height: 1;
 }
@@ -95,7 +108,7 @@
 
 .actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
   gap: 8px;
   margin-top: 20px;
 }
@@ -104,20 +117,18 @@
   min-width: 0;
 }
 
-.tool {
+.toolMain,
+.toolQuiet {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 7px;
   width: 100%;
-  min-height: 40px;
-  padding: 0 8px;
-  border: 0;
-  border-radius: 999px;
-  background: #3d7a55;
-  color: #fff;
+  min-height: 42px;
+  padding: 0 10px;
+  border-radius: 12px;
   font-family: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 650;
   line-height: 1.2;
   text-align: center;
@@ -125,15 +136,33 @@
   cursor: pointer;
 }
 
-.tool:hover,
-.tool[aria-pressed="true"] {
+.toolMain {
+  border: 0;
+  background: #3d7a55;
+  color: #fff;
+}
+
+.toolMain:hover {
   background: #326348;
   color: #fff;
 }
 
+.toolQuiet {
+  border: 1px solid #d5e0d4;
+  background: #f6f8f3;
+  color: #235641;
+}
+
+.toolQuiet:hover,
+.toolQuiet[aria-pressed="true"] {
+  background: #eef4ee;
+  color: #173f35;
+}
+
 .contactMain:focus-visible,
 .contactPhone:focus-visible,
-.tool:focus-visible {
+.toolMain:focus-visible,
+.toolQuiet:focus-visible {
   outline: 3px solid #4b9c6c;
   outline-offset: 3px;
 }

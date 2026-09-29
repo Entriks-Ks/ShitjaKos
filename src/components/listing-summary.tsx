@@ -1,5 +1,5 @@
 import Link from "@/components/navigation-link";
-import { Heart, MapPin, Phone, ShieldCheck, Store } from "lucide-react";
+import { Heart, MapPin, MessageCircle, Phone, ShieldCheck, Store } from "lucide-react";
 import { copy, countryForCity, countryName, Locale, money } from "@/lib/catalog";
 import { FavoriteButton } from "@/components/favorite-button";
 import { MessageSeller } from "@/components/messaging/message-seller";
@@ -66,9 +66,8 @@ export function ListingSummary({
     <div className={styles.summary}>
       <section className={styles.product}>
         <p className={styles.kicker}>
-          {categoryName}
-          <span aria-hidden="true">·</span>
-          {intentLabel}
+          <span>{categoryName}</span>
+          <span className={styles.intentTag}>{intentLabel}</span>
         </p>
         <h1 className={styles.title}>{title}</h1>
         <p className={styles.price}>
@@ -97,11 +96,12 @@ export function ListingSummary({
               <MessageSeller
                 listingId={id}
                 listingTitle={title}
-                buttonClassName={styles.tool}
+                buttonClassName={styles.toolMain}
                 label={labels.messageSeller}
               />
             ) : (
-              <Link className={styles.tool} href={loginHref}>
+              <Link className={styles.toolMain} href={loginHref}>
+                <MessageCircle size={16} aria-hidden="true" />
                 {labels.messageSeller}
               </Link>
             ))}
@@ -109,18 +109,18 @@ export function ListingSummary({
             <FavoriteButton
               listingId={id}
               initialSaved={saved}
-              buttonClassName={styles.tool}
+              buttonClassName={styles.toolQuiet}
               label={labels.saveListing}
             />
           ) : (
-            <Link className={styles.tool} href={loginHref} aria-label={labels.saveListing}>
+            <Link className={styles.toolQuiet} href={loginHref} aria-label={labels.saveListing}>
               <Heart size={15} aria-hidden="true" />
               {labels.saveListing}
             </Link>
           )}
           <ShareListingButton
             title={title}
-            buttonClassName={styles.tool}
+            buttonClassName={styles.toolQuiet}
             label={labels.shareListing}
           />
         </div>
