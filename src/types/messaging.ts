@@ -20,4 +20,17 @@ export type ChatView = {
   hasMore: boolean;
 };
 
+export type ChatInboxItem = {
+  id: string;
+  title: string;
+  otherName: string;
+  preview: string;
+  unread: number;
+};
+
+export type ChatInbox = {
+  items: ChatInboxItem[];
+  hasMore: boolean;
+};
+
 export type ChatResult<T> = { ok: true; data: T } | { ok: false; error: string };

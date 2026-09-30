@@ -1,7 +1,9 @@
 import "server-only";
 import type { Actor } from "@/lib/permissions";
 import { ChatError, conversationSide } from "@/lib/messaging/policy";
-import type { ChatMessage, ChatView } from "@/types/messaging";
+import type {
+  ChatMessage, ChatView, ChatInbox, ChatInboxItem,
+} from "@/types/messaging";
 import {
   startMessageInput,
   sendMessageInput,
@@ -9,6 +11,8 @@ import {
   readMessageInput,
   blockMessageInput,
   reportMessageInput,
+  deleteConversationInput,
+
 } from "@/lib/validations/messaging";
 import { withTransaction } from "@/repositories/transaction";
 import { recordAudit } from "@/repositories/audit";
@@ -156,69 +160,163 @@ export async function sendChatMessage(actor: Actor, raw: unknown) {
   });
 }
 
-export async function getChat(actor: Actor, raw: unknown): Promise<ChatView> {
+export async function getChat(
+  actor: Actor,
+  raw: unknown,
+): Promise<ChatView> {
   const input = messagePageInput.parse(raw);
+
   return withTransaction(async (tx) => {
     const current = await activeActor(tx, actor);
-    const { conversation, side } = await context(tx, current, input.conversationId);
+
+    const { conversation, side } = await context(
+      tx,
+      current,
+      input.conversationId,
+    );
+
+    const participantState =
+      await records.findConversationParticipantState(
+        tx,
+        conversation.id,
+        current.id,
+      );
+
+    // A direct URL cannot reopen a deleted conversation.
+    // It becomes available again only after a new message.
+    if (participantState?.deletedAt) {
+      throw new ChatError(
+        "Conversation not found.",
+        404,
+      );
+    }
+
+    const deletedThroughSequence =
+      participantState?.deletedThroughSequence ?? 0;
+
     const messages = await records.findMessagePage(
       tx,
       conversation.id,
+      deletedThroughSequence,
       input.before,
       input.after,
     );
+
     const selected = messages.slice(0, 50);
-    if (input.after === undefined) selected.reverse();
+
+    if (input.after === undefined) {
+      selected.reverse();
+    }
+
     return {
       id: conversation.id,
       title: conversation.listingTitle,
       otherName:
         side === "BUYER"
-          ? (conversation.business?.publicName ?? conversation.sellerName)
+          ? (
+            conversation.business?.publicName ??
+            conversation.sellerName
+          )
           : conversation.buyer.name,
       listingId: conversation.listingId,
       side,
       canSend: sendingAllowed(conversation),
-      blockedByMe: conversation.blocks.some((block) => block.side === side),
-      messages: selected.map((message) => dto(message, current.id)),
+      blockedByMe: conversation.blocks.some(
+        (block) => block.side === side,
+      ),
+      messages: selected.map((message) =>
+        dto(message, current.id),
+      ),
       hasMore: messages.length > 50,
     };
   });
 }
 
-export async function getChatInbox(actor: Actor, page = 1) {
-  if (!Number.isSafeInteger(page) || page < 1 || page > 10_000)
+export async function getChatInbox(
+  actor: Actor,
+  page = 1,
+): Promise<ChatInbox> {
+  if (
+    !Number.isSafeInteger(page) ||
+    page < 1 ||
+    page > 10_000
+  ) {
     throw new ChatError("Invalid page.");
+  }
+
   return withTransaction(async (tx) => {
     const current = await activeActor(tx, actor);
-    const conversations = await records.findInboxPage(tx, current.id, page);
-    const items = [];
-    for (const conversation of conversations.slice(0, 20)) {
-      // Reuse the same rule; skip ambiguous buyer/business membership collisions.
+
+    const conversations =
+      await records.findInboxPage(
+        tx,
+        current.id,
+        page,
+      );
+
+    const items: ChatInboxItem[] = [];
+
+    for (
+      const conversation of conversations.slice(0, 20)
+    ) {
       let side: "BUYER" | "SELLER";
+
       try {
-        side = conversationSide(current, conversation);
+        side = conversationSide(
+          current,
+          conversation,
+        );
       } catch (error) {
-        if (error instanceof ChatError) continue;
+        if (error instanceof ChatError) {
+          continue;
+        }
+
         throw error;
       }
+
+      const participantState =
+        conversation.readStates[0];
+
+      // Defensive check. findInboxPage() should already
+      // exclude conversations deleted by this user.
+      if (participantState?.deletedAt) {
+        continue;
+      }
+
+      // Deleted messages must never become unread again.
+      const unreadAfter = Math.max(
+        participantState?.lastSequence ?? 0,
+        participantState?.deletedThroughSequence ?? 0,
+      );
+
       items.push({
         id: conversation.id,
         title: conversation.listingTitle,
         otherName:
           side === "BUYER"
-            ? (conversation.business?.publicName ?? conversation.sellerName)
+            ? (
+              conversation.business?.publicName ??
+              conversation.sellerName
+            )
             : conversation.buyer.name,
-        preview: conversation.messages[0]?.body.slice(0, 120) ?? "",
+        preview:
+          conversation.messages[0]?.body.slice(
+            0,
+            120,
+          ) ?? "",
         unread: await records.countUnread(
           tx,
           conversation.id,
           side,
-          conversation.readStates[0]?.lastSequence ?? 0,
+          unreadAfter,
         ),
       });
     }
-    return { items, hasMore: conversations.length > 20 };
+
+    return {
+      items,
+      hasMore: conversations.length > 20,
+    };
   });
 }
 
@@ -302,5 +400,55 @@ export async function reportChatMessage(actor: Actor, raw: unknown) {
       messageId: message.id,
     });
     return { reportId: report.id };
+  });
+}
+
+
+export async function deleteChatForActor(
+  actor: Actor,
+  raw: unknown,
+) {
+  const input = deleteConversationInput.parse(raw);
+
+  return withTransaction(async (tx) => {
+    const current = await activeActor(
+      tx,
+      actor,
+      true,
+    );
+
+    // Synchronizes deletion with concurrent message sends.
+    await records.lockConversation(
+      tx,
+      input.conversationId,
+    );
+
+    const { conversation } = await context(
+      tx,
+      current,
+      input.conversationId,
+    );
+
+    await records.hideConversationForUser(
+      tx,
+      conversation.id,
+      current.id,
+      conversation.lastSequence,
+    );
+
+    await recordAudit(
+      tx,
+      current.id,
+      "conversation.deleted-for-user",
+      conversation.id,
+      {
+        deletedThroughSequence:
+          conversation.lastSequence,
+      },
+    );
+
+    return {
+      deleted: true,
+    };
   });
 }

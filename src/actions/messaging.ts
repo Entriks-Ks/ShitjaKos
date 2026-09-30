@@ -11,7 +11,9 @@ import {
   markChatRead,
   blockChat,
   reportChatMessage,
+  deleteChatForActor,
 } from "@/services/messaging";
+import { revalidatePath } from "next/cache";
 
 async function execute<T>(work: (actor: Actor) => Promise<T>): Promise<ChatResult<T>> {
   const actor = await currentActor();
@@ -31,6 +33,21 @@ async function execute<T>(work: (actor: Actor) => Promise<T>): Promise<ChatResul
       error: "Could not complete the request. Please retry.",
     };
   }
+}
+
+
+export async function deleteConversationAction(
+  raw: unknown,
+) {
+  const result = await execute((actor) =>
+    deleteChatForActor(actor, raw),
+  );
+
+  if (result.ok) {
+    revalidatePath("/dashboard/messages");
+  }
+
+  return result;
 }
 
 export async function startConversationAction(raw: unknown) {

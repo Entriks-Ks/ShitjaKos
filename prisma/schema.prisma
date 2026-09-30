@@ -405,7 +405,12 @@ model ConversationReadState {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+   // Messages at or below this sequence are hidden from this user.
+  deletedThroughSequence Int         @default(0)
+   deletedAt             DateTime?
+
   @@id([conversationId, userId])
+  @@index([userId, deletedAt])
 }
 
 model ConversationBlock {

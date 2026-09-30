@@ -19,6 +19,7 @@ import {
   reportMessageAction,
 } from "@/actions/messaging";
 import { refreshMessageNotifications } from "@/hooks/use-message-notifications";
+import { DeleteConversationButton } from "./delete-conversation-button";
 
 function mergeMessages(previous: ChatMessage[], incoming: ChatMessage[]) {
   const byId = new Map(previous.map((message) => [message.id, message]));
@@ -288,44 +289,68 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
           </p>
         </div>
         <details className={styles.options}>
-          <summary className={styles.iconButton} aria-label="Conversation options">
+          <summary
+            className={styles.iconButton}
+            aria-label="Conversation options"
+          >
             <MoreHorizontal size={22} />
           </summary>
-          <button
-            className="btn btn-outline"
-            disabled={blocking}
-            onClick={() => {
-              if (blockLock.current) return;
-              blockLock.current = true;
-              startBlock(async () => {
-                try {
-                  const result = await blockConversationAction({
-                    conversationId: initial.id,
-                    blocked: !view.blockedByMe,
-                  });
-                  if (!result.ok) {
-                    setError(result.error);
-                    return;
+
+          <div className={styles.optionsMenu}>
+            <button
+              type="button"
+              className={styles.optionsMenuButton}
+              disabled={blocking}
+              onClick={() => {
+                if (blockLock.current) return;
+
+                blockLock.current = true;
+
+                startBlock(async () => {
+                  try {
+                    const result =
+                      await blockConversationAction({
+                        conversationId: initial.id,
+                        blocked: !view.blockedByMe,
+                      });
+
+                    if (!result.ok) {
+                      setError(result.error);
+                      return;
+                    }
+
+                    const response = await fetch(
+                      `/api/v1/conversations/${initial.id}/messages?after=${latest.current}`,
+                      {
+                        cache: "no-store",
+                      },
+                    );
+
+                    if (!response.ok) {
+                      throw new Error("refresh");
+                    }
+
+                    accept(await response.json());
+                  } catch {
+                    setError(
+                      "Could not refresh the conversation. Updates will retry.",
+                    );
+                  } finally {
+                    blockLock.current = false;
                   }
-                  const response = await fetch(
-                    "/api/v1/conversations/" +
-                      initial.id +
-                      "/messages?after=" +
-                      latest.current,
-                    { cache: "no-store" },
-                  );
-                  if (!response.ok) throw new Error("refresh");
-                  accept(await response.json());
-                } catch {
-                  setError("Could not refresh the conversation. Updates will retry.");
-                } finally {
-                  blockLock.current = false;
-                }
-              });
-            }}
-          >
-            {view.blockedByMe ? "Unblock conversation" : "Block conversation"}
-          </button>
+                });
+              }}
+            >
+              {view.blockedByMe
+                ? "Unblock conversation"
+                : "Block conversation"}
+            </button>
+
+            <DeleteConversationButton
+              conversationId={initial.id}
+              otherName={view.otherName}
+            />
+          </div>
         </details>
       </header>
       <div className={styles.listingBar}>
@@ -364,9 +389,9 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
               try {
                 const response = await fetch(
                   "/api/v1/conversations/" +
-                    initial.id +
-                    "/messages?before=" +
-                    messages[0].sequence,
+                  initial.id +
+                  "/messages?before=" +
+                  messages[0].sequence,
                   { cache: "no-store" },
                 );
                 if (!response.ok) throw new Error("older");
@@ -387,18 +412,18 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
           <Fragment key={message.id}>
             {(index === 0 ||
               message.createdAt.slice(0, 10) !==
-                messages[index - 1].createdAt.slice(0, 10)) && (
-              <div className={styles.dateDivider}>
-                <time dateTime={message.createdAt.slice(0, 10)}>
-                  {new Intl.DateTimeFormat("en-GB", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                    timeZone: "UTC",
-                  }).format(new Date(message.createdAt))}
-                </time>
-              </div>
-            )}
+              messages[index - 1].createdAt.slice(0, 10)) && (
+                <div className={styles.dateDivider}>
+                  <time dateTime={message.createdAt.slice(0, 10)}>
+                    {new Intl.DateTimeFormat("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                      timeZone: "UTC",
+                    }).format(new Date(message.createdAt))}
+                  </time>
+                </div>
+              )}
             <article
               className={`${styles.bubble} ${message.mine ? styles.mine : styles.theirs}`}
             >

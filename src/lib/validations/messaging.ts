@@ -31,3 +31,7 @@ export const messagePageInput = z
   .refine((value) => value.before === undefined || value.after === undefined, {
     message: "Use before or after, not both.",
   });
+
+export const deleteConversationInput = z.object({
+  conversationId: chatId,
+});

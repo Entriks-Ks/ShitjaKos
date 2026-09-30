@@ -111,11 +111,21 @@ export async function insertMessage(
   },
 ) {
   const conversation = await tx.conversation.update({
-    where: { id: input.conversationId },
-    data: { lastSequence: { increment: 1 }, updatedAt: new Date() },
-    select: { lastSequence: true },
+    where: {
+      id: input.conversationId,
+    },
+    data: {
+      lastSequence: {
+        increment: 1,
+      },
+      updatedAt: new Date(),
+    },
+    select: {
+      lastSequence: true,
+    },
   });
-  return tx.message.create({
+
+  const message = await tx.message.create({
     data: {
       conversationId: input.conversationId,
       senderId: input.senderId,
@@ -125,25 +135,53 @@ export async function insertMessage(
       sequence: conversation.lastSequence,
     },
   });
+
+  // A new message makes the conversation visible again.
+  // deletedThroughSequence remains unchanged, so previously
+  // deleted messages stay hidden for that user.
+  await tx.conversationReadState.updateMany({
+    where: {
+      conversationId: input.conversationId,
+      deletedAt: {
+        not: null,
+      },
+    },
+    data: {
+      deletedAt: null,
+    },
+  });
+
+  return message;
 }
 
 export function findMessagePage(
   tx: Tx,
   conversationId: string,
+  deletedThroughSequence: number,
   before?: number,
   after?: number,
 ) {
+  const sequence =
+    before !== undefined
+      ? {
+        gt: deletedThroughSequence,
+        lt: before,
+      }
+      : {
+        gt: Math.max(
+          deletedThroughSequence,
+          after ?? 0,
+        ),
+      };
+
   return tx.message.findMany({
     where: {
       conversationId,
-      sequence:
-        before !== undefined
-          ? { lt: before }
-          : after !== undefined
-            ? { gt: after }
-            : undefined,
+      sequence,
     },
-    orderBy: { sequence: after !== undefined ? "asc" : "desc" },
+    orderBy: {
+      sequence: after !== undefined ? "asc" : "desc",
+    },
     take: 51,
   });
 }
@@ -173,16 +211,43 @@ export async function advanceReadState(
   });
 }
 
-export function findInboxPage(tx: Tx, userId: string, page: number) {
+export function findInboxPage(
+  tx: Tx,
+  userId: string,
+  page: number,
+) {
   return tx.conversation.findMany({
     where: {
-      OR: [
-        { buyerId: userId },
-        { sellerUserId: userId },
+      AND: [
         {
-          business: {
-            memberships: {
-              some: { userId, role: { in: ["OWNER", "STAFF"] } },
+          OR: [
+            {
+              buyerId: userId,
+            },
+            {
+              sellerUserId: userId,
+            },
+            {
+              business: {
+                memberships: {
+                  some: {
+                    userId,
+                    role: {
+                      in: ["OWNER", "STAFF"],
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
+        {
+          readStates: {
+            none: {
+              userId,
+              deletedAt: {
+                not: null,
+              },
             },
           },
         },
@@ -190,10 +255,33 @@ export function findInboxPage(tx: Tx, userId: string, page: number) {
     },
     include: {
       ...contextInclude,
-      readStates: { where: { userId }, select: { lastSequence: true } },
-      messages: { orderBy: { sequence: "desc" }, take: 1 },
+
+      readStates: {
+        where: {
+          userId,
+        },
+        select: {
+          lastSequence: true,
+          deletedThroughSequence: true,
+          deletedAt: true,
+        },
+      },
+
+      messages: {
+        orderBy: {
+          sequence: "desc",
+        },
+        take: 1,
+      },
     },
-    orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+    orderBy: [
+      {
+        updatedAt: "desc",
+      },
+      {
+        id: "desc",
+      },
+    ],
     skip: (page - 1) * 20,
     take: 21,
   });
@@ -290,7 +378,14 @@ export async function findUnreadMessageSummary(tx: Tx, userId: string) {
       LEFT JOIN "ConversationReadState" AS read_state
         ON read_state."conversationId" = accessible.id
         AND read_state."userId" = ${userId}
-      WHERE message.sequence > COALESCE(read_state."lastSequence", 0)
+      WHERE read_state."deletedAt" IS NULL
+  AND message.sequence > GREATEST(
+    COALESCE(read_state."lastSequence", 0),
+    COALESCE(
+      read_state."deletedThroughSequence",
+      0
+    )
+  )
         AND (
           (accessible.side = 'BUYER' AND message."senderSide" = 'SELLER'::"MessageSide")
           OR
@@ -315,13 +410,13 @@ export async function findUnreadMessageSummary(tx: Tx, userId: string) {
     unread: Number(latest?.totalUnread ?? 0),
     latest: latest
       ? {
-          messageId: latest.messageId,
-          conversationId: latest.conversationId,
-          title: latest.title,
-          otherName: latest.otherName,
-          preview: latest.preview,
-          createdAt: latest.createdAt.toISOString(),
-        }
+        messageId: latest.messageId,
+        conversationId: latest.conversationId,
+        title: latest.title,
+        otherName: latest.otherName,
+        preview: latest.preview,
+        createdAt: latest.createdAt.toISOString(),
+      }
       : null,
   };
 }
@@ -377,5 +472,67 @@ export function insertMessageReport(
     },
     create: data,
     update: {},
+  });
+}
+
+
+
+export async function lockConversation(
+  tx: Tx,
+  conversationId: string,
+) {
+  await tx.$queryRaw`
+    SELECT "id"
+    FROM "Conversation"
+    WHERE "id" = ${conversationId}
+    FOR UPDATE
+  `;
+}
+
+export function findConversationParticipantState(
+  tx: Tx,
+  conversationId: string,
+  userId: string,
+) {
+  return tx.conversationReadState.findUnique({
+    where: {
+      conversationId_userId: {
+        conversationId,
+        userId,
+      },
+    },
+    select: {
+      lastSequence: true,
+      deletedThroughSequence: true,
+      deletedAt: true,
+    },
+  });
+}
+
+export function hideConversationForUser(
+  tx: Tx,
+  conversationId: string,
+  userId: string,
+  throughSequence: number,
+) {
+  return tx.conversationReadState.upsert({
+    where: {
+      conversationId_userId: {
+        conversationId,
+        userId,
+      },
+    },
+    create: {
+      conversationId,
+      userId,
+      lastSequence: throughSequence,
+      deletedThroughSequence: throughSequence,
+      deletedAt: new Date(),
+    },
+    update: {
+      lastSequence: throughSequence,
+      deletedThroughSequence: throughSequence,
+      deletedAt: new Date(),
+    },
   });
 }
