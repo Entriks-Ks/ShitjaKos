@@ -1,4 +1,5 @@
 import Link from "@/components/navigation-link";
+import { BusinessViewTracker } from "@/components/business-performance/view-tracker";
 import { notFound } from "next/navigation";
 import { Header } from "@/components/header";
 import { ListingCard } from "@/components/listing-card";
@@ -60,6 +61,9 @@ export default async function Page({
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
+      {user && visible && item.businessId && (
+        <BusinessViewTracker kind="listing" id={id} />
+      )}
       <main className="wrap py-8">
         <nav aria-label="Breadcrumb" className="listing-banner-path">
           <Link href={`/?lang=${locale}`}>{t.home}</Link>
@@ -116,11 +120,7 @@ export default async function Page({
             ...item.attributes.map((a) => ({
               name: translated(a.attribute.translations, locale),
               value: `${
-                typeof a.value === "boolean"
-                  ? a.value
-                    ? "Yes"
-                    : "No"
-                  : String(a.value)
+                typeof a.value === "boolean" ? (a.value ? "Yes" : "No") : String(a.value)
               }${a.attribute.unit ? ` ${a.attribute.unit}` : ""}`.trim(),
             })),
           ]}

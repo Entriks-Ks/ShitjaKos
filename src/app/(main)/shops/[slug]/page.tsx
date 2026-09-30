@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BusinessViewTracker } from "@/components/business-performance/view-tracker";
 import { notFound } from "next/navigation";
 import Image from "next/image";
 import { Header } from "@/components/header";
@@ -69,16 +70,20 @@ export default async function Page({
     : [];
   const favorites = new Set(favoriteIds);
   const dateText = (value: Date) =>
-    value.toLocaleDateString(locale === "en" ? "en-GB" : locale === "de" ? "de-DE" : "sq-AL", {
-      day: "numeric",
-      month: "long",
-      year: "numeric",
-    });
+    value.toLocaleDateString(
+      locale === "en" ? "en-GB" : locale === "de" ? "de-DE" : "sq-AL",
+      {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      },
+    );
   const street = shop.address.trim();
 
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
+      {user && <BusinessViewTracker kind="shop" id={shop.businessId} />}
       <main className="wrap shop-page">
         <section className="shop-hero">
           <div className="shop-cover">
@@ -116,7 +121,9 @@ export default async function Page({
             )}
             <div className="shop-profile-copy">
               <h1>{shop.business.publicName}</h1>
-              {shop.tagline.trim() ? <p className="shop-profile-tagline">{shop.tagline}</p> : null}
+              {shop.tagline.trim() ? (
+                <p className="shop-profile-tagline">{shop.tagline}</p>
+              ) : null}
               <div className="shop-profile-meta">
                 <p className="shop-profile-contacts">
                   <span>
@@ -165,7 +172,11 @@ export default async function Page({
               {shop.openingHours.trim() ? (
                 <ShopFact icon={Clock} label={t.openingHours} value={shop.openingHours} />
               ) : null}
-              <ShopFact icon={Building2} label={t.legalName} value={shop.business.legalName} />
+              <ShopFact
+                icon={Building2}
+                label={t.legalName}
+                value={shop.business.legalName}
+              />
               <ShopFact
                 icon={CalendarDays}
                 label={t.memberSince}

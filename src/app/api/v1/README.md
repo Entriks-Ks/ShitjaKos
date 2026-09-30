@@ -154,6 +154,14 @@ the listing or business permission check must pass. `Admin` means an active veri
 
 ### Businesses and staff
 
+Business performance is available to active OWNER members through
+`GET /api/v1/businesses/:id/performance?from=YYYY-MM-DD&to=YYYY-MM-DD`.
+Mobile clients record a visible detail screen using authenticated
+`POST /api/v1/performance/views` with `{ "kind": "shop", "id": "business-id" }`
+or `{ "kind": "listing", "id": "listing-id" }`. Views exclude current business
+members and admins and are deduplicated per signed-in visitor/page/UTC day.
+See [performance definitions and client integration](../../../../docs/business-performance.md).
+
 | Method | Path                                               | Access       | What it does                                                                                         | Input / result                                                                                                          |
 | ------ | -------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/api/v1/businesses`                               | User         | Creates a business, OWNER membership, shop data, and optional initial branding pending admin review. | Send JSON for details only, or multipart fields with optional `logo` and `background` files; returns `201 {id,images}`. |

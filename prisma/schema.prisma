@@ -136,6 +136,19 @@ model Business {
   listings         Listing[]
   conversations    Conversation[]
   staffInvitations BusinessStaffInvitation[]
+  performanceViews BusinessPerformanceView[]
+}
+
+model BusinessPerformanceView {
+  id String @id @default(cuid())
+  businessId String
+  target String
+  day DateTime @db.Date
+  visitorHash String
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, target, day, visitorHash])
+  @@index([businessId, day])
 }
 
 model BusinessMembership {

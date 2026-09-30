@@ -35,7 +35,11 @@ export default async function DashboardLayout({
             {user.emailVerified ? "Email verified" : "Email not verified"}
           </StatusBadge>
         </div>
-        <WorkspaceNav />
+        <WorkspaceNav
+          hasBusiness={user.memberships.some(
+            ({ role, business }) => role === "OWNER" && !business.suspendedAt,
+          )}
+        />
         <div className="account-contact">
           <p>
             <Mail size={15} />
