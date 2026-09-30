@@ -10,6 +10,7 @@ import {
   Layers,
   ArrowUpRight,
   MessageSquare,
+  Flag,
 } from "lucide-react";
 import { useMessageNotifications } from "@/hooks/use-message-notifications";
 
@@ -18,19 +19,22 @@ export function WorkspaceNav({ admin = false }: { admin?: boolean }) {
   const { unread } = useMessageNotifications();
   const links = admin
     ? [
-        { href: "/admin", name: "Review queue", icon: ShieldCheck },
-        { href: "/admin/catalog", name: "Categories & fields", icon: Layers },
-        { href: "/dashboard", name: "My account", icon: UserRound },
-        { href: "/admin/users", name: "Users", icon: UserRound },
-        { href: "/admin/businesses", name: "Businesses", icon: Store },
-      ]
+      { href: "/admin", name: "Review queue", icon: ShieldCheck },
+      { href: "/admin/catalog", name: "Categories & fields", icon: Layers },
+      { href: "/dashboard", name: "My account", icon: UserRound },
+      { href: "/admin/users", name: "Users", icon: UserRound },
+      { href: "/admin/businesses", name: "Businesses", icon: Store },
+      {
+        href: "/admin/message-reports", name: "Message reports", icon: Flag
+      },
+    ]
     : [
-        { href: "/dashboard", name: "Overview", icon: LayoutDashboard },
-        { href: "/dashboard/profile", name: "Personal details", icon: UserRound },
-        { href: "/dashboard/favorites", name: "My favorites", icon: Heart },
-        { href: "/dashboard/shops", name: "My shops", icon: Store },
-        { href: "/dashboard/messages", name: "Messages", icon: MessageSquare },
-      ];
+      { href: "/dashboard", name: "Overview", icon: LayoutDashboard },
+      { href: "/dashboard/profile", name: "Personal details", icon: UserRound },
+      { href: "/dashboard/favorites", name: "My favorites", icon: Heart },
+      { href: "/dashboard/shops", name: "My shops", icon: Store },
+      { href: "/dashboard/messages", name: "Messages", icon: MessageSquare },
+    ];
   return (
     <nav
       className="workspace-nav"
