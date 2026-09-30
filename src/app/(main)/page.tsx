@@ -48,9 +48,9 @@ export default async function Home({
   ]);
   const favoriteIds = user
     ? await getFavoriteListingIds(
-        user.id,
-        result.items.map((item) => item.id),
-      )
+      user.id,
+      result.items.map((item) => item.id),
+    )
     : [];
   return (
     <>
@@ -218,7 +218,7 @@ export default async function Home({
             <p className="eyebrow">
               {translated(
                 categories.find((category) => category.id === "family")?.translations ??
-                  [],
+                [],
                 locale,
               ) || "Familje, fëmijë dhe bebe"}
             </p>

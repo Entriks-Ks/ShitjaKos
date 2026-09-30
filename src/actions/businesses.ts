@@ -3,7 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/session";
 import { actionErrorMessage } from "@/lib/action-error";
-import { createBusiness, updateBusiness, deleteBusiness } from "@/services/businesses";
+import {
+  createBusinessWithImages,
+  updateBusiness,
+  deleteBusiness,
+} from "@/services/businesses";
 import {
   clearShopImage,
   parseShopImageKind,
@@ -28,10 +32,15 @@ export async function deleteBusinessAction(businessId: string) {
 export async function businessAction(raw: unknown) {
   const user = await requireUser();
   try {
-    const id = await createBusiness(user, raw);
+    const form = raw instanceof FormData ? raw : null;
+    const values = form ? Object.fromEntries(form) : raw;
+    const result = await createBusinessWithImages(user, values, {
+      logo: form?.get("logo"),
+      background: form?.get("background"),
+    });
     revalidatePath("/dashboard");
     revalidatePath("/dashboard/shops");
-    return { id };
+    return result;
   } catch (error) {
     return { error: actionErrorMessage(error) };
   }

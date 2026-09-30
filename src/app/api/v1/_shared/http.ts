@@ -4,6 +4,7 @@ import { ApiError, apiId } from "./input";
 import { ChatError } from "@/lib/messaging/policy";
 import { MediaOperationError } from "@/services/media";
 import { BusinessStaffError } from "@/services/business-staff";
+import { ShopImageError } from "@/services/shop-images";
 import { serviceErrorStatus } from "./service-errors";
 
 export type ApiContext = { params: Promise<Record<string, string>> };
@@ -46,6 +47,8 @@ export function endpoint(
       )
         return json({ error: error.message }, error.status);
       if (error instanceof BusinessStaffError) return json({ error: error.message }, 403);
+      if (error instanceof ShopImageError)
+        return json({ error: error.message }, error.status);
       const knownStatus = serviceErrorStatus(error);
       if (knownStatus)
         return json(

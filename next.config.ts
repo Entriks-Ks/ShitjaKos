@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
   outputFileTracingRoot: process.cwd(),
   experimental: {
     serverActions: {
-      bodySizeLimit: "9mb",
+      // Business creation may include one 8 MB logo and one 8 MB background.
+      bodySizeLimit: "18mb",
     },
   },
 };

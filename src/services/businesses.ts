@@ -14,6 +14,7 @@ import {
   updateBusinessDetails,
 } from "@/repositories/businesses";
 import { removeShopImage } from "@/lib/shop-images";
+import { saveShopImage } from "@/services/shop-images";
 
 export async function deleteBusiness(actor: Actor, businessId: string) {
   const images = await withTransaction(async (tx) => {
@@ -71,6 +72,48 @@ export async function createBusiness(actor: Actor, raw: unknown) {
     await recordAudit(tx, actor.id, "business.submitted", business.id, {});
     return business.id;
   });
+}
+
+export async function createBusinessWithImages(
+  actor: Actor,
+  raw: unknown,
+  images: {
+    logo?: FormDataEntryValue | null;
+    background?: FormDataEntryValue | null;
+  },
+) {
+  const id = await createBusiness(actor, raw);
+
+  try {
+    if (images.logo instanceof File && images.logo.size > 0) {
+      await saveShopImage(actor, id, "logo", images.logo);
+    }
+
+    if (images.background instanceof File && images.background.size > 0) {
+      await saveShopImage(actor, id, "background", images.background);
+    }
+
+    return {
+      id,
+      images: {
+        logo: images.logo instanceof File && images.logo.size > 0,
+        background: images.background instanceof File && images.background.size > 0,
+      },
+    };
+  } catch (error) {
+    // Do not leave a duplicate pending business when initial image validation
+    // or storage fails. A newly created business has no listings yet.
+    try {
+      await deleteBusiness(actor, id);
+    } catch (rollbackError) {
+      console.error(
+        "Could not roll back business after initial image upload failed.",
+        rollbackError instanceof Error ? rollbackError.name : "UnknownError",
+      );
+    }
+
+    throw error;
+  }
 }
 
 export async function updateBusiness(actor: Actor, businessId: string, raw: unknown) {

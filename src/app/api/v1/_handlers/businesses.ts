@@ -1,17 +1,56 @@
 import "server-only";
 import { z } from "zod";
 import { apiActor } from "@/app/api/v1/_shared/access";
-import { createBusiness, updateBusiness, deleteBusiness } from "@/services/businesses";
+import {
+  createBusinessWithImages,
+  updateBusiness,
+  deleteBusiness,
+} from "@/services/businesses";
 import {
   getBusinessStaff,
   getMyStaffInvitations,
   changeBusinessStaff,
 } from "@/services/business-staff";
 import { endpoint, paramsOf, json } from "@/app/api/v1/_shared/http";
-import { readJson } from "@/app/api/v1/_shared/input";
+import { ApiError, boundedBytes, readJson } from "@/app/api/v1/_shared/input";
 import { changed } from "@/app/api/v1/_shared/cache";
 import * as reads from "@/app/api/v1/_shared/reads";
 const query = (r: Request) => Object.fromEntries(new URL(r.url).searchParams);
+
+const BUSINESS_CREATE_BODY_LIMIT = 18 * 1024 * 1024;
+
+async function readBusinessCreateRequest(request: Request) {
+  const contentType = request.headers.get("content-type") ?? "";
+
+  if (contentType.split(";")[0].trim() === "application/json") {
+    return {
+      values: await readJson(request),
+      logo: null,
+      background: null,
+    };
+  }
+
+  if (!contentType.startsWith("multipart/form-data;")) {
+    throw new ApiError(415, "Use application/json or multipart/form-data.");
+  }
+
+  const bytes = await boundedBytes(request, BUSINESS_CREATE_BODY_LIMIT);
+  let form: FormData;
+
+  try {
+    form = await new Response(bytes, {
+      headers: { "Content-Type": contentType },
+    }).formData();
+  } catch {
+    throw new ApiError(400, "Invalid multipart body.");
+  }
+
+  return {
+    values: Object.fromEntries(form),
+    logo: form.get("logo"),
+    background: form.get("background"),
+  };
+}
 
 export const shopsGet = endpoint(async (r) => reads.readShops(query(r)));
 export const shopGet = endpoint(async (r, c) =>
@@ -24,9 +63,14 @@ export const businessGet = endpoint(async (r, c) =>
   reads.readBusiness(await apiActor(r), (await paramsOf(c)).id),
 );
 export const businessPost = endpoint(async (r) => {
-  const id = await createBusiness(await apiActor(r), await readJson(r));
+  const actor = await apiActor(r);
+  const input = await readBusinessCreateRequest(r);
+  const result = await createBusinessWithImages(actor, input.values, {
+    logo: input.logo,
+    background: input.background,
+  });
   changed();
-  return json({ id }, 201);
+  return json(result, 201);
 });
 export const businessPatch = endpoint(async (r, c) => {
   await updateBusiness(await apiActor(r), (await paramsOf(c)).id, await readJson(r));

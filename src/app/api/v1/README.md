@@ -154,17 +154,30 @@ the listing or business permission check must pass. `Admin` means an active veri
 
 ### Businesses and staff
 
-| Method | Path                                               | Access       | What it does                                                              | Input / result                                                                             |
-| ------ | -------------------------------------------------- | ------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
-| POST   | `/api/v1/businesses`                               | User         | Creates a business, OWNER membership, and shop data pending admin review. | Business/shop form; returns `201 {id}`.                                                    |
-| GET    | `/api/v1/businesses/:id`                           | Member       | Loads private business settings plus the caller's membership role.        | Returns `404` to non-members so private business existence/details are not exposed.        |
-| PATCH  | `/api/v1/businesses/:id`                           | OWNER        | Updates business and shop settings.                                       | Any supported subset of the business form; returns `{ok:true}`.                            |
-| DELETE | `/api/v1/businesses/:id`                           | OWNER        | Deletes an eligible empty business after the service checks dependencies. | Returns `{ok:true}` or a business-rule error explaining what must be removed first.        |
-| GET    | `/api/v1/businesses/:id/staff`                     | OWNER        | Loads the staff roster and pending invitations for staff management.      | Returns the existing service shape for members and invitations.                            |
-| POST   | `/api/v1/businesses/:id/invitations`               | OWNER        | Creates or replaces a STAFF invitation and attempts to email it.          | Body `{"email":"person@example.com"}`; returns saved invitation data and any mail warning. |
-| DELETE | `/api/v1/businesses/:id/invitations/:invitationId` | OWNER        | Cancels a pending invitation belonging to that business.                  | Returns the service result.                                                                |
-| POST   | `/api/v1/businesses/:id/invitations/:invitationId` | Invited user | Accepts or declines the invitation addressed to the signed-in email.      | Body `{"decision":"accept"}` or `{"decision":"decline"}`; acceptance creates a STAFF role. |
-| DELETE | `/api/v1/businesses/:id/staff/:userId`             | OWNER        | Removes a STAFF member from that business.                                | Cannot remove an OWNER; returns the service result.                                        |
+| Method | Path                                               | Access       | What it does                                                                                         | Input / result                                                                                                          |
+| ------ | -------------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/api/v1/businesses`                               | User         | Creates a business, OWNER membership, shop data, and optional initial branding pending admin review. | Send JSON for details only, or multipart fields with optional `logo` and `background` files; returns `201 {id,images}`. |
+| GET    | `/api/v1/businesses/:id`                           | Member       | Loads private business settings plus the caller's membership role.                                   | Returns `404` to non-members so private business existence/details are not exposed.                                     |
+| PATCH  | `/api/v1/businesses/:id`                           | OWNER        | Updates business and shop settings.                                                                  | Any supported subset of the business form; returns `{ok:true}`.                                                         |
+| DELETE | `/api/v1/businesses/:id`                           | OWNER        | Deletes an eligible empty business after the service checks dependencies.                            | Returns `{ok:true}` or a business-rule error explaining what must be removed first.                                     |
+| GET    | `/api/v1/businesses/:id/staff`                     | OWNER        | Loads the staff roster and pending invitations for staff management.                                 | Returns the existing service shape for members and invitations.                                                         |
+| POST   | `/api/v1/businesses/:id/invitations`               | OWNER        | Creates or replaces a STAFF invitation and attempts to email it.                                     | Body `{"email":"person@example.com"}`; returns saved invitation data and any mail warning.                              |
+| DELETE | `/api/v1/businesses/:id/invitations/:invitationId` | OWNER        | Cancels a pending invitation belonging to that business.                                             | Returns the service result.                                                                                             |
+| POST   | `/api/v1/businesses/:id/invitations/:invitationId` | Invited user | Accepts or declines the invitation addressed to the signed-in email.                                 | Body `{"decision":"accept"}` or `{"decision":"decline"}`; acceptance creates a STAFF role.                              |
+| DELETE | `/api/v1/businesses/:id/staff/:userId`             | OWNER        | Removes a STAFF member from that business.                                                           | Cannot remove an OWNER; returns the service result.                                                                     |
+
+To create a shop with its initial branding, send `multipart/form-data` to
+`POST /api/v1/businesses`. Use the normal business field names and attach either
+or both optional files:
+
+- `logo`: JPEG, PNG or WebP, up to 8 MiB; stored as a 512×512 WebP.
+- `background`: JPEG, PNG or WebP, up to 8 MiB; stored as a 1600×900 WebP.
+
+The authenticated user becomes the OWNER. The business and both images are
+treated as one creation operation: if an image is rejected or cannot be stored,
+the newly created empty business is removed so the client can safely retry.
+Existing clients may continue sending `application/json` when they do not have
+initial images.
 
 ### Conversations
 

@@ -2,7 +2,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { businessAction, clearShopImageAction, saveShopImageAction, updateBusinessAction } from "@/actions/businesses";
+import {
+  businessAction,
+  clearShopImageAction,
+  saveShopImageAction,
+  updateBusinessAction,
+} from "@/actions/businesses";
 import { cities } from "@/lib/catalog";
 import { CountryCityFields } from "@/components/country-city-fields";
 
@@ -37,8 +42,8 @@ export function BusinessForm({ initial }: { initial?: BusinessInitial }) {
 
           const r = initial
             ? await updateBusinessAction(initial.id, values)
-            : await businessAction(values);
-          if (r.error) setError(r.error);
+            : await businessAction(f);
+          if ("error" in r && r.error) setError(r.error);
           else {
             router.push("/dashboard/shops");
             router.refresh();
@@ -111,9 +116,7 @@ export function BusinessForm({ initial }: { initial?: BusinessInitial }) {
           backgroundSrc={initial.backgroundSrc}
         />
       ) : (
-        <p className="notice">
-          After the shop is created you can add a logo and a background image.
-        </p>
+        <CreateShopImages disabled={busy} />
       )}
       {!initial && (
         <p className="notice">
@@ -134,6 +137,30 @@ export function BusinessForm({ initial }: { initial?: BusinessInitial }) {
             : "Create business & request review"}
       </button>
     </form>
+  );
+}
+
+function CreateShopImages({ disabled }: { disabled: boolean }) {
+  return (
+    <fieldset disabled={disabled} className="grid gap-5 sm:grid-cols-2">
+      <legend className="sr-only">Shop images</legend>
+
+      <label className="field space-y-2">
+        Shop logo
+        <span className="muted text-sm font-normal">
+          Square JPEG, PNG or WebP, up to 8 MB.
+        </span>
+        <input name="logo" type="file" accept="image/jpeg,image/png,image/webp" />
+      </label>
+
+      <label className="field space-y-2">
+        Shop background
+        <span className="muted text-sm font-normal">
+          Wide JPEG, PNG or WebP, up to 8 MB.
+        </span>
+        <input name="background" type="file" accept="image/jpeg,image/png,image/webp" />
+      </label>
+    </fieldset>
   );
 }
 
