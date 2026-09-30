@@ -3,10 +3,23 @@
 import { revalidateListing } from "@/lib/revalidation";
 import { requireUser } from "@/lib/session";
 import { actionErrorMessage } from "@/lib/action-error";
-import { saveListing, transitionListing } from "@/services/listings";
-import { deleteListing } from "@/services/listings";
+import { saveListing, transitionListing, deleteListing } from "@/services/listings";
+import { suggestCategoryFromListingText } from "@/services/suggest-category";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
+
+export async function suggestListingCategoryAction(title: string, description: string) {
+  await requireUser();
+  try {
+    const id = await suggestCategoryFromListingText(
+      z.string().max(120).parse(title),
+      z.string().max(6000).parse(description),
+    );
+    return { id };
+  } catch {
+    return { id: null };
+  }
+}
 
 export async function saveListingAction(raw: unknown) {
   const user = await requireUser();

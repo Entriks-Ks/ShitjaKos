@@ -1,9 +1,9 @@
 "use client";
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import { translated, optionLabel } from "@/lib/catalog";
 import { CountryCityFields } from "@/components/country-city-fields";
-import { saveListingAction, statusAction } from "@/actions/listings";
+import { saveListingAction, suggestListingCategoryAction, statusAction } from "@/actions/listings";
 import type { getCategories } from "@/repositories/catalog";
 import type { ListingInput } from "@/lib/validations/listing";
 import Image from "next/image";
@@ -29,6 +29,13 @@ export function ListingForm({
 }) {
   const router = useRouter();
   const [categoryId, setCategory] = useState(initial?.categoryId ?? "");
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [description, setDescription] = useState(initial?.description ?? "");
+  const [suggesting, setSuggesting] = useState(false);
+  const userPickedCategory = useRef(!!initial?.categoryId);
+  const categoryRef = useRef(categoryId);
+  const suggestTick = useRef(0);
+  categoryRef.current = categoryId;
   const [attributes, setAttributes] = useState<Record<string, unknown>>(
     initial?.attributes ?? {},
   );
@@ -57,6 +64,27 @@ export function ListingForm({
 
 
   const category = categories.find((c) => c.id === categoryId);
+
+  useEffect(() => {
+    if (initial) return;
+    if (userPickedCategory.current) return;
+    if (title.trim().length < 5 || description.trim().length < 20) return;
+    const tick = ++suggestTick.current;
+    const timer = window.setTimeout(async () => {
+      setSuggesting(true);
+      try {
+        const result = await suggestListingCategoryAction(title, description);
+        if (tick !== suggestTick.current) return;
+        if (userPickedCategory.current || !result.id) return;
+        if (categoryRef.current === result.id) return;
+        setCategory(result.id);
+        setAttributes({});
+      } finally {
+        if (tick === suggestTick.current) setSuggesting(false);
+      }
+    }, 800);
+    return () => window.clearTimeout(timer);
+  }, [title, description, initial]);
   async function save(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError("");
@@ -120,31 +148,28 @@ export function ListingForm({
           </label>
         </div>
         <label className="field">
-          Category
-          <select
-            aria-label="Category"
+          Title
+          <input
+            name="title"
             required
-            value={categoryId}
-            onChange={(e) => {
-              setCategory(e.target.value);
-              setAttributes({});
-            }}
-          >
-            <option value="">Choose a subcategory</option>
-            {categories
-              .filter((c) => !c.parentId)
-              .map((parent) => (
-                <optgroup key={parent.id} label={translated(parent.translations, "en")}>
-                  {categories
-                    .filter((c) => c.parentId === parent.id)
-                    .map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {translated(c.translations, "en")}
-                      </option>
-                    ))}
-                </optgroup>
-              ))}
-          </select>
+            minLength={5}
+            maxLength={120}
+            placeholder="e.g. iPhone 15 Pro, 256 GB, excellent condition"
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+        </label>
+        <label className="field">
+          Description
+          <textarea
+            name="description"
+            required
+            minLength={20}
+            maxLength={6000}
+            placeholder="Tell buyers about the item, its condition and pickup arrangements."
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
         </label>
         <section className="rounded-xl border border-stone-200 bg-stone-50 p-5">
           <div className="flex items-start justify-between gap-4">
@@ -271,31 +296,44 @@ export function ListingForm({
             </div>
           )}
         </section>
-        <label className="field">
-          Title
-          <input
-            name="title"
-            required
-            minLength={5}
-            maxLength={120}
-            placeholder="e.g. iPhone 15 Pro, 256 GB, excellent condition"
-            defaultValue={initial?.title}
-          />
-        </label>
-        <label className="field">
-          Description
-          <textarea
-            name="description"
-            required
-            minLength={20}
-            maxLength={6000}
-            placeholder="Tell buyers about the item, its condition and pickup arrangements."
-            defaultValue={initial?.description}
-          />
-        </label>
-        {!!category?.attributes.length && (
-          <div className="rounded-xl bg-stone-50 p-5 space-y-4">
-            <h3 className="font-semibold text-sm">About this item</h3>
+        <div className="rounded-xl bg-stone-50 p-5 space-y-4">
+          <h3 className="font-semibold text-sm">About this item</h3>
+          <label className="field">
+            Category
+            <select
+              aria-label="Category"
+              required
+              value={categoryId}
+              onChange={(e) => {
+                userPickedCategory.current = true;
+                setCategory(e.target.value);
+                setAttributes({});
+              }}
+            >
+              <option value="">
+                {suggesting ? "Choosing a subcategory…" : "Choose a subcategory"}
+              </option>
+              {categories
+                .filter((c) => !c.parentId)
+                .map((parent) => (
+                  <optgroup key={parent.id} label={translated(parent.translations, "en")}>
+                    {categories
+                      .filter((c) => c.parentId === parent.id)
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {translated(c.translations, "en")}
+                        </option>
+                      ))}
+                  </optgroup>
+                ))}
+            </select>
+            <small>
+              {suggesting
+                ? "Reading your title and description to pick a subcategory."
+                : "Filled from what you wrote. Scroll the list if you want a different subcategory."}
+            </small>
+          </label>
+          {!!category?.attributes.length && (
             <div className="grid sm:grid-cols-2 gap-4">
               {category.attributes.map((a) => (
                 <label className="field" key={a.id}>
@@ -353,8 +391,8 @@ export function ListingForm({
                 </label>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           <label className="field">
             Price / wanted budget (€)
