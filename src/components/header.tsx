@@ -92,16 +92,22 @@ export function Header({
               {accountControl}
               {favoritesControl}
             </div>
-            <Link href="/listings/new" className="btn btn-primary">
-              <Plus size={17} />
-              <span>{t.sell}</span>
+            <Link
+              href="/listings/new"
+              className="btn btn-primary header-sell"
+              aria-label={t.sell}
+            >
+              <Plus size={18} />
+              <span className="header-sell-label">{t.sell}</span>
             </Link>
             <Suspense fallback={<LanguageToggleFallback locale={locale} />}>
               <LanguageToggle locale={locale} />
             </Suspense>
           </div>
         </div>
-        <nav aria-label="Mobile navigation" className="wrap site-nav-mobile">
+      </header>
+      <nav aria-label="Mobile navigation" className="site-nav-mobile">
+        <div className="wrap site-nav-mobile-inner">
           <Link
             href={`/?lang=${locale}#categories`}
             className="site-nav-link"
@@ -116,8 +122,8 @@ export function Header({
           >
             {t.shops}
           </Link>
-        </nav>
-      </header>
+        </div>
+      </nav>
     </>
   );
 }
@@ -131,7 +137,7 @@ function LanguageToggleFallback({ locale }: { locale: Locale }) {
         aria-label="Language"
       >
         <Globe size={16} strokeWidth={1.8} />
-        <span>{locale.toUpperCase()}</span>
+        <span className="lang-code">{locale.toUpperCase()}</span>
         <ChevronDown className="lang-chevron" size={14} strokeWidth={2} />
       </button>
     </div>
@@ -175,7 +181,7 @@ function LanguageToggle({ locale }: { locale: Locale }) {
         onClick={() => setOpen((value) => !value)}
       >
         <Globe size={16} strokeWidth={1.8} />
-        <span>{locale.toUpperCase()}</span>
+        <span className="lang-code">{locale.toUpperCase()}</span>
         <ChevronDown className="lang-chevron" size={14} strokeWidth={2} />
       </button>
       {open ? (
