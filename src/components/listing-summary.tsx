@@ -1,4 +1,5 @@
 import Link from "@/components/navigation-link";
+import Image from "next/image";
 import { Heart, MapPin, MessageCircle, Phone, ShieldCheck, Store } from "lucide-react";
 import { copy, countryForCity, countryName, Locale, money } from "@/lib/catalog";
 import { FavoriteButton } from "@/components/favorite-button";
@@ -129,7 +130,14 @@ export function ListingSummary({
       <section className={styles.contact} aria-label={labels.seller}>
         <div className={styles.who}>
           {sellerLogo ? (
-            <img className={styles.avatar} src={sellerLogo} alt="" />
+            <Image
+              className={styles.avatar}
+              src={sellerLogo}
+              alt=""
+              width={58}
+              height={58}
+              unoptimized
+            />
           ) : (
             <div className={styles.avatarFallback} aria-hidden="true">
               {initials(sellerName).toUpperCase() || <Store size={20} />}

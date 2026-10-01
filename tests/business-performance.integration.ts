@@ -8,6 +8,8 @@ import {
   viewBusiness,
   insertPerformanceView,
   performanceTotals,
+  consumePerformanceBudget,
+  cleanupPerformance,
 } from "../src/repositories/business-performance";
 const db = getPrisma();
 const rollback = new Error("ROLLBACK_SUCCESS");
@@ -47,6 +49,8 @@ try {
       assert.equal(await viewBusiness(tx, "shop", business.id, owner), null);
       assert.equal(await viewBusiness(tx, "shop", business.id, staff), null);
       assert.ok(await viewBusiness(tx, "shop", business.id, visitor));
+      assert.ok(await viewBusiness(tx, "shop", business.id, null));
+      assert.equal(await viewBusiness(tx, "listing", "nonexistent", null), null);
       const data = {
         businessId: business.id,
         target: "shop",
@@ -64,6 +68,43 @@ try {
       assert.equal(totals.shopViews, 1);
       assert.equal(totals.listingViews, 0);
       assert.equal(totals.daily.length, 1);
+      await insertPerformanceView(tx, { ...data, visitorHash: "guest-test-digest" });
+      assert.equal(
+        (
+          await performanceTotals(
+            tx,
+            business.id,
+            new Date("2026-09-30"),
+            new Date("2026-10-01"),
+          )
+        ).shopViews,
+        2,
+      );
+      const key = `test:${randomUUID()}`;
+      assert.equal(await consumePerformanceBudget(tx, key, 2), true);
+      assert.equal(await consumePerformanceBudget(tx, key, 2), true);
+      assert.equal(await consumePerformanceBudget(tx, key, 2), false);
+      await tx.performanceBudget.update({
+        where: { key },
+        data: { expiresAt: new Date("2000-01-01") },
+      });
+      assert.equal(await consumePerformanceBudget(tx, key, 2), true);
+      await cleanupPerformance(tx, new Date("2026-10-03"));
+      assert.equal(
+        await tx.businessPerformanceView.count({ where: { businessId: business.id } }),
+        0,
+      );
+      assert.equal(
+        (
+          await performanceTotals(
+            tx,
+            business.id,
+            new Date("2026-09-30"),
+            new Date("2026-10-01"),
+          )
+        ).shopViews,
+        2,
+      );
       await tx.business.update({
         where: { id: business.id },
         data: { suspendedAt: new Date() },

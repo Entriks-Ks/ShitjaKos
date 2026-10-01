@@ -20,6 +20,7 @@
     "db:clear:demo": "tsx scripts/demo-content.ts clear",
     "setup:local": "node scripts/setup-local.mjs",
     "admin:grant": "tsx scripts/make-admin.ts",
+    "performance:cleanup": "node --conditions=react-server --import tsx scripts/performance-cleanup.ts",
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
     "format": "prettier --write src prisma/*.ts scripts tests playwright.config.ts",

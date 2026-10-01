@@ -156,10 +156,13 @@ the listing or business permission check must pass. `Admin` means an active veri
 
 Business performance is available to active OWNER members through
 `GET /api/v1/businesses/:id/performance?from=YYYY-MM-DD&to=YYYY-MM-DD`.
-Mobile clients record a visible detail screen using authenticated
+Mobile clients record a visible detail screen using
 `POST /api/v1/performance/views` with `{ "kind": "shop", "id": "business-id" }`
 or `{ "kind": "listing", "id": "listing-id" }`. Views exclude current business
-members and admins and are deduplicated per signed-in visitor/page/UTC day.
+members and admins when signed in and are deduplicated per visitor/page/UTC day.
+Guest requests receive a signed token on HTTP 202 and retry with
+`X-Performance-Visitor`; signed-in requests continue using bearer authentication.
+Tokens expire at UTC midnight. The counters are estimates, not unique monthly people.
 See [performance definitions and client integration](../../../../docs/business-performance.md).
 
 | Method | Path                                               | Access       | What it does                                                                                         | Input / result                                                                                                          |

@@ -143,9 +143,11 @@ export default async function PerformanceScreen({
       </section>
       <aside className="workspace-card text-sm muted space-y-2">
         <p>
-          Views count signed-in visitors once per page per UTC day. Your own visits, staff
-          visits and administrator visits are excluded. Anonymous visits are not counted.
-          View tracking begins when this feature is enabled.
+          Views estimate daily unique visitors per page, including guests. Signed-in
+          owners, staff and administrators are excluded. Logged-out sellers may count.
+          Daily counts added together are not unique people across the whole period. Guest
+          counts begin when guest tracking is enabled; earlier counts only include
+          signed-in visitors.
         </p>
         <p>
           Saved favorites are favorites added during the selected period that are still
@@ -154,9 +156,10 @@ export default async function PerformanceScreen({
           indicators, not completed sales.
         </p>
         <p>
-          No visitor identities, IP addresses, message content or browsing histories are
-          shown. Popular listings are ranked by recorded views. Days with no views are
-          omitted from the chart.
+          Private browsing, cookie resets and signing in after a guest visit can add an
+          extra count. Browser privacy opt-outs are respected. No visitor identities, IP
+          addresses or message content are shown. Popular listings are ranked by recorded
+          views. Days with no views are omitted from the chart.
         </p>
       </aside>
     </div>

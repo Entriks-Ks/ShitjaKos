@@ -20,7 +20,7 @@ export async function viewBusiness(
   tx: Tx,
   kind: "shop" | "listing",
   id: string,
-  userId: string,
+  userId: string | null,
 ) {
   const businessId =
     kind === "shop"
@@ -37,17 +37,52 @@ export async function viewBusiness(
       id: businessId,
       suspendedAt: null,
       reviewStatus: "APPROVED",
-      memberships: { none: { userId } },
+      ...(userId ? { memberships: { none: { userId } } } : {}),
     },
     select: { id: true },
   });
 }
 
-export function insertPerformanceView(
+export async function insertPerformanceView(
   tx: Tx,
   data: { businessId: string; target: string; day: Date; visitorHash: string },
 ) {
-  return tx.businessPerformanceView.createMany({ data: [data], skipDuplicates: true });
+  const inserted = await tx.businessPerformanceView.createMany({
+    data: [data],
+    skipDuplicates: true,
+  });
+  // The migration's AFTER INSERT trigger increments daily totals atomically,
+  // including writes from older instances during deployment. Duplicates do not fire it.
+  return inserted;
+}
+
+// Atomic fixed windows shared by every web/mobile instance. No raw IPs or IDs.
+export async function consumePerformanceBudget(
+  tx: Tx,
+  key: string,
+  maximum: number,
+  seconds = 60,
+) {
+  const rows = await tx.$queryRaw<{ count: number }[]>`
+    INSERT INTO "PerformanceBudget" ("key", "count", "expiresAt")
+    VALUES (${key}, 1, clock_timestamp() + ${seconds} * interval '1 second')
+    ON CONFLICT ("key") DO UPDATE SET
+      "count" = CASE WHEN "PerformanceBudget"."expiresAt" <= clock_timestamp() THEN 1 ELSE "PerformanceBudget"."count" + 1 END,
+      "expiresAt" = CASE WHEN "PerformanceBudget"."expiresAt" <= clock_timestamp() THEN clock_timestamp() + ${seconds} * interval '1 second' ELSE "PerformanceBudget"."expiresAt" END
+    WHERE "PerformanceBudget"."expiresAt" <= clock_timestamp() OR "PerformanceBudget"."count" < ${maximum}
+    RETURNING "count"`;
+  return rows.length > 0;
+}
+
+export async function cleanupPerformance(tx: Tx, now = new Date()) {
+  const cutoff = new Date(now.toISOString().slice(0, 10));
+  cutoff.setUTCDate(cutoff.getUTCDate() - 1);
+  // Bounded batches keep maintenance from holding a busy transaction for long.
+  const receipts =
+    await tx.$executeRaw`DELETE FROM "BusinessPerformanceView" WHERE "id" IN (SELECT "id" FROM "BusinessPerformanceView" WHERE "day" < ${cutoff} LIMIT 5000)`;
+  const budgets =
+    await tx.$executeRaw`DELETE FROM "PerformanceBudget" WHERE "key" IN (SELECT "key" FROM "PerformanceBudget" WHERE "expiresAt" < ${now} AND "key" <> 'maintenance' LIMIT 5000)`;
+  return { receipts, budgets };
 }
 
 export async function performanceTotals(
@@ -56,11 +91,12 @@ export async function performanceTotals(
   from: Date,
   until: Date,
 ) {
-  const views = await tx.businessPerformanceView.groupBy({
+  const viewSums = await tx.businessPerformanceDay.groupBy({
     by: ["target"],
     where: { businessId, day: { gte: from, lt: until } },
-    _count: { _all: true },
+    _sum: { views: true },
   });
+  const views = viewSums.map((v) => ({ target: v.target, views: v._sum.views ?? 0 }));
   const favorites = await tx.favorite.count({
     where: { listing: { businessId }, createdAt: { gte: from, lt: until } },
   });
@@ -74,15 +110,15 @@ export async function performanceTotals(
       createdAt: { gte: from, lt: until },
     },
   });
-  const daily = await tx.businessPerformanceView.groupBy({
+  const daily = await tx.businessPerformanceDay.groupBy({
     by: ["day"],
     where: { businessId, day: { gte: from, lt: until } },
-    _count: { _all: true },
+    _sum: { views: true },
     orderBy: { day: "asc" },
   });
   const top = views
     .filter((v) => v.target !== "shop")
-    .sort((a, b) => b._count._all - a._count._all || a.target.localeCompare(b.target))
+    .sort((a, b) => b.views - a.views || a.target.localeCompare(b.target))
     .slice(0, 10);
   const listings = await tx.listing.findMany({
     where: { businessId, id: { in: top.map((v) => v.target) } },
@@ -116,23 +152,23 @@ export async function performanceTotals(
       id: item.target,
       title: listing?.title ?? "Deleted listing",
       status: listing?.status ?? "DELETED",
-      views: item._count._all,
+      views: item.views,
       favorites: saved,
       inquiries,
     });
   }
   return {
-    shopViews: views.find((v) => v.target === "shop")?._count._all ?? 0,
+    shopViews: views.find((v) => v.target === "shop")?.views ?? 0,
     listingViews: views
       .filter((v) => v.target !== "shop")
-      .reduce((sum, v) => sum + v._count._all, 0),
+      .reduce((sum, v) => sum + v.views, 0),
     favorites,
     conversations,
     messages,
     popular,
     daily: daily.map((v) => ({
       day: v.day.toISOString().slice(0, 10),
-      views: v._count._all,
+      views: v._sum.views ?? 0,
     })),
   };
 }

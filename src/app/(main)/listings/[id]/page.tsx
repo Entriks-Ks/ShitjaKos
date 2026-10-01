@@ -61,9 +61,7 @@ export default async function Page({
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
-      {user && visible && item.businessId && (
-        <BusinessViewTracker kind="listing" id={id} />
-      )}
+      {visible && item.businessId && <BusinessViewTracker kind="listing" id={id} />}
       <main className="wrap py-8">
         <nav aria-label="Breadcrumb" className="listing-banner-path">
           <Link href={`/?lang=${locale}`}>{t.home}</Link>

@@ -137,6 +137,7 @@ model Business {
   conversations    Conversation[]
   staffInvitations BusinessStaffInvitation[]
   performanceViews BusinessPerformanceView[]
+  performanceDays BusinessPerformanceDay[]
 }
 
 model BusinessPerformanceView {
@@ -149,6 +150,25 @@ model BusinessPerformanceView {
 
   @@unique([businessId, target, day, visitorHash])
   @@index([businessId, day])
+  @@index([day])
+}
+
+model BusinessPerformanceDay {
+  businessId String
+  target String
+  day DateTime @db.Date
+  views Int @default(0)
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@id([businessId, target, day])
+  @@index([businessId, day])
+}
+
+model PerformanceBudget {
+  key String @id
+  count Int
+  expiresAt DateTime
+  @@index([expiresAt])
 }
 
 model BusinessMembership {

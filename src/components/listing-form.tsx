@@ -35,7 +35,9 @@ export function ListingForm({
   const userPickedCategory = useRef(!!initial?.categoryId);
   const categoryRef = useRef(categoryId);
   const suggestTick = useRef(0);
-  categoryRef.current = categoryId;
+  useEffect(() => {
+    categoryRef.current = categoryId;
+  }, [categoryId]);
   const [attributes, setAttributes] = useState<Record<string, unknown>>(
     initial?.attributes ?? {},
   );

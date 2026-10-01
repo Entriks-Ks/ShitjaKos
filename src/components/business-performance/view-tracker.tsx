@@ -1,6 +1,5 @@
 "use client";
-import { useEffect, useTransition } from "react";
-import { recordBusinessViewAction } from "@/actions/business-performance";
+import { useEffect } from "react";
 
 export function BusinessViewTracker({
   kind,
@@ -9,13 +8,47 @@ export function BusinessViewTracker({
   kind: "shop" | "listing";
   id: string;
 }) {
-  const [, startTransition] = useTransition();
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      if (document.visibilityState === "visible")
-        startTransition(() => recordBusinessViewAction({ kind, id }));
-    }, 1500);
-    return () => window.clearTimeout(timer);
+    if (
+      navigator.doNotTrack === "1" ||
+      (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl
+    )
+      return;
+    const controller = new AbortController();
+    let sent = false;
+    let timer: number | undefined;
+    async function send() {
+      if (sent || document.visibilityState !== "visible") return;
+      sent = true;
+      const options = {
+        method: "POST",
+        credentials: "same-origin" as const,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind, id }),
+        signal: controller.signal,
+      };
+      try {
+        const response = await fetch("/api/v1/performance/views", options);
+        if (response.status === 202 && !controller.signal.aborted) {
+          // One retry only. Cookie-disabled browsers are not counted.
+          await fetch("/api/v1/performance/views", options);
+        }
+      } catch {
+        /* Tracking never interrupts browsing. */
+      }
+    }
+    function visible() {
+      window.clearTimeout(timer);
+      if (!sent && document.visibilityState === "visible")
+        timer = window.setTimeout(send, 1500);
+    }
+    visible();
+    document.addEventListener("visibilitychange", visible);
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+      document.removeEventListener("visibilitychange", visible);
+    };
   }, [kind, id]);
   return null;
 }

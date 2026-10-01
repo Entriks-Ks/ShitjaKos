@@ -83,7 +83,7 @@ export default async function Page({
   return (
     <>
       <Header locale={locale} signedIn={!!user} />
-      {user && <BusinessViewTracker kind="shop" id={shop.businessId} />}
+      <BusinessViewTracker kind="shop" id={shop.businessId} />
       <main className="wrap shop-page">
         <section className="shop-hero">
           <div className="shop-cover">

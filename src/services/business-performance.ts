@@ -8,6 +8,7 @@ import {
 import { withTransaction } from "@/repositories/transaction";
 import { findModerationUser } from "@/repositories/admin-accounts";
 import * as records from "@/repositories/business-performance";
+import { performanceHash, utcDay, validVisitorToken } from "@/lib/performance-visitor";
 
 export class PerformanceError extends Error {
   constructor(
@@ -47,19 +48,37 @@ export async function getBusinessPerformance(
   });
 }
 
-export async function recordBusinessView(actor: Actor, raw: unknown) {
+export async function recordBusinessView(
+  actor: Actor | null,
+  raw: unknown,
+  guestToken?: string,
+) {
   const input = performanceViewInput.parse(raw);
-  const day = new Date(new Date().toISOString().slice(0, 10));
+  const day = utcDay();
   const secret = process.env.BETTER_AUTH_SECRET;
   if (!secret) return;
+  if (!actor && !validVisitorToken(guestToken, secret)) return;
   await withTransaction(async (tx) => {
-    const current = await findModerationUser(tx, actor.id);
-    if (!current || current.suspendedAt || current.role === "ADMIN") return;
-    const business = await records.viewBusiness(tx, input.kind, input.id, actor.id);
+    if (actor) {
+      const current = await findModerationUser(tx, actor.id);
+      if (!current || current.suspendedAt || current.role === "ADMIN") return;
+    }
+    const identity = actor ? `user:${actor.id}` : `guest:${guestToken}`;
+    const budget = performanceHash(`${day.toISOString()}:${identity}`, secret);
+    if (!(await records.consumePerformanceBudget(tx, `visitor:${budget}`, 30))) return;
+    const business = await records.viewBusiness(
+      tx,
+      input.kind,
+      input.id,
+      actor?.id ?? null,
+    );
     if (!business) return;
     const target = input.kind === "shop" ? "shop" : input.id;
     const visitorHash = createHmac("sha256", secret)
-      .update(JSON.stringify([day.toISOString(), business.id, target, actor.id]))
+      // Preserve existing signed-in hashes during the migration day.
+      .update(
+        JSON.stringify([day.toISOString(), business.id, target, actor?.id ?? identity]),
+      )
       .digest("hex");
     await records.insertPerformanceView(tx, {
       businessId: business.id,
@@ -68,4 +87,16 @@ export async function recordBusinessView(actor: Actor, raw: unknown) {
       visitorHash,
     });
   });
+}
+
+export async function performanceIntake() {
+  return withTransaction(async (tx) => {
+    if (await records.consumePerformanceBudget(tx, "maintenance", 1))
+      await records.cleanupPerformance(tx);
+    return records.consumePerformanceBudget(tx, "intake", 600);
+  });
+}
+
+export async function maintainPerformance() {
+  return withTransaction((tx) => records.cleanupPerformance(tx));
 }
