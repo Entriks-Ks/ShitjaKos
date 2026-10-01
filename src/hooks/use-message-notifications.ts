@@ -34,6 +34,11 @@ const EMPTY_SUMMARY: MessageNotificationSnapshot = {
 let snapshot = EMPTY_SUMMARY;
 let timer: ReturnType<typeof setTimeout> | undefined;
 let request: AbortController | undefined;
+let events: EventSource | undefined;
+let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+let connected = false;
+let pendingRefresh = false;
+let refreshTimer: ReturnType<typeof setTimeout> | undefined;
 let subscribers = 0;
 let initialized = false;
 let newestSeenAt = 0;
@@ -84,12 +89,52 @@ function showBrowserNotification(latest: LatestUnreadMessage) {
 }
 
 function schedulePoll() {
-  clearTimeout(timer);
-  if (subscribers > 0) timer = setTimeout(loadSummary, 15_000);
+  if (timer) return;
+  if (subscribers > 0 && !connected && document.visibilityState === "visible") {
+    timer = setTimeout(() => {
+      timer = undefined;
+      void loadSummary();
+    }, 60_000);
+  }
+}
+
+function queueRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    if (subscribers > 0) void loadSummary();
+  }, 250);
+}
+
+function connectEvents() {
+  if (events || !subscribers || !("EventSource" in window)) return;
+  events = new EventSource("/api/v1/notifications/stream");
+  events.addEventListener("ready", () => {
+    connected = true;
+    clearTimeout(timer);
+    timer = undefined;
+    queueRefresh();
+  });
+  events.addEventListener("changed", queueRefresh);
+  events.onerror = () => {
+    connected = false;
+    schedulePoll();
+    // EventSource reconnects automatically; ready fetches current state.
+    // Some HTTP failures permanently close it, so retry those explicitly.
+    if (events?.readyState === EventSource.CLOSED) {
+      events.close();
+      events = undefined;
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connectEvents, 30_000);
+    }
+  };
 }
 
 async function loadSummary() {
-  request?.abort();
+  if (!subscribers) return;
+  if (request) {
+    pendingRefresh = true;
+    return;
+  }
   const controller = new AbortController();
   request = controller;
 
@@ -99,6 +144,10 @@ async function loadSummary() {
       signal: controller.signal,
     });
     if ([401, 403].includes(response.status)) {
+      clearTimeout(reconnectTimer);
+      events?.close();
+      events = undefined;
+      connected = false;
       initialized = true;
       publish({
         unread: 0,
@@ -120,12 +169,22 @@ async function loadSummary() {
     publish({ ...snapshot, loading: false, permission: browserPermission() });
   } finally {
     if (request === controller) request = undefined;
+    if (pendingRefresh) {
+      pendingRefresh = false;
+      queueRefresh();
+    }
     schedulePoll();
   }
 }
 
 function refreshWhenActive() {
-  if (document.visibilityState === "visible") void loadSummary();
+  if (document.visibilityState === "visible") {
+    connectEvents();
+    void loadSummary();
+  } else {
+    clearTimeout(timer);
+    timer = undefined;
+  }
 }
 
 function subscribe(listener: () => void) {
@@ -135,6 +194,7 @@ function subscribe(listener: () => void) {
     window.addEventListener("focus", refreshWhenActive);
     document.addEventListener("visibilitychange", refreshWhenActive);
     void loadSummary();
+    connectEvents();
   }
 
   return () => {
@@ -142,6 +202,13 @@ function subscribe(listener: () => void) {
     subscribers -= 1;
     if (subscribers === 0) {
       clearTimeout(timer);
+      timer = undefined;
+      clearTimeout(refreshTimer);
+      clearTimeout(reconnectTimer);
+      events?.close();
+      events = undefined;
+      connected = false;
+      pendingRefresh = false;
       request?.abort();
       request = undefined;
       window.removeEventListener("focus", refreshWhenActive);
