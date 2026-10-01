@@ -10,11 +10,12 @@ export class ChatError extends Error {
 }
 
 type AccessContext = {
+  createdAt: Date;
   buyerId: string;
   sellerUserId: string | null;
   sellerKind: "PERSONAL" | "BUSINESS";
   business: {
-    memberships: { userId: string; role: string }[];
+    memberships: { userId: string; role: string; joinedAt: Date }[];
   } | null;
 };
 
@@ -25,12 +26,22 @@ export function conversationSide(actor: Actor, conversation: AccessContext) {
     conversation.sellerKind === "PERSONAL"
       ? conversation.sellerUserId === actor.id
       : !!conversation.business?.memberships.some(
-        (m) => m.userId === actor.id && ["OWNER", "STAFF"].includes(m.role),
-      );
+          (m) => m.userId === actor.id && ["OWNER", "STAFF"].includes(m.role),
+        );
   const buyer = conversation.buyerId === actor.id;
   if (buyer && seller) throw new ChatError("Conversation access needs review.", 403);
   if (buyer) return "BUYER" as const;
-  if (seller) return "SELLER" as const;
+  if (seller) {
+    if (conversation.sellerKind === "BUSINESS") {
+      const membership = conversation.business?.memberships.find(
+        (m) => m.userId === actor.id,
+      );
+      if (membership?.role === "STAFF" && conversation.createdAt < membership.joinedAt) {
+        throw new ChatError("Conversation not found.", 404);
+      }
+    }
+    return "SELLER" as const;
+  }
   // No automatic admin bypass for private message history.
   throw new ChatError("Conversation not found.", 404);
 }

@@ -14,7 +14,7 @@ const contextInclude = {
       publicName: true,
       suspendedAt: true,
       reviewStatus: true,
-      memberships: { select: { userId: true, role: true } },
+      memberships: { select: { userId: true, role: true, joinedAt: true } },
     },
   },
   blocks: true,
@@ -164,15 +164,12 @@ export function findMessagePage(
   const sequence =
     before !== undefined
       ? {
-        gt: deletedThroughSequence,
-        lt: before,
-      }
+          gt: deletedThroughSequence,
+          lt: before,
+        }
       : {
-        gt: Math.max(
-          deletedThroughSequence,
-          after ?? 0,
-        ),
-      };
+          gt: Math.max(deletedThroughSequence, after ?? 0),
+        };
 
   return tx.message.findMany({
     where: {
@@ -211,11 +208,11 @@ export async function advanceReadState(
   });
 }
 
-export function findInboxPage(
-  tx: Tx,
-  userId: string,
-  page: number,
-) {
+export async function findInboxPage(tx: Tx, userId: string, page: number) {
+  const memberships = await tx.businessMembership.findMany({
+    where: { userId, role: { in: ["OWNER", "STAFF"] } },
+    select: { businessId: true, role: true, joinedAt: true },
+  });
   return tx.conversation.findMany({
     where: {
       AND: [
@@ -227,18 +224,12 @@ export function findInboxPage(
             {
               sellerUserId: userId,
             },
-            {
-              business: {
-                memberships: {
-                  some: {
-                    userId,
-                    role: {
-                      in: ["OWNER", "STAFF"],
-                    },
-                  },
-                },
-              },
-            },
+            ...memberships.map((membership) => ({
+              businessId: membership.businessId,
+              ...(membership.role === "STAFF"
+                ? { createdAt: { gte: membership.joinedAt } }
+                : {}),
+            })),
           ],
         },
         {
@@ -349,9 +340,12 @@ export async function findUnreadMessageSummary(tx: Tx, userId: string) {
               FROM "BusinessMembership" AS membership
               WHERE membership."businessId" = conversation."businessId"
                 AND membership."userId" = ${userId}
-                AND membership.role IN (
-                  'OWNER'::"BusinessRole",
-                  'STAFF'::"BusinessRole"
+                AND (
+                  membership.role = 'OWNER'::"BusinessRole"
+                  OR (
+                    membership.role = 'STAFF'::"BusinessRole"
+                    AND conversation."createdAt" >= membership."joinedAt"
+                  )
                 )
             )
           )
@@ -410,13 +404,13 @@ export async function findUnreadMessageSummary(tx: Tx, userId: string) {
     unread: Number(latest?.totalUnread ?? 0),
     latest: latest
       ? {
-        messageId: latest.messageId,
-        conversationId: latest.conversationId,
-        title: latest.title,
-        otherName: latest.otherName,
-        preview: latest.preview,
-        createdAt: latest.createdAt.toISOString(),
-      }
+          messageId: latest.messageId,
+          conversationId: latest.conversationId,
+          title: latest.title,
+          otherName: latest.otherName,
+          preview: latest.preview,
+          createdAt: latest.createdAt.toISOString(),
+        }
       : null,
   };
 }
@@ -475,12 +469,7 @@ export function insertMessageReport(
   });
 }
 
-
-
-export async function lockConversation(
-  tx: Tx,
-  conversationId: string,
-) {
+export async function lockConversation(tx: Tx, conversationId: string) {
   await tx.$queryRaw`
     SELECT "id"
     FROM "Conversation"

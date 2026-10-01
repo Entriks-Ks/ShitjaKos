@@ -172,6 +172,7 @@ model PerformanceBudget {
 }
 
 model BusinessMembership {
+  joinedAt   DateTime     @default(now())
   userId     String
   businessId String
   role       BusinessRole

@@ -4,19 +4,21 @@ import { conversationSide } from "../src/lib/messaging/policy";
 
 const actor = (id: string, role = "USER") => ({ id, role, suspendedAt: null });
 const personal = {
+  createdAt: new Date("2026-10-01T12:00:00Z"),
   buyerId: "buyer",
   sellerUserId: "seller",
   sellerKind: "PERSONAL" as const,
   business: null,
 };
 const business = {
+  createdAt: new Date("2026-10-01T12:00:00Z"),
   buyerId: "buyer",
   sellerUserId: null,
   sellerKind: "BUSINESS" as const,
   business: {
     memberships: [
-      { userId: "owner", role: "OWNER" },
-      { userId: "manager", role: "STAFF" },
+      { userId: "owner", role: "OWNER", joinedAt: new Date("2026-10-01T13:00:00Z") },
+      { userId: "manager", role: "STAFF", joinedAt: new Date("2026-10-01T11:00:00Z") },
     ],
   },
 };
@@ -48,7 +50,30 @@ test("suspended and ambiguous identities are denied", () => {
   assert.throws(() =>
     conversationSide(actor("buyer"), {
       ...business,
-      business: { memberships: [{ userId: "buyer", role: "OWNER" }] },
+      business: {
+        memberships: [{ userId: "buyer", role: "OWNER", joinedAt: new Date(0) }],
+      },
     }),
+  );
+});
+
+test("staff cannot access conversations started before joining, even with new replies", () => {
+  assert.throws(
+    () =>
+      conversationSide(actor("manager"), {
+        ...business,
+        createdAt: new Date("2026-10-01T10:00:00Z"),
+      }),
+    { status: 404 },
+  );
+});
+
+test("staff access starts at the membership timestamp", () => {
+  assert.equal(
+    conversationSide(actor("manager"), {
+      ...business,
+      createdAt: new Date("2026-10-01T11:00:00Z"),
+    }),
+    "SELLER",
   );
 });
