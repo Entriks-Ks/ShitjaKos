@@ -220,6 +220,7 @@ export async function getChat(
           )
           : conversation.buyer.name,
       listingId: conversation.listingId,
+      listingPhoto: conversation.listing?.media[0] ?? null,
       side,
       canSend: sendingAllowed(conversation),
       blockedByMe: conversation.blocks.some(

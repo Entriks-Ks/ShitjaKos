@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import {
   Fragment,
   useCallback,
@@ -108,6 +109,7 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
   const [error, setError] = useState("");
   const [fatal, setFatal] = useState(false);
   const [loadingOlder, setLoadingOlder] = useState(false);
+  const [failedListingPhotoId, setFailedListingPhotoId] = useState<string | null>(null);
   const [request, setRequest] = useState<{
     body: string;
     clientId: string;
@@ -452,7 +454,19 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
         </details>
       </header>
       <div className={styles.listingBar}>
-        <Package size={20} aria-hidden="true" />
+        <span className={styles.listingThumbnail} aria-hidden="true">
+          <Package size={22} />
+          {view.listingPhoto && failedListingPhotoId !== view.listingPhoto.id && (
+            <Image
+              unoptimized
+              src={`/api/media/${view.listingPhoto.id}?size=thumb`}
+              alt=""
+              fill
+              sizes="52px"
+              onError={() => setFailedListingPhotoId(view.listingPhoto?.id ?? null)}
+            />
+          )}
+        </span>
         <div>
           <span>About this listing</span>
           <strong>{view.title}</strong>
@@ -596,7 +610,7 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
               placeholder="Write a message…"
               value={body}
               onChange={(event) => setBody(event.target.value)}
-              rows={2}
+              rows={1}
               required
               maxLength={4000}
               disabled={!!request || !view.canSend}

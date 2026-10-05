@@ -13,6 +13,7 @@ export type ChatView = {
   title: string;
   otherName: string;
   listingId: string | null;
+  listingPhoto: { id: string; altText: string } | null;
   side: "BUYER" | "SELLER";
   canSend: boolean;
   blockedByMe: boolean;

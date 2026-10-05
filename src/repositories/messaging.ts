@@ -20,6 +20,19 @@ const contextInclude = {
   blocks: true,
 } satisfies Prisma.ConversationInclude;
 
+const detailInclude = {
+  ...contextInclude,
+  listing: {
+    select: {
+      media: {
+        orderBy: { position: "asc" },
+        take: 1,
+        select: { id: true, altText: true },
+      },
+    },
+  },
+} satisfies Prisma.ConversationInclude;
+
 export function findChatActor(tx: Tx, id: string) {
   return tx.user.findUnique({
     where: { id },
@@ -73,7 +86,7 @@ export function insertConversation(
 export function findConversation(tx: Tx, id: string) {
   return tx.conversation.findUnique({
     where: { id },
-    include: contextInclude,
+    include: detailInclude,
   });
 }
 

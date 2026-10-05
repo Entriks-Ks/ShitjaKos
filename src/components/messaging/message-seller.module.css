@@ -91,6 +91,12 @@
   outline: 2px solid #74925a;
   outline-offset: 3px;
 }
+.dialog .form textarea:focus,
+.dialog .form textarea:focus-visible {
+  border-color: #74925a;
+  outline: none;
+  box-shadow: none;
+}
 @media (max-width: 380px) {
   .actions {
     grid-template-columns: minmax(0, 1fr);
