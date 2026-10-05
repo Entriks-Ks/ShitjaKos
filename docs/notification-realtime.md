@@ -11,8 +11,27 @@ Web notification badges use `/api/v1/notifications/stream`. One EventSource is
 shared by hook consumers in each browser tab. `ready` and `changed` events trigger
 a debounced fetch of the existing authorized notification-summary endpoint.
 Normal 15-second polling is removed. An unavailable stream falls back to a
-60-second check in visible tabs. The chat thread's own message polling is separate
-and is unchanged.
+60-second check in visible tabs. Open chat threads also subscribe to the same
+connection: events trigger permission-checked message fetches after the latest
+received sequence. Healthy connections no longer cause five-second chat polling.
+Chat catches up on mount, reconnect, returning to a visible tab, and going online.
+It drains multiple missed pages sequentially and coalesces events during a fetch.
+Failed fetches or unavailable SSE use a 60-second visible-tab fallback.
+Temporary chat-fetch failures also retry with backoff from one to 60 seconds.
+When the visible thread shows its newest messages, the summary request
+includes `readingConversationId`. That conversation is excluded from this tab's
+badge and browser alerts; unread messages in other conversations still count.
+This only filters the summary: messages are marked read separately through the
+existing Server Action after they are fetched. Selecting the composer or focusing
+the browser window is not required. Scrolling up, hiding the tab, or leaving the
+conversation removes the filter. Responses started before a
+reading-context change are discarded, so a stale count cannot flash afterward.
+The optional parameter is validated in the messaging service and applied inside
+the repository's existing authorized-inbox query. Mobile requests without it
+continue to receive the complete unread count. No migration is required.
+Inbox-wide events may cause a fetch even when another conversation changed.
+Block and suspension changes without a corresponding trigger are reflected on
+the next refresh/reconnect; mutation services still enforce current permissions.
 
 PostgreSQL triggers publish user-specific invalidations after committed message,
 read-state, membership, and session-deletion changes. One dedicated LISTEN session

@@ -1,6 +1,14 @@
 "use client";
 
-import { Fragment, useCallback, useEffect, useRef, useState, useTransition } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -18,7 +26,11 @@ import {
   blockConversationAction,
   reportMessageAction,
 } from "@/actions/messaging";
-import { refreshMessageNotifications } from "@/hooks/use-message-notifications";
+import {
+  subscribeChatUpdates,
+  isNotificationStreamConnected,
+  registerMessageNotificationReader,
+} from "@/hooks/use-message-notifications";
 import { DeleteConversationButton } from "./delete-conversation-button";
 
 function mergeMessages(previous: ChatMessage[], incoming: ChatMessage[]) {
@@ -103,13 +115,13 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
   } | null>(null);
   const [sending, startSend] = useTransition();
   const [blocking, startBlock] = useTransition();
-  const [endVisible, setEndVisible] = useState(false);
-  const [focused, setFocused] = useState(false);
+  const [followingLatest, setFollowingLatest] = useState(true);
+  const [visible, setVisible] = useState(false);
   const container = useRef<HTMLDivElement>(null);
-  const end = useRef<HTMLDivElement>(null);
   const latest = useRef(initial.messages.at(-1)?.sequence ?? 0);
   const atBottom = useRef(true);
   const lastRead = useRef(0);
+  const readInFlight = useRef<Promise<void> | null>(null);
   const sendLock = useRef(false);
   const blockLock = useRef(false);
 
@@ -122,17 +134,87 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
     setMessages((previous) => mergeMessages(previous, next.messages));
   }, []);
 
+  const acknowledge = useCallback(
+    async (sequence: number) => {
+      // Both visibility changes and incoming messages can ask to acknowledge.
+      // Serialize them so a slow Server Action is not sent twice.
+      while (sequence > lastRead.current) {
+        if (readInFlight.current) {
+          await readInFlight.current;
+          continue;
+        }
+        let timeout: ReturnType<typeof setTimeout> | undefined;
+        const task = (async () => {
+          const result = await Promise.race([
+            markReadAction({ conversationId: initial.id, sequence }),
+            new Promise<never>((_, reject) => {
+              timeout = setTimeout(
+                () => reject(new Error("Read acknowledgement timed out.")),
+                30_000,
+              );
+            }),
+          ]);
+          if (!result.ok) throw new Error(result.error);
+          lastRead.current = Math.max(lastRead.current, sequence);
+        })();
+        readInFlight.current = task;
+        try {
+          await task;
+        } finally {
+          clearTimeout(timeout);
+          if (readInFlight.current === task) readInFlight.current = null;
+        }
+      }
+    },
+    [initial.id],
+  );
+
   useEffect(() => {
-    const controller = new AbortController();
-    let timer: ReturnType<typeof setTimeout>;
     let stopped = false;
-    async function poll() {
+    let running = false;
+    let queued = false;
+    let retryNeeded = false;
+    let retryDelay = 1_000;
+    let controller: AbortController | undefined;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    function readingNewest() {
+      return document.visibilityState === "visible" && atBottom.current;
+    }
+
+    function schedule(delay = 150) {
+      // Throttle bursts without indefinitely postponing updates.
+      if (stopped || timer) return;
+      timer = setTimeout(() => {
+        timer = undefined;
+        void refresh();
+      }, delay);
+    }
+
+    function requestRefresh() {
+      if (stopped) return;
+      if (running) {
+        queued = true;
+        return;
+      }
+      schedule();
+    }
+
+    async function refresh() {
+      if (stopped || running || document.visibilityState !== "visible") {
+        return;
+      }
+      running = true;
+      queued = false;
+      const currentController = new AbortController();
+      controller = currentController;
+      const timeout = setTimeout(() => currentController.abort(), 15_000);
       try {
-        if (document.visibilityState !== "visible") return;
         const response = await fetch(
           "/api/v1/conversations/" + initial.id + "/messages?after=" + latest.current,
-          { cache: "no-store", signal: controller.signal },
+          { cache: "no-store", signal: currentController.signal },
         );
+        if (stopped) return;
         if ([401, 403, 404].includes(response.status)) {
           stopped = true;
           setFatal(true);
@@ -141,87 +223,111 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
           setError("This conversation is no longer available to your account.");
           return;
         }
-        if (!response.ok) throw new Error("poll");
+        if (!response.ok) throw new Error("refresh");
         const next: ChatView = await response.json();
-        if (!controller.signal.aborted) accept(next);
+        if (stopped || currentController.signal.aborted) return;
+        const previousSequence = latest.current;
+        accept(next);
+        // Acknowledge only fetched messages while the recipient is actually
+        // viewing the newest messages. Do this before publishing the badge.
+        if (readingNewest() && latest.current > lastRead.current) {
+          await acknowledge(latest.current);
+        }
+        retryNeeded = false;
+        retryDelay = 1_000;
+        setError((current) =>
+          current === "Connection interrupted. Retrying updates shortly." ? "" : current,
+        );
+        // Drain all missed pages after reconnecting; never advance using a sent reply alone.
+        if (next.hasMore && latest.current > previousSequence) queued = true;
       } catch {
-        if (!controller.signal.aborted)
+        if (!stopped) {
+          retryNeeded = true;
           setError("Connection interrupted. Retrying updates shortly.");
+        }
       } finally {
-        if (!stopped && !controller.signal.aborted) timer = setTimeout(poll, 5000);
+        clearTimeout(timeout);
+        if (controller === currentController) controller = undefined;
+        running = false;
+        if (!stopped && queued) {
+          queued = false;
+          schedule();
+        } else {
+          if (!stopped && retryNeeded) {
+            // Retry temporary failures promptly, then back off. A lost SSE
+            // event must not strand the chat until the next one-minute check.
+            schedule(retryDelay);
+            retryDelay = Math.min(retryDelay * 2, 60_000);
+          }
+        }
       }
     }
-    timer = setTimeout(poll, 5000);
+
+    const unsubscribe = subscribeChatUpdates(requestRefresh);
+    function handleVisibility() {
+      if (document.visibilityState === "visible") requestRefresh();
+    }
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("online", requestRefresh);
+    window.addEventListener("focus", requestRefresh);
+    const fallbackTimer = setInterval(() => {
+      if (
+        document.visibilityState === "visible" &&
+        (!isNotificationStreamConnected() || retryNeeded)
+      )
+        requestRefresh();
+    }, 60_000);
+    requestRefresh();
     return () => {
       stopped = true;
-      controller.abort();
+      unsubscribe();
+      controller?.abort();
       clearTimeout(timer);
+      clearInterval(fallbackTimer);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("online", requestRefresh);
+      window.removeEventListener("focus", requestRefresh);
     };
-  }, [initial.id, accept]);
+  }, [initial.id, accept, acknowledge]);
 
   useEffect(() => {
     function update() {
-      setFocused(document.visibilityState === "visible" && document.hasFocus());
+      // A visible conversation is being read even when the composer or browser
+      // window is not focused (for example, two windows beside each other).
+      setVisible(document.visibilityState === "visible");
     }
     update();
-    window.addEventListener("focus", update);
-    window.addEventListener("blur", update);
     document.addEventListener("visibilitychange", update);
     return () => {
-      window.removeEventListener("focus", update);
-      window.removeEventListener("blur", update);
       document.removeEventListener("visibilitychange", update);
     };
   }, []);
 
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => setEndVisible(entry.isIntersecting),
-      { threshold: 1 },
-    );
-    if (end.current) observer.observe(end.current);
-    return () => observer.disconnect();
-  }, []);
+    if (!fatal && visible && followingLatest)
+      return registerMessageNotificationReader(initial.id);
+  }, [initial.id, fatal, visible, followingLatest]);
 
   const newest = messages.at(-1)?.sequence ?? 0;
   const readThrough = Math.min(newest, fetchedThrough);
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (atBottom.current && container.current)
       container.current.scrollTop = container.current.scrollHeight;
   }, [newest, request]);
 
-  const [, startRead] = useTransition();
   useEffect(() => {
     if (
       fatal ||
-      !focused ||
-      !endVisible ||
+      !visible ||
+      !followingLatest ||
       !readThrough ||
       readThrough <= lastRead.current
     )
       return;
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      startRead(async () => {
-        try {
-          const result = await markReadAction({
-            conversationId: initial.id,
-            sequence: readThrough,
-          });
-          if (result.ok && !cancelled) {
-            lastRead.current = Math.max(lastRead.current, readThrough);
-            refreshMessageNotifications();
-          }
-        } catch {
-          /* Read state can be retried on the next visible update. */
-        }
-      });
-    }, 500);
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [initial.id, readThrough, focused, endVisible, fatal, startRead]);
+    void acknowledge(readThrough).catch(() => {
+      /* A failed acknowledgement leaves the messages unread; the next update retries. */
+    });
+  }, [readThrough, visible, followingLatest, fatal, acknowledge]);
 
   function send() {
     if (sendLock.current || fatal || !view.canSend) return;
@@ -242,7 +348,7 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
           clientId: draft.clientId,
         });
         if (!result.ok) throw new Error(result.error);
-        // Do not advance the polling cursor here: another user's message may
+        // Do not advance the message cursor here: another user's message may
         // have been committed before this reply but not fetched by this client.
         setMessages((previous) => mergeMessages(previous, [result.data]));
         setBody("");
@@ -289,10 +395,7 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
           </p>
         </div>
         <details className={styles.options}>
-          <summary
-            className={styles.iconButton}
-            aria-label="Conversation options"
-          >
+          <summary className={styles.iconButton} aria-label="Conversation options">
             <MoreHorizontal size={22} />
           </summary>
 
@@ -308,11 +411,10 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
 
                 startBlock(async () => {
                   try {
-                    const result =
-                      await blockConversationAction({
-                        conversationId: initial.id,
-                        blocked: !view.blockedByMe,
-                      });
+                    const result = await blockConversationAction({
+                      conversationId: initial.id,
+                      blocked: !view.blockedByMe,
+                    });
 
                     if (!result.ok) {
                       setError(result.error);
@@ -332,18 +434,14 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
 
                     accept(await response.json());
                   } catch {
-                    setError(
-                      "Could not refresh the conversation. Updates will retry.",
-                    );
+                    setError("Could not refresh the conversation. Updates will retry.");
                   } finally {
                     blockLock.current = false;
                   }
                 });
               }}
             >
-              {view.blockedByMe
-                ? "Unblock conversation"
-                : "Block conversation"}
+              {view.blockedByMe ? "Unblock conversation" : "Block conversation"}
             </button>
 
             <DeleteConversationButton
@@ -377,6 +475,7 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
         onScroll={() => {
           const node = container.current!;
           atBottom.current = node.scrollHeight - node.scrollTop - node.clientHeight < 50;
+          setFollowingLatest(atBottom.current);
         }}
       >
         {older && (
@@ -386,12 +485,13 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
             onClick={async () => {
               setLoadingOlder(true);
               atBottom.current = false;
+              setFollowingLatest(false);
               try {
                 const response = await fetch(
                   "/api/v1/conversations/" +
-                  initial.id +
-                  "/messages?before=" +
-                  messages[0].sequence,
+                    initial.id +
+                    "/messages?before=" +
+                    messages[0].sequence,
                   { cache: "no-store" },
                 );
                 if (!response.ok) throw new Error("older");
@@ -412,18 +512,18 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
           <Fragment key={message.id}>
             {(index === 0 ||
               message.createdAt.slice(0, 10) !==
-              messages[index - 1].createdAt.slice(0, 10)) && (
-                <div className={styles.dateDivider}>
-                  <time dateTime={message.createdAt.slice(0, 10)}>
-                    {new Intl.DateTimeFormat("en-GB", {
-                      day: "numeric",
-                      month: "long",
-                      year: "numeric",
-                      timeZone: "UTC",
-                    }).format(new Date(message.createdAt))}
-                  </time>
-                </div>
-              )}
+                messages[index - 1].createdAt.slice(0, 10)) && (
+              <div className={styles.dateDivider}>
+                <time dateTime={message.createdAt.slice(0, 10)}>
+                  {new Intl.DateTimeFormat("en-GB", {
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    timeZone: "UTC",
+                  }).format(new Date(message.createdAt))}
+                </time>
+              </div>
+            )}
             <article
               className={`${styles.bubble} ${message.mine ? styles.mine : styles.theirs}`}
             >
@@ -454,7 +554,7 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
               </p>
             </article>
           )}
-        <div ref={end} className="h-1" />
+        <div className="h-1" />
       </div>
       {error && (
         <p role="alert" className="notice error">

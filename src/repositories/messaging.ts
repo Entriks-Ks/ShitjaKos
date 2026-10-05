@@ -303,7 +303,11 @@ type UnreadSummaryRow = {
   createdAt: Date;
 };
 
-export async function findUnreadMessageSummary(tx: Tx, userId: string) {
+export async function findUnreadMessageSummary(
+  tx: Tx,
+  userId: string,
+  readingConversationId: string | null = null,
+) {
   const rows = await tx.$queryRaw<UnreadSummaryRow[]>`
     WITH accessible AS (
       SELECT
@@ -373,6 +377,7 @@ export async function findUnreadMessageSummary(tx: Tx, userId: string) {
         ON read_state."conversationId" = accessible.id
         AND read_state."userId" = ${userId}
       WHERE read_state."deletedAt" IS NULL
+        AND (${readingConversationId}::text IS NULL OR accessible.id <> ${readingConversationId})
   AND message.sequence > GREATEST(
     COALESCE(read_state."lastSequence", 0),
     COALESCE(

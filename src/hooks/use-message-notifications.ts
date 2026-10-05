@@ -45,6 +45,41 @@ let newestSeenAt = 0;
 let newestSeenId = "";
 const listeners = new Set<() => void>();
 const navigators = new Set<(path: string) => void>();
+const chatUpdateListeners = new Set<() => void>();
+const readingConversations = new Map<symbol, string>();
+let readingRevision = 0;
+
+// Exclude only the conversation currently being read from this tab's alerts.
+// The stored unread state is still advanced separately, after messages arrive.
+export function registerMessageNotificationReader(conversationId: string) {
+  const token = Symbol();
+  readingConversations.set(token, conversationId);
+  readingRevision++;
+  queueRefresh();
+  function release() {
+    if (!readingConversations.delete(token)) return;
+    readingRevision++;
+    if (subscribers > 0) queueRefresh();
+  }
+  return release;
+}
+
+function notifyChatUpdates() {
+  chatUpdateListeners.forEach((listener) => listener());
+}
+
+export function isNotificationStreamConnected() {
+  return connected;
+}
+
+export function subscribeChatUpdates(listener: () => void) {
+  chatUpdateListeners.add(listener);
+  const release = subscribe(() => {});
+  return () => {
+    chatUpdateListeners.delete(listener);
+    release();
+  };
+}
 
 function browserPermission(): NotificationPermissionState {
   return typeof window !== "undefined" && "Notification" in window
@@ -113,8 +148,12 @@ function connectEvents() {
     clearTimeout(timer);
     timer = undefined;
     queueRefresh();
+    notifyChatUpdates();
   });
-  events.addEventListener("changed", queueRefresh);
+  events.addEventListener("changed", () => {
+    queueRefresh();
+    notifyChatUpdates();
+  });
   events.onerror = () => {
     connected = false;
     schedulePoll();
@@ -137,9 +176,14 @@ async function loadSummary() {
   }
   const controller = new AbortController();
   request = controller;
+  const revision = readingRevision;
+  const readingId = readingConversations.values().next().value;
+  const url = readingId
+    ? `/api/v1/notifications?readingConversationId=${encodeURIComponent(readingId)}`
+    : "/api/v1/notifications";
 
   try {
-    const response = await fetch("/api/v1/notifications", {
+    const response = await fetch(url, {
       cache: "no-store",
       signal: controller.signal,
     });
@@ -160,6 +204,11 @@ async function loadSummary() {
     if (!response.ok) throw new Error("Could not refresh notifications.");
 
     const next = (await response.json()) as MessageNotificationSummary;
+    // An earlier request may finish after the chat started reading. Discard it.
+    if (revision !== readingRevision) {
+      pendingRefresh = true;
+      return;
+    }
     const isNewer = rememberLatest(next.latest);
     if (initialized && isNewer && next.latest) showBrowserNotification(next.latest);
     initialized = true;

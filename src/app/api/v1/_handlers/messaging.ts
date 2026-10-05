@@ -11,7 +11,7 @@ export const conversationsGet = endpoint(async (r) =>
   chat.getChatInbox(await apiActor(r), pagination.parse(query(r)).page),
 );
 export const notificationsGet = endpoint(async (r) =>
-  chat.getMessageNotificationSummary(await apiActor(r)),
+  chat.getMessageNotificationSummary(await apiActor(r), query(r)),
 );
 export const conversationsPost = endpoint(async (r) =>
   json(await chat.startListingConversation(await apiActor(r), await readJson(r)), 201),

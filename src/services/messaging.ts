@@ -12,6 +12,7 @@ import {
   blockMessageInput,
   reportMessageInput,
   deleteConversationInput,
+  messageNotificationInput,
 
 } from "@/lib/validations/messaging";
 import { withTransaction } from "@/repositories/transaction";
@@ -320,10 +321,13 @@ export async function getChatInbox(
   });
 }
 
-export async function getMessageNotificationSummary(actor: Actor) {
+export async function getMessageNotificationSummary(actor: Actor, raw: unknown = {}) {
+  const input = messageNotificationInput.parse(raw);
   return withTransaction(async (tx) => {
     const current = await activeActor(tx, actor);
-    return records.findUnreadMessageSummary(tx, current.id);
+    // Only filters this response; it never marks unseen messages read or changes
+    // another user's notifications. The repository still enforces inbox access.
+    return records.findUnreadMessageSummary(tx, current.id, input.readingConversationId);
   });
 }
 

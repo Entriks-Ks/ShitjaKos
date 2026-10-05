@@ -1,6 +1,9 @@
 import { z } from "zod";
 
 export const chatId = z.string().trim().min(1).max(100);
+export const messageNotificationInput = z.object({
+  readingConversationId: chatId.optional(),
+});
 export const sendMessageInput = z.object({
   conversationId: chatId,
   clientId: z.uuid(),
