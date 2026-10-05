@@ -1554,6 +1554,7 @@ h2 {
   z-index: 6;
 }
 .hero .searchbar {
+  z-index: 6;
   margin-top: 72px;
   max-width: none;
 }
@@ -2048,6 +2049,7 @@ h2 {
 }
 .listing-card {
   position: relative;
+  isolation: isolate;
   background: #fff;
   border: 1px solid #e4ebe4;
   border-radius: 16px;
