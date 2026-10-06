@@ -25,77 +25,19 @@ import {
   sendMessageAction,
   markReadAction,
   blockConversationAction,
-  reportMessageAction,
 } from "@/actions/messaging";
 import {
   subscribeChatUpdates,
   isNotificationStreamConnected,
   registerMessageNotificationReader,
 } from "@/hooks/use-message-notifications";
+import { ReportMessage } from "./report-message";
 import { DeleteConversationButton } from "./delete-conversation-button";
 
 function mergeMessages(previous: ChatMessage[], incoming: ChatMessage[]) {
   const byId = new Map(previous.map((message) => [message.id, message]));
   incoming.forEach((message) => byId.set(message.id, message));
   return [...byId.values()].sort((a, b) => a.sequence - b.sequence);
-}
-
-function ReportMessage({
-  conversationId,
-  messageId,
-}: {
-  conversationId: string;
-  messageId: string;
-}) {
-  const [notice, setNotice] = useState("");
-  const [pending, startTransition] = useTransition();
-  const locked = useRef(false);
-  return (
-    <details className={styles.report}>
-      <summary aria-label="Message options">
-        <MoreHorizontal size={16} aria-hidden="true" />
-      </summary>
-      <form
-        className="mt-2 space-y-2"
-        onSubmit={(event) => {
-          event.preventDefault();
-          if (locked.current) return;
-          locked.current = true;
-          const reason = String(new FormData(event.currentTarget).get("reason") ?? "");
-          startTransition(async () => {
-            try {
-              const result = await reportMessageAction({
-                conversationId,
-                messageId,
-                reason,
-              });
-              setNotice(result.ok ? "Report recorded." : result.error);
-            } catch {
-              setNotice("Could not submit report. Please retry.");
-            } finally {
-              locked.current = false;
-            }
-          });
-        }}
-      >
-        <label className="field">
-          Reason
-          <textarea
-            name="reason"
-            required
-            minLength={5}
-            maxLength={1000}
-            rows={2}
-            disabled={pending}
-          />
-        </label>
-        <button className="btn btn-outline" disabled={pending}>
-          Submit report
-        </button>
-        {notice && <p role="status">{notice}</p>}
-      </form>
-    </details>
-  );
 }
 
 export function ConversationThread({ initial }: { initial: ChatView }) {
@@ -551,7 +493,11 @@ export function ConversationThread({ initial }: { initial: ChatView }) {
                 </time>
                 {message.mine && <Check size={13} aria-label="Sent" />}
                 {message.side !== view.side && (
-                  <ReportMessage conversationId={initial.id} messageId={message.id} />
+                  <ReportMessage
+                    conversationId={initial.id}
+                    messageId={message.id}
+                    body={message.body}
+                  />
                 )}
               </div>
             </article>
