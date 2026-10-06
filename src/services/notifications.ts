@@ -1,4 +1,6 @@
 import "server-only";
+import { getMessageNotificationSummary } from "@/services/messaging";
+import { getSavedSearchNotificationSummary } from "@/services/saved-searches";
 import type { Actor } from "@/lib/permissions";
 import { ChatError } from "@/lib/messaging/policy";
 import { findChatActor } from "@/repositories/messaging";
@@ -28,4 +30,17 @@ export async function subscribeToNotifications(
   // Always subscribe to the authenticated actor's own inbox. Callers cannot
   // supply a separate recipient or use an admin role to watch another user.
   return subscribeNotificationEvents(current.id, subscriber);
+}
+
+export async function getAccountNotificationSummary(actor: Actor, raw: unknown = {}) {
+  const [messages, searches] = await Promise.all([
+    getMessageNotificationSummary(actor, raw),
+    getSavedSearchNotificationSummary(actor),
+  ]);
+  // Preserve `unread` and `latest` as chat-only fields for existing mobile clients.
+  return {
+    ...messages,
+    ...searches,
+    totalUnread: messages.unread + searches.savedSearchUnread,
+  };
 }

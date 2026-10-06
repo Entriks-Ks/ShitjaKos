@@ -5,6 +5,7 @@ import { ChatError } from "@/lib/messaging/policy";
 import { MediaOperationError } from "@/services/media";
 import { BusinessStaffError } from "@/services/business-staff";
 import { ShopImageError } from "@/services/shop-images";
+import { SavedSearchError } from "@/services/saved-searches";
 import { serviceErrorStatus } from "./service-errors";
 
 export type ApiContext = { params: Promise<Record<string, string>> };
@@ -42,6 +43,7 @@ export function endpoint(
         );
       if (
         error instanceof ApiError ||
+        error instanceof SavedSearchError ||
         error instanceof ChatError ||
         error instanceof MediaOperationError
       )

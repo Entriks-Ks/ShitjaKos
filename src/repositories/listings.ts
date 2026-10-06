@@ -208,10 +208,9 @@ export function getSimilarListings(categoryId: string, excludeId: string) {
     orderBy: { publishedAt: "desc" },
   });
 }
-export async function searchListings(
+export function buildListingSearchWhere(
   params: Record<string, string | undefined>,
-  pageSize = 12,
-) {
+): Prisma.ListingWhereInput {
   const where: Prisma.ListingWhereInput = publicWhere();
   const filters: Prisma.ListingWhereInput[] = [];
   if (params.q?.trim())
@@ -256,7 +255,14 @@ export async function searchListings(
         some: { attributeId: params.attribute, value: { equals: params.value } },
       },
     });
-  const finalWhere = { AND: [where, ...filters] };
+  return { AND: [where, ...filters] };
+}
+
+export async function searchListings(
+  params: Record<string, string | undefined>,
+  pageSize = 12,
+) {
+  const finalWhere = buildListingSearchWhere(params);
   const requestedPage = Math.max(1, Math.min(1000, Math.floor(Number(params.page)) || 1));
   const sort: Prisma.ListingOrderByWithRelationInput =
     params.sort === "price-asc"

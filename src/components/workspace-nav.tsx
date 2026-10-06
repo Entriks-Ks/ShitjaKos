@@ -6,6 +6,7 @@ import {
   UserRound,
   Store,
   Heart,
+  Bookmark,
   ShieldCheck,
   Layers,
   ArrowUpRight,
@@ -23,7 +24,7 @@ export function WorkspaceNav({
   hasBusiness?: boolean;
 }) {
   const path = usePathname();
-  const { unread } = useMessageNotifications();
+  const { unread, savedSearchUnread } = useMessageNotifications();
   const links = admin
     ? [
         { href: "/admin", name: "Review queue", icon: ShieldCheck },
@@ -41,6 +42,7 @@ export function WorkspaceNav({
         { href: "/dashboard", name: "Overview", icon: LayoutDashboard },
         { href: "/dashboard/profile", name: "Personal details", icon: UserRound },
         { href: "/dashboard/favorites", name: "My favorites", icon: Heart },
+        { href: "/dashboard/saved-searches", name: "Saved searches", icon: Bookmark },
         { href: "/dashboard/shops", name: "My shops", icon: Store },
         ...(hasBusiness
           ? [{ href: "/dashboard/performance", name: "Performance", icon: BarChart3 }]
@@ -56,6 +58,14 @@ export function WorkspaceNav({
         <Link key={href} href={href} aria-current={path === href ? "page" : undefined}>
           <Icon size={18} />
           <span className="workspace-nav-name">{name}</span>
+          {href === "/dashboard/saved-searches" && savedSearchUnread > 0 && (
+            <span
+              className="workspace-nav-badge"
+              aria-label={`${savedSearchUnread} unread search alerts`}
+            >
+              {savedSearchUnread > 99 ? "99+" : savedSearchUnread}
+            </span>
+          )}
           {href === "/dashboard/messages" && unread > 0 ? (
             <span
               className="workspace-nav-badge"

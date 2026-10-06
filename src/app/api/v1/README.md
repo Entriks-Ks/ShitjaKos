@@ -371,6 +371,56 @@ For non-mutating HTTP smoke checks, run the built server on port 3007 and run
 cover unauthenticated denial, request validation, and public card privacy; they do
 not substitute for authenticated integration tests against a disposable database.
 
-Only implemented backend features are exposed. Future payments, saved-search alerts,
+Only implemented backend features are exposed. Future payments,
 ownership transfer, and moderation workflows need their own service implementations
 before endpoints can expose them.
+
+## Saved searches and alerts
+
+All endpoints require the existing authenticated cookie or mobile Bearer session.
+Only active, verified users may access their own saved searches/alerts. Admin does
+not grant access to another user's private saved searches. Mutations check origin
+and share the service's per-user budget (5 changes/minute) with web actions.
+
+| Endpoint                                  | Purpose                                                                                      |
+| ----------------------------------------- | -------------------------------------------------------------------------------------------- |
+| GET /api/v1/saved-searches?page=1         | All saved searches (up to 30), plus 20 recent alert digests and hasMore for alert pagination |
+| POST /api/v1/saved-searches               | Save validated filters and select alert frequency                                            |
+| PUT /api/v1/saved-searches/:id            | Rename or change frequency; filters stay unchanged                                           |
+| DELETE /api/v1/saved-searches/:id         | Delete this user's search and its alerts; listings remain                                    |
+| POST /api/v1/saved-search-alerts/:id/read | Mark this user's selected alert read                                                         |
+| POST /api/v1/saved-search-alerts/read     | Mark all this user's saved-search alerts read                                                |
+
+Create body:
+
+```json
+{
+  "name": "Desks in Prishtina",
+  "frequency": "DAILY",
+  "filters": { "q": "desk", "city": "Prishtina", "max": "200" }
+}
+```
+
+Frequency is OFF, DAILY or WEEKLY. PUT accepts only name and frequency.
+Filter values are strings: q, category (ID), city, country (xk/al/mk/me), min/max
+(in euros), seller (private/business/verified), condition, intent, attribute (ID)
+and value. A field filter requires its category and value. Unknown fields are
+rejected; do not send page, sort, lang or userId inside filters. Duplicate filters
+return 409, ownership misses return 404, invalid input 400, exhausted budget 429.
+
+GET response: `{searches, alerts, hasMore}`. Searches include id, name, filters,
+frequency, lastError, nextRunAt, createdAt and a relative results URL. An alert
+includes id, name, read, createdAt, relative results URL and currently public
+`listings: [{id,title}]`. A removed/unsupported filter may have a null URL.
+No private listing details are included. Users mark alerts read explicitly.
+
+GET /api/v1/notifications retains chat-only `unread` and `latest` for existing apps.
+New fields: `savedSearchUnread` (unread digests), `latestSavedSearch`
+(`{id,title,createdAt}` or null), and `totalUnread` (messages plus digests).
+Use totalUnread on the account badge and unread on Messages. The existing SSE
+endpoint announces committed alert creation/read/delete changes; then refetch the
+summary. The readingConversationId option excludes only active-chat unread counts.
+Native clients must integrate these screens and optional OS notifications themselves.
+
+Requires migration `20261006170000_saved_searches` and a scheduled worker.
+See docs/saved-searches.md. No email or native push is sent by these endpoints.

@@ -18,6 +18,8 @@ model User {
   suspendedAt          DateTime?
   deletedAt            DateTime?
   role                 String                  @default("USER")
+  savedSearches        SavedSearch[]
+  savedSearchAlerts    SavedSearchAlert[]
   sessions             Session[]
   accounts             Account[]
   favorites            Favorite[]
@@ -321,6 +323,8 @@ model Listing {
   category          Category                @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   attributes        ListingAttributeValue[]
   additionalData    ListingAdditionalData[]
+  firstPublication  ListingPublication?
+  savedSearchMatches SavedSearchMatch[]
   media             ListingMedia[]
   conversations     Conversation[]
 
@@ -483,4 +487,63 @@ enum ConversationSellerKind {
 enum MessageSide {
   BUYER
   SELLER
+}
+
+
+enum SavedSearchFrequency {
+  OFF
+  DAILY
+  WEEKLY
+}
+
+model SavedSearch {
+  id String @id @default(cuid())
+  userId String
+  name String
+  filters Json
+  filterVersion Int @default(1)
+  filterHash String
+  frequency SavedSearchFrequency @default(OFF)
+  eligibleSince DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+  nextRunAt DateTime?
+  lastCheckedAt DateTime?
+  lastError String?
+  createdAt DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  alerts SavedSearchAlert[]
+  matches SavedSearchMatch[]
+  @@unique([userId, filterHash])
+  @@index([nextRunAt])
+}
+
+model ListingPublication {
+  listingId String @id
+  createdAt DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  @@index([createdAt, listingId])
+}
+
+model SavedSearchAlert {
+  id String @id @default(cuid())
+  userId String
+  savedSearchId String
+  createdAt DateTime @default(dbgenerated("timezone('UTC'::text, CURRENT_TIMESTAMP)"))
+  readAt DateTime?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedSearch SavedSearch @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
+  matches SavedSearchMatch[]
+  @@index([userId, readAt, createdAt])
+}
+
+model SavedSearchMatch {
+  savedSearchId String
+  listingId String
+  alertId String
+  savedSearch SavedSearch @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  alert SavedSearchAlert @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  @@id([savedSearchId, listingId])
+  @@index([alertId])
+  @@index([listingId])
 }

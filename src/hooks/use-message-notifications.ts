@@ -13,6 +13,8 @@ type LatestUnreadMessage = {
 };
 
 export type MessageNotificationSummary = {
+  savedSearchUnread: number;
+  latestSavedSearch: { id: string; title: string; createdAt: string } | null;
   unread: number;
   latest: LatestUnreadMessage | null;
 };
@@ -25,6 +27,8 @@ type MessageNotificationSnapshot = MessageNotificationSummary & {
 };
 
 const EMPTY_SUMMARY: MessageNotificationSnapshot = {
+  savedSearchUnread: 0,
+  latestSavedSearch: null,
   unread: 0,
   latest: null,
   loading: true,
@@ -43,6 +47,8 @@ let subscribers = 0;
 let initialized = false;
 let newestSeenAt = 0;
 let newestSeenId = "";
+let newestSearchAlertAt = 0;
+let newestSearchAlertId = "";
 const listeners = new Set<() => void>();
 const navigators = new Set<(path: string) => void>();
 const chatUpdateListeners = new Set<() => void>();
@@ -194,6 +200,8 @@ async function loadSummary() {
       connected = false;
       initialized = true;
       publish({
+        savedSearchUnread: 0,
+        latestSavedSearch: null,
         unread: 0,
         latest: null,
         loading: false,
@@ -211,6 +219,33 @@ async function loadSummary() {
     }
     const isNewer = rememberLatest(next.latest);
     if (initialized && isNewer && next.latest) showBrowserNotification(next.latest);
+    const searchAlert = next.latestSavedSearch;
+    if (searchAlert) {
+      const timestamp = Date.parse(searchAlert.createdAt);
+      const isNew =
+        timestamp > newestSearchAlertAt ||
+        (timestamp === newestSearchAlertAt && searchAlert.id !== newestSearchAlertId);
+      if (
+        initialized &&
+        isNew &&
+        browserPermission() === "granted" &&
+        document.visibilityState !== "visible"
+      ) {
+        const alert = new Notification("New saved-search matches", {
+          body: searchAlert.title,
+          tag: `saved-search-${searchAlert.id}`,
+        });
+        alert.onclick = () => {
+          window.focus();
+          navigators.values().next().value?.("/dashboard/saved-searches");
+          alert.close();
+        };
+      }
+      if (timestamp >= newestSearchAlertAt) {
+        newestSearchAlertAt = timestamp;
+        newestSearchAlertId = searchAlert.id;
+      }
+    }
     initialized = true;
     publish({ ...next, loading: false, permission: browserPermission() });
   } catch (error) {

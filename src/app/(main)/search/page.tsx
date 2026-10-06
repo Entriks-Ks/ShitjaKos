@@ -1,3 +1,4 @@
+import { SaveSearchButton } from "@/components/save-search-button";
 import Link from "@/components/navigation-link";
 import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
@@ -99,6 +100,11 @@ export default async function SearchPage({
                 <span className="text-sm text-stone-500">
                   {result.count} {t.results}
                 </span>
+                <SaveSearchButton
+                  params={params}
+                  signedIn={!!user}
+                  suggestedName={title}
+                />
                 <SearchFilters params={params} locale={locale} selected={selected} />
               </div>
             </div>

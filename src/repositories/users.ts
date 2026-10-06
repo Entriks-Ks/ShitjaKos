@@ -162,6 +162,7 @@ export async function anonymizeAccount(
     where: { sellerUserId: userId, sellerKind: "PERSONAL" },
     data: { sellerName: "Deleted account" },
   });
+  await tx.savedSearch.deleteMany({ where: { userId } });
   await tx.favorite.deleteMany({ where: { userId } });
   await tx.businessMembership.deleteMany({ where: { userId } });
   await tx.businessStaffInvitation.deleteMany({

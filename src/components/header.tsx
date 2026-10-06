@@ -7,13 +7,14 @@ import { copy, Locale, locales } from "@/lib/catalog";
 import { useMessageNotifications } from "@/hooks/use-message-notifications";
 
 function SignedInAccountControl({ label }: { label: string }) {
-  const { unread } = useMessageNotifications();
+  const notifications = useMessageNotifications();
+  const unread = notifications.unread + (notifications.savedSearchUnread ?? 0);
 
   return (
     <Link
       className="header-icon-link header-account-link"
       href="/dashboard"
-      aria-label={unread > 0 ? `${label}, ${unread} unread messages` : label}
+      aria-label={unread > 0 ? `${label}, ${unread} unread notifications` : label}
     >
       <User size={22} strokeWidth={1.5} />
       <span>{label}</span>

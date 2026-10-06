@@ -1,9 +1,9 @@
 import "server-only";
+import { getAccountNotificationSummary } from "@/services/notifications";
 import { apiActor } from "@/app/api/v1/_shared/access";
 import { endpoint, paramsOf, json } from "@/app/api/v1/_shared/http";
 import { readJson, pagination } from "@/app/api/v1/_shared/input";
 import * as chat from "@/services/messaging";
-
 
 const query = (r: Request) => Object.fromEntries(new URL(r.url).searchParams);
 
@@ -11,7 +11,7 @@ export const conversationsGet = endpoint(async (r) =>
   chat.getChatInbox(await apiActor(r), pagination.parse(query(r)).page),
 );
 export const notificationsGet = endpoint(async (r) =>
-  chat.getMessageNotificationSummary(await apiActor(r), query(r)),
+  getAccountNotificationSummary(await apiActor(r), query(r)),
 );
 export const conversationsPost = endpoint(async (r) =>
   json(await chat.startListingConversation(await apiActor(r), await readJson(r)), 201),
@@ -50,14 +50,11 @@ export const reportPost = endpoint(async (r, c) => {
   });
 });
 
+export const conversationDelete = endpoint(async (request, contextValue) => {
+  const actor = await apiActor(request);
+  const { id } = await paramsOf(contextValue);
 
-export const conversationDelete = endpoint(
-  async (request, contextValue) => {
-    const actor = await apiActor(request);
-    const { id } = await paramsOf(contextValue);
-
-    return chat.deleteChatForActor(actor, {
-      conversationId: id,
-    });
-  },
-);
+  return chat.deleteChatForActor(actor, {
+    conversationId: id,
+  });
+});
