@@ -30,6 +30,7 @@ export async function changeAccountSuspension(actor: Actor, raw: unknown) {
     if (input.kind === "user") {
       const target = await findModerationUser(tx, input.id);
       if (!target) throw new Error("User not found.");
+      if (target.deletedAt) throw new Error("Deleted accounts cannot be restored.");
       if (target.id === admin.id) {
         throw new Error("You cannot suspend or restore your own account.");
       }

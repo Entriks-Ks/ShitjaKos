@@ -1,9 +1,20 @@
 import "server-only";
-import { Actor } from "@/lib/permissions";
+import { Actor, assertAccountDeletionAllowed } from "@/lib/permissions";
 import { profileInput } from "@/lib/validations/profile";
 import { recordAudit } from "@/repositories/audit";
 import { withTransaction } from "@/repositories/transaction";
-import { findUserStatus, renameUser, upsertPersonalProfile, consumeAccountSecurityAttempt, findActorById } from "@/repositories/users";
+import {
+  findUserStatus,
+  renameUser,
+  upsertPersonalProfile,
+  consumeAccountSecurityAttempt,
+  findActorById,
+} from "@/repositories/users";
+import {
+  findDeletionCredential,
+  lockAccountForDeletion,
+  anonymizeAccount,
+} from "@/repositories/users";
 import { z } from "zod";
 import { getAuth } from "@/lib/auth";
 
@@ -21,9 +32,10 @@ export async function updateProfile(actor: Actor, raw: unknown) {
   });
 }
 
-const code = z.string().trim().regex(/^\d{6}$/);
-
-
+const code = z
+  .string()
+  .trim()
+  .regex(/^\d{6}$/);
 
 const commandSchema = z.discriminatedUnion("operation", [
   z.object({
@@ -59,8 +71,6 @@ const commandSchema = z.discriminatedUnion("operation", [
   }),
 ]);
 
-
-
 async function accountContext(requestHeaders: Headers) {
   const auth = getAuth();
 
@@ -81,14 +91,7 @@ async function accountContext(requestHeaders: Headers) {
   return { auth, session };
 }
 
-
-
-
-
-
-export async function getAccountSecurity(
-  requestHeaders: Headers,
-) {
+export async function getAccountSecurity(requestHeaders: Headers) {
   const { auth, session } = await accountContext(requestHeaders);
 
   const sessions = await auth.api.listSessions({
@@ -109,20 +112,11 @@ export async function getAccountSecurity(
   };
 }
 
-
-
-
-export async function changeAccountSecurity(
-  requestHeaders: Headers,
-  raw: unknown,
-) {
+export async function changeAccountSecurity(requestHeaders: Headers, raw: unknown) {
   const input = commandSchema.parse(raw);
   const { auth, session } = await accountContext(requestHeaders);
 
-  const allowed = await consumeAccountSecurityAttempt(
-    session.user.id,
-    input.operation,
-  );
+  const allowed = await consumeAccountSecurityAttempt(session.user.id, input.operation);
 
   if (!allowed) {
     throw new Error("Too many attempts. Wait a minute and try again.");
@@ -194,18 +188,14 @@ export async function changeAccountSecurity(
         headers: requestHeaders,
       });
 
-      const target = sessions.find(
-        (item) => item.id === input.sessionId,
-      );
+      const target = sessions.find((item) => item.id === input.sessionId);
 
       if (!target) {
         return "That session has already ended.";
       }
 
       if (target.id === session.session.id) {
-        throw new Error(
-          "Use the normal sign-out button for your current session.",
-        );
+        throw new Error("Use the normal sign-out button for your current session.");
       }
 
       await auth.api.revokeSession({
@@ -228,3 +218,42 @@ export async function changeAccountSecurity(
   }
 }
 
+const deletionInput = z.object({
+  password: z.string().min(1).max(128),
+  confirmation: z.literal("DELETE"),
+});
+
+export async function deleteOwnAccount(requestHeaders: Headers, raw: unknown) {
+  const input = deletionInput.parse(raw);
+  const { auth, session } = await accountContext(requestHeaders);
+  if (!(await consumeAccountSecurityAttempt(session.user.id, "delete-account")))
+    throw new Error("Too many attempts. Wait a minute and try again.");
+
+  // Snapshot the credential so a concurrent password change invalidates this request.
+  const credential = await findDeletionCredential(session.user.id);
+  if (!credential?.password)
+    throw new Error("A password is required to delete this account.");
+  await auth.api.verifyPassword({
+    headers: requestHeaders,
+    body: { password: input.password },
+  });
+
+  await withTransaction(
+    async (tx) => {
+      const user = await lockAccountForDeletion(tx, session.user.id);
+      assertAccountDeletionAllowed(user, user.memberships.length > 0);
+      if (
+        user.email !== session.user.email ||
+        !user.accounts.some(
+          (item) => item.id === credential.id && item.password === credential.password,
+        )
+      )
+        throw new Error("Your account changed. Sign in again and retry.");
+      await anonymizeAccount(tx, user.id, user.email);
+      await recordAudit(tx, user.id, "account.deleted", user.id, {
+        policy: "anonymized-account-retained-conversations-closed-listings",
+      });
+    },
+    { timeout: 20_000 },
+  );
+}

@@ -2,11 +2,14 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/session";
-import { updateProfile, changeAccountSecurity } from "@/services/profile";
+import {
+  updateProfile,
+  changeAccountSecurity,
+  deleteOwnAccount,
+} from "@/services/profile";
 import { APIError } from "better-auth/api";
 import { ZodError } from "zod";
 import { headers } from "next/headers";
-import Link from "next/link";
 
 export async function updateProfileAction(raw: unknown) {
   const actor = await requireUser();
@@ -24,7 +27,6 @@ export async function updateProfileAction(raw: unknown) {
     };
   }
 }
-
 
 export async function accountSecurityAction(
   _previous: { ok: boolean; message: string },
@@ -56,9 +58,7 @@ export async function accountSecurityAction(
     if (error instanceof APIError) {
       return {
         ok: false,
-        message:
-          error.body?.message ??
-          "The request failed. Try signing in again.",
+        message: error.body?.message ?? "The request failed. Try signing in again.",
       };
     }
 
@@ -79,4 +79,37 @@ export async function accountSecurityAction(
           : "Could not complete the request. Please try again.",
     };
   }
+}
+
+export async function deleteAccountAction(raw: {
+  password: string;
+  confirmation: string;
+}) {
+  try {
+    await deleteOwnAccount(new Headers(await headers()), raw);
+  } catch (error) {
+    if (error instanceof ZodError)
+      return { error: "Enter your password and type DELETE to confirm." };
+    if (error instanceof APIError)
+      return {
+        error: "Password verification failed. Check your password or sign in again.",
+      };
+    const messages = new Set([
+      "This account is unavailable.",
+      "Sign in again to manage your account.",
+      "Staff accounts must be managed by another administrator.",
+      "Delete or transfer your shops before deleting your account.",
+      "Too many attempts. Wait a minute and try again.",
+      "A password is required to delete this account.",
+      "Your account changed. Sign in again and retry.",
+    ]);
+    return {
+      error:
+        error instanceof Error && messages.has(error.message)
+          ? error.message
+          : "Could not delete your account. Please try again.",
+    };
+  }
+  revalidatePath("/", "layout");
+  return { ok: true };
 }

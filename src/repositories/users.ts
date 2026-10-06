@@ -77,11 +77,7 @@ export function findUserSuspension(
   });
 }
 
-
-export async function consumeAccountSecurityAttempt(
-  userId: string,
-  operation: string,
-) {
+export async function consumeAccountSecurityAttempt(userId: string, operation: string) {
   const key = `account-security:${userId}:${operation}`;
   const now = BigInt(Date.now());
   const cutoff = now - BigInt(60_000);
@@ -115,4 +111,93 @@ export async function consumeAccountSecurityAttempt(
   `;
 
   return rows[0].count <= 5;
+}
+
+export function findDeletionCredential(userId: string) {
+  return getPrisma().account.findFirst({
+    where: { userId, providerId: "credential" },
+    select: { id: true, password: true },
+  });
+}
+
+export async function lockAccountForDeletion(
+  tx: Prisma.TransactionClient,
+  userId: string,
+) {
+  await tx.$queryRaw`SELECT "id" FROM "User" WHERE "id" = ${userId} FOR UPDATE`;
+  await tx.$queryRaw`SELECT "id" FROM "Account" WHERE "userId" = ${userId} FOR UPDATE`;
+  return tx.user.findUniqueOrThrow({
+    where: { id: userId },
+    include: {
+      accounts: {
+        where: { providerId: "credential" },
+        select: { id: true, password: true },
+      },
+      memberships: { where: { role: "OWNER" }, select: { businessId: true } },
+    },
+  });
+}
+
+export async function anonymizeAccount(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  email: string,
+) {
+  const now = new Date();
+  // Retain closed listing records and message history; remove contact details.
+  await tx.listing.updateMany({
+    where: { personalProfile: { userId } },
+    data: {
+      status: "CLOSED",
+      phoneVisible: false,
+      contactPhone: null,
+      version: { increment: 1 },
+    },
+  });
+  await tx.personalProfile.updateMany({
+    where: { userId },
+    data: { displayName: "Deleted account", phone: "", bio: "", city: "" },
+  });
+  await tx.conversation.updateMany({
+    where: { sellerUserId: userId, sellerKind: "PERSONAL" },
+    data: { sellerName: "Deleted account" },
+  });
+  await tx.favorite.deleteMany({ where: { userId } });
+  await tx.businessMembership.deleteMany({ where: { userId } });
+  await tx.businessStaffInvitation.deleteMany({
+    where: {
+      OR: [{ email: { equals: email, mode: "insensitive" } }, { invitedById: userId }],
+    },
+  });
+  await tx.pendingRegistration.deleteMany({
+    where: { email: { equals: email, mode: "insensitive" } },
+  });
+  await tx.verification.deleteMany({
+    where: {
+      OR: [
+        { identifier: { startsWith: "reset-password:" }, value: userId },
+        {
+          identifier: {
+            in: ["email-verification", "sign-in", "forget-password"].map(
+              (type) => `${type}-otp-${email.toLowerCase()}`,
+            ),
+          },
+        },
+        { identifier: { startsWith: `change-email-otp-${email.toLowerCase()}-` } },
+      ],
+    },
+  });
+  await tx.session.deleteMany({ where: { userId } });
+  await tx.account.deleteMany({ where: { userId } });
+  await tx.user.update({
+    where: { id: userId },
+    data: {
+      name: "Deleted account",
+      email: `deleted-${randomUUID()}@account.invalid`,
+      emailVerified: false,
+      image: null,
+      suspendedAt: now,
+      deletedAt: now,
+    },
+  });
 }

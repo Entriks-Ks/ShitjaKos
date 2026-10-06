@@ -88,7 +88,7 @@ export async function findAdminBusinesses(query: string, page: number) {
 export function findModerationUser(tx: Prisma.TransactionClient, id: string) {
   return tx.user.findUnique({
     where: { id },
-    select: { id: true, role: true, suspendedAt: true },
+    select: { id: true, role: true, suspendedAt: true, deletedAt: true },
   });
 }
 

@@ -6,6 +6,7 @@ import { getPrisma } from "@/lib/prisma";
 // itself; this keeps every Prisma import inside the repository layer.
 export function withTransaction<T>(
   run: (tx: Prisma.TransactionClient) => Promise<T>,
+  options?: { timeout?: number },
 ): Promise<T> {
-  return getPrisma().$transaction(run);
+  return getPrisma().$transaction(run, options);
 }

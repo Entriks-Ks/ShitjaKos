@@ -1,4 +1,14 @@
 export type Actor = { id: string; suspendedAt: Date | null; role: string };
+export function assertAccountDeletionAllowed(
+  user: Actor & { deletedAt: Date | null },
+  ownsBusiness: boolean,
+) {
+  if (user.deletedAt || user.suspendedAt) throw new Error("This account is unavailable.");
+  if (user.role !== "USER")
+    throw new Error("Staff accounts must be managed by another administrator.");
+  if (ownsBusiness)
+    throw new Error("Delete or transfer your shops before deleting your account.");
+}
 export function assertBusinessDeletionAllowed(
   actor: Actor,
   membership: { userId: string; role: string } | null,

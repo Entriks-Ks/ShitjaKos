@@ -1,3 +1,4 @@
+import { DeleteAccount } from "@/components/delete-account";
 import { ChangeEmailForm } from "@/components/change-email-form";
 import Link from "@/components/navigation-link";
 import { LockKeyhole, Mail } from "lucide-react";
@@ -65,6 +66,7 @@ export default async function ProfilePage() {
             Reset password
           </Link>
         </div>
+        <DeleteAccount />
       </section>
     </>
   );
