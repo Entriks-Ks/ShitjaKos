@@ -1,6 +1,7 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
+import { randomUUID } from "node:crypto";
 
 export type PersonalProfileWrite = Omit<
   Prisma.PersonalProfileUncheckedCreateInput,
@@ -74,4 +75,44 @@ export function findUserSuspension(
     where: { id },
     select: { suspendedAt: true },
   });
+}
+
+
+export async function consumeAccountSecurityAttempt(
+  userId: string,
+  operation: string,
+) {
+  const key = `account-security:${userId}:${operation}`;
+  const now = BigInt(Date.now());
+  const cutoff = now - BigInt(60_000);
+
+  const rows = await getPrisma().$queryRaw<Array<{ count: number }>>`
+    INSERT INTO "RateLimit" (
+      "id",
+      "key",
+      "count",
+      "lastRequest"
+    )
+    VALUES (
+      ${randomUUID()},
+      ${key},
+      1,
+      ${now}
+    )
+    ON CONFLICT ("key")
+    DO UPDATE SET
+      "count" = CASE
+        WHEN "RateLimit"."lastRequest" <= ${cutoff}
+          THEN 1
+        ELSE "RateLimit"."count" + 1
+      END,
+      "lastRequest" = CASE
+        WHEN "RateLimit"."lastRequest" <= ${cutoff}
+          THEN ${now}
+        ELSE "RateLimit"."lastRequest"
+      END
+    RETURNING "count"
+  `;
+
+  return rows[0].count <= 5;
 }

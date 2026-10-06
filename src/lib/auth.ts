@@ -64,6 +64,10 @@ function makeAuth() {
         storeOTP: "hashed",
         disableSignUp: true,
         overrideDefaultEmailVerification: true,
+        changeEmail: {
+          enabled: true,
+          verifyCurrentEmail: true,
+        },
         async sendVerificationOTP({ email, otp, type }) {
           const subject =
             type === "forget-password"

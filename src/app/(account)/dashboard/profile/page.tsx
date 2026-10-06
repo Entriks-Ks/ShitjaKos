@@ -1,9 +1,11 @@
+import { ChangeEmailForm } from "@/components/change-email-form";
 import Link from "@/components/navigation-link";
 import { LockKeyhole, Mail } from "lucide-react";
 import { requireUser } from "@/lib/session";
 import { cities } from "@/lib/catalog";
 import { ProfileForm } from "@/components/profile-form";
 import { StatusBadge } from "@/components/workspace-ui";
+
 export const metadata = {
   title: "Personal details",
   robots: { index: false, follow: false },
@@ -44,9 +46,12 @@ export default async function ProfilePage() {
               <small>{user.email}</small>
             </span>
           </div>
-          <StatusBadge tone={user.emailVerified ? "green" : "amber"}>
-            {user.emailVerified ? "Verified" : "Unverified"}
-          </StatusBadge>
+          <div className="flex flex-wrap items-center gap-3">
+            <StatusBadge tone={user.emailVerified ? "green" : "amber"}>
+              {user.emailVerified ? "Verified" : "Unverified"}
+            </StatusBadge>
+            <ChangeEmailForm />
+          </div>
         </div>
         <div className="security-row">
           <div>
