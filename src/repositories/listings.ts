@@ -131,7 +131,7 @@ export function createListing(
       personalProfileId: input.personalProfileId,
       businessId: input.businessId,
       attributes: { create: input.attributes },
-      additionalData: { create: input.additionalData, },
+      additionalData: { create: input.additionalData },
     },
   });
 }
@@ -179,7 +179,7 @@ export function getListingPreview(id: string) {
       personalProfile: true,
       business: { include: { shop: true, memberships: true } },
       attributes: { include: { attribute: { include: { translations: true } } } },
-      additionalData: { orderBy: { position: "asc", }, },
+      additionalData: { orderBy: { position: "asc" } },
       media: { orderBy: { position: "asc" } },
     },
   });
@@ -194,7 +194,7 @@ export function getEditableListing(id: string) {
       media: { orderBy: { position: "asc" } },
       attributes: true,
       additionalData: {
-        orderBy: { position: "asc", }
+        orderBy: { position: "asc" },
       },
     },
   });
@@ -270,11 +270,48 @@ export function buildListingSearchWhere(
   return { AND: [where, ...filters] };
 }
 
+async function fuzzyListingIds(query: string) {
+  const words = query.trim().slice(0, 120).split(/\s+/).slice(0, 8);
+  let matchingIds: Set<string> | undefined;
+
+  for (const word of words) {
+    const threshold = word.length <= 4 ? 0.65 : word.length <= 6 ? 0.55 : 0.5;
+    const rows = await getPrisma().$queryRaw<Array<{ id: string }>>`
+      SELECT DISTINCT l.id
+      FROM "Listing" l
+      JOIN "Category" c ON c.id = l."categoryId"
+      WHERE
+        word_similarity(unaccent(${word}), unaccent(l.title)) >= ${threshold}
+        OR word_similarity(unaccent(${word}), unaccent(l.description)) >= ${threshold}
+        OR word_similarity(unaccent(${word}), unaccent(c.slug)) >= ${threshold}
+        OR EXISTS (
+          SELECT 1
+          FROM "CategoryTranslation" ct
+          WHERE ct."categoryId" = c.id
+            AND word_similarity(unaccent(${word}), unaccent(ct.name)) >= ${threshold}
+        )
+    `;
+    const ids = new Set(rows.map((row) => row.id));
+    matchingIds = matchingIds
+      ? new Set([...matchingIds].filter((id) => ids.has(id)))
+      : ids;
+    if (!matchingIds.size) return [];
+  }
+
+  return [...(matchingIds ?? [])];
+}
+
 export async function searchListings(
   params: Record<string, string | undefined>,
   pageSize = 12,
 ) {
-  const finalWhere = buildListingSearchWhere(params);
+  const fuzzyIds = params.q?.trim() ? await fuzzyListingIds(params.q) : undefined;
+  const finalWhere = {
+    AND: [
+      buildListingSearchWhere({ ...params, q: undefined }),
+      ...(fuzzyIds ? [{ id: { in: fuzzyIds } }] : []),
+    ],
+  } satisfies Prisma.ListingWhereInput;
   const requestedPage = Math.max(1, Math.min(1000, Math.floor(Number(params.page)) || 1));
   const sort: Prisma.ListingOrderByWithRelationInput =
     params.sort === "price-asc"
@@ -309,8 +346,6 @@ export async function searchListings(
     pages,
   };
 }
-
-
 
 export async function replaceListingAdditionalData(
   tx: Prisma.TransactionClient,
