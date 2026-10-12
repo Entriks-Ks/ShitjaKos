@@ -5,6 +5,7 @@ import { copy, countryForCity, countryName, Locale, money } from "@/lib/catalog"
 import { FavoriteButton } from "@/components/favorite-button";
 import { MessageSeller } from "@/components/messaging/message-seller";
 import { ShareListingButton } from "@/components/share-listing-button";
+import { ContentReportControl } from "@/components/content-report-control";
 import styles from "./listing-detail.module.css";
 
 type Labels = (typeof copy)[Locale];
@@ -70,7 +71,14 @@ export function ListingSummary({
           <span>{categoryName}</span>
           <span className={styles.intentTag}>{intentLabel}</span>
         </p>
-        <h1 className={styles.title}>{title}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className={`${styles.title} min-w-0 flex-1`}>{title}</h1>
+          {visible && !owner && (
+            <div className="shrink-0">
+              <ContentReportControl targetKind="LISTING" targetId={id} />
+            </div>
+          )}
+        </div>
         <p className={styles.price}>
           {money(priceCents)}
           {negotiable ? <span className={styles.negotiable}>{labels.negotiable}</span> : null}

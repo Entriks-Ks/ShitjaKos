@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { CheckCircle2, Flag, MoreHorizontal, X } from "lucide-react";
+import { CheckCircle2, FlagTriangleRight, MoreHorizontal, X } from "lucide-react";
 import { reportMessageAction } from "@/actions/messaging";
 import styles from "./report-message.module.css";
 
@@ -85,7 +85,7 @@ export function ReportMessage({
                 cancel.current?.focus();
               }}
             >
-              <Flag size={15} aria-hidden="true" /> Report
+              <FlagTriangleRight size={15} aria-hidden="true" /> Report
             </button>
           </div>
         )}
@@ -103,7 +103,7 @@ export function ReportMessage({
       >
         <div className={styles.heading}>
           <span className={styles.icon}>
-            {submitted ? <CheckCircle2 size={23} /> : <Flag size={23} />}
+            {submitted ? <CheckCircle2 size={23} /> : <FlagTriangleRight size={23} />}
           </span>
           <button
             type="button"

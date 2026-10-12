@@ -12,6 +12,7 @@ import {
   ArrowUpRight,
   MessageSquare,
   Flag,
+  FlagTriangleRight,
   BarChart3,
 } from "lucide-react";
 import { useMessageNotifications } from "@/hooks/use-message-notifications";
@@ -28,6 +29,7 @@ export function WorkspaceNav({
   const links = admin
     ? [
         { href: "/admin", name: "Review queue", icon: ShieldCheck },
+        { href: "/admin/content-reports", name: "Listing & shop reports", icon: Flag },
         { href: "/admin/catalog", name: "Categories & fields", icon: Layers },
         { href: "/dashboard", name: "My account", icon: UserRound },
         { href: "/admin/users", name: "Users", icon: UserRound },
@@ -35,7 +37,7 @@ export function WorkspaceNav({
         {
           href: "/admin/message-reports",
           name: "Message reports",
-          icon: Flag,
+          icon: FlagTriangleRight,
         },
       ]
     : [

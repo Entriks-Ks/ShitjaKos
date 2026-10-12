@@ -1,3 +1,4 @@
+import { ContentReportControl } from "@/components/content-report-control";
 import type { ReactNode } from "react";
 import { BusinessViewTracker } from "@/components/business-performance/view-tracker";
 import { notFound } from "next/navigation";
@@ -120,7 +121,7 @@ export default async function Page({
               </div>
             )}
             <div className="shop-profile-copy">
-              <h1>{shop.business.publicName}</h1>
+              <div className="flex items-center justify-between gap-3"><h1>{shop.business.publicName}</h1><ContentReportControl targetKind="BUSINESS" targetId={shop.businessId} /></div>
               {shop.tagline.trim() ? (
                 <p className="shop-profile-tagline">{shop.tagline}</p>
               ) : null}
