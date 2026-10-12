@@ -2,6 +2,12 @@ import "server-only";
 import { getPrisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { countryById } from "@/lib/catalog";
+import {
+  expandSearchWords,
+  normalizeSearchText,
+  parseNaturalSearch,
+  searchWords,
+} from "@/lib/listing-search";
 
 export function publicWhere(): Prisma.ListingWhereInput {
   return {
@@ -271,25 +277,32 @@ export function buildListingSearchWhere(
 }
 
 async function fuzzyListingIds(query: string) {
-  const words = query.trim().slice(0, 120).split(/\s+/).slice(0, 8);
+  const words = searchWords(query);
   let matchingIds: Set<string> | undefined;
 
   for (const word of words) {
+    const variants = expandSearchWords([word]);
     const threshold = word.length <= 4 ? 0.65 : word.length <= 6 ? 0.55 : 0.5;
     const rows = await getPrisma().$queryRaw<Array<{ id: string }>>`
       SELECT DISTINCT l.id
       FROM "Listing" l
       JOIN "Category" c ON c.id = l."categoryId"
       WHERE
-        word_similarity(unaccent(${word}), unaccent(l.title)) >= ${threshold}
-        OR word_similarity(unaccent(${word}), unaccent(l.description)) >= ${threshold}
-        OR word_similarity(unaccent(${word}), unaccent(c.slug)) >= ${threshold}
-        OR EXISTS (
-          SELECT 1
-          FROM "CategoryTranslation" ct
-          WHERE ct."categoryId" = c.id
-            AND word_similarity(unaccent(${word}), unaccent(ct.name)) >= ${threshold}
-        )
+        ${Prisma.join(
+          variants.map(
+            (
+              variant,
+            ) => Prisma.sql`word_similarity(unaccent(${variant}), unaccent(l.title)) >= ${threshold}
+              OR word_similarity(unaccent(${variant}), unaccent(l.description)) >= ${threshold}
+              OR word_similarity(unaccent(${variant}), unaccent(c.slug)) >= ${threshold}
+              OR EXISTS (
+                SELECT 1 FROM "CategoryTranslation" ct
+                WHERE ct."categoryId" = c.id
+                  AND word_similarity(unaccent(${variant}), unaccent(ct.name)) >= ${threshold}
+              )`,
+          ),
+          " OR ",
+        )}
     `;
     const ids = new Set(rows.map((row) => row.id));
     matchingIds = matchingIds
@@ -301,14 +314,45 @@ async function fuzzyListingIds(query: string) {
   return [...(matchingIds ?? [])];
 }
 
+async function rankedListingIds(query: string, ids: string[]) {
+  if (!ids.length) return ids;
+  const words = expandSearchWords(searchWords(query));
+  if (!words.length) return ids;
+  const rows = await getPrisma().$queryRaw<Array<{ id: string; score: number }>>`
+    SELECT l.id,
+      (
+        CASE WHEN unaccent(lower(l.title)) LIKE '%' || unaccent(lower(${normalizeSearchText(query)})) || '%' THEN 100 ELSE 0 END
+        + CASE WHEN unaccent(lower(c.slug)) LIKE '%' || unaccent(lower(${normalizeSearchText(query)})) || '%' THEN 80 ELSE 0 END
+        + GREATEST(
+            ${Prisma.join(
+              words.map(
+                (word) =>
+                  Prisma.sql`word_similarity(unaccent(${word}), unaccent(l.title))`,
+              ),
+              " + ",
+            )}
+          )
+      )::float8 AS score
+    FROM "Listing" l
+    JOIN "Category" c ON c.id = l."categoryId"
+    WHERE l.id IN (${Prisma.join(ids)})
+    ORDER BY score DESC, l."publishedAt" DESC NULLS LAST, l.id ASC
+  `;
+  return rows.map((row) => row.id);
+}
+
 export async function searchListings(
   params: Record<string, string | undefined>,
   pageSize = 12,
 ) {
+  const natural = params.q ? parseNaturalSearch(params.q) : {};
+  const effectiveParams = { ...natural, ...params };
   const fuzzyIds = params.q?.trim() ? await fuzzyListingIds(params.q) : undefined;
+  const rankedIds =
+    fuzzyIds && params.q ? await rankedListingIds(params.q, fuzzyIds) : undefined;
   const finalWhere = {
     AND: [
-      buildListingSearchWhere({ ...params, q: undefined }),
+      buildListingSearchWhere({ ...effectiveParams, q: undefined }),
       ...(fuzzyIds ? [{ id: { in: fuzzyIds } }] : []),
     ],
   } satisfies Prisma.ListingWhereInput;
@@ -320,14 +364,28 @@ export async function searchListings(
         ? { priceCents: "desc" }
         : { publishedAt: "desc" };
   const size = pageSize;
-  const readPage = (page: number) =>
-    getPrisma().listing.findMany({
-      where: finalWhere,
-      include: listingInclude,
-      orderBy: [sort, { id: "asc" }],
-      take: size,
-      skip: (page - 1) * size,
+  const readPage = async (page: number) => {
+    const pageIds = rankedIds?.slice((page - 1) * size, page * size);
+    const items = pageIds
+      ? await getPrisma().listing.findMany({
+          where: { AND: [finalWhere, { id: { in: pageIds } }] },
+          include: listingInclude,
+          orderBy: { id: "asc" },
+        })
+      : await getPrisma().listing.findMany({
+          where: finalWhere,
+          include: listingInclude,
+          orderBy: [sort, { id: "asc" as const }],
+          take: size,
+          skip: (page - 1) * size,
+        });
+    if (!pageIds) return items;
+    const byId = new Map(items.map((item) => [item.id, item]));
+    return pageIds.flatMap((id) => {
+      const item = byId.get(id);
+      return item ? [item] : [];
     });
+  };
   const [count, requestedItems] = await Promise.all([
     getPrisma().listing.count({ where: finalWhere }),
     readPage(requestedPage),
@@ -335,6 +393,17 @@ export async function searchListings(
   const pages = Math.max(1, Math.ceil(count / size));
   const page = Math.min(pages, requestedPage);
   const items = page === requestedPage ? requestedItems : await readPage(page);
+  if (params.q?.trim()) {
+    await getPrisma().searchEvent.create({
+      data: {
+        query: normalizeSearchText(params.q),
+        resultCount: count,
+        hasFilters: Object.entries(effectiveParams).some(
+          ([key, value]) => key !== "q" && key !== "page" && Boolean(value),
+        ),
+      },
+    });
+  }
   // Contact fields are deliberately omitted from public cards.
   return {
     items: items.map(({ contactPhone: _phone, ...item }) => {

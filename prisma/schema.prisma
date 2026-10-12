@@ -390,6 +390,17 @@ model AuditEvent {
   @@index([targetId, createdAt])
 }
 
+model SearchEvent {
+  id          String   @id @default(cuid())
+  query       String
+  resultCount Int
+  hasFilters  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([query, createdAt])
+}
+
 model Conversation {
   id              String                  @id @default(cuid())
   listingId       String?
