@@ -219,6 +219,18 @@ export function buildListingSearchWhere(
         OR: [
           { title: { contains: word, mode: "insensitive" } },
           { description: { contains: word, mode: "insensitive" } },
+          {
+            category: {
+              OR: [
+                { slug: { contains: word, mode: "insensitive" } },
+                {
+                  translations: {
+                    some: { name: { contains: word, mode: "insensitive" } },
+                  },
+                },
+              ],
+            },
+          },
         ],
       });
   if (params.category)
