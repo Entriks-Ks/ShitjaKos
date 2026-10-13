@@ -33,7 +33,12 @@ export async function businessAction(raw: unknown) {
   const user = await requireUser();
   try {
     const form = raw instanceof FormData ? raw : null;
-    const values = form ? Object.fromEntries(form) : raw;
+    const values = form
+      ? {
+          ...Object.fromEntries(form),
+          categoryIds: form.getAll("categoryIds").map(String),
+        }
+      : raw;
     const result = await createBusinessWithImages(user, values, {
       logo: form?.get("logo"),
       background: form?.get("background"),

@@ -1,4 +1,8 @@
 "use client";
+import {
+  BusinessCategoryFields,
+  type BusinessCategoryOption,
+} from "@/components/business-category-fields";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -12,6 +16,7 @@ import { cities } from "@/lib/catalog";
 import { CountryCityFields } from "@/components/country-city-fields";
 
 type BusinessInitial = {
+  categoryIds: string[];
   id: string;
   legalName: string;
   publicName: string;
@@ -25,7 +30,13 @@ type BusinessInitial = {
   backgroundSrc: string | null;
 };
 
-export function BusinessForm({ initial }: { initial?: BusinessInitial }) {
+export function BusinessForm({
+  initial,
+  categories,
+}: {
+  initial?: BusinessInitial;
+  categories: BusinessCategoryOption[];
+}) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -38,7 +49,10 @@ export function BusinessForm({ initial }: { initial?: BusinessInitial }) {
         setError("");
         try {
           const f = new FormData(e.currentTarget);
-          const values = Object.fromEntries(f);
+          const values = {
+            ...Object.fromEntries(f),
+            categoryIds: f.getAll("categoryIds").map(String),
+          };
 
           const r = initial
             ? await updateBusinessAction(initial.id, values)
@@ -55,6 +69,7 @@ export function BusinessForm({ initial }: { initial?: BusinessInitial }) {
         }
       }}
     >
+      <BusinessCategoryFields options={categories} initialIds={initial?.categoryIds} />
       <div className="grid sm:grid-cols-2 gap-5">
         <label className="field">
           Registered legal name

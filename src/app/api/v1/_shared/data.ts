@@ -1,3 +1,4 @@
+import { publicShopWhere, publicBusinessCategories } from "@/repositories/shops";
 import "server-only";
 import { withTransaction } from "@/repositories/transaction";
 import { publicWhere, listingInclude } from "@/repositories/listings";
@@ -50,6 +51,7 @@ export function apiFavorites(userId: string, page: number, limit: number) {
   );
 }
 const businessSelect = {
+  categories: { include: { category: { include: { translations: true } } }, orderBy: { position: "asc" as const } },
   id: true,
   publicName: true,
   legalName: true,
@@ -104,10 +106,10 @@ export function apiPublicListing(id: string) {
     }),
   );
 }
-export function apiShops(page: number, limit: number) {
+export function apiShops(page: number, limit: number, filters: { category?: string; city?: string } = {}) {
   return withTransaction((db) =>
     db.shop.findMany({
-      where: { business: { reviewStatus: "APPROVED", suspendedAt: null } },
+      where: publicShopWhere(filters),
       select: {
         slug: true,
         tagline: true,
@@ -115,6 +117,7 @@ export function apiShops(page: number, limit: number) {
         openingHours: true,
         business: {
           select: {
+            categories: publicBusinessCategories,
             id: true,
             publicName: true,
             description: true,

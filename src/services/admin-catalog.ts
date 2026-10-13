@@ -218,6 +218,7 @@ export async function deleteCatalogCategory(actor: Actor, categoryId: string) {
     if (category.children.length) {
       throw new Error("Delete or move this category’s subcategories first.");
     }
+    if (category._count.businesses) throw new Error("This category is used by businesses. Archive it instead.");
     if (category._count.listings) {
       throw new Error("This subcategory has listings. Archive it instead.");
     }

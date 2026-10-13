@@ -46,7 +46,7 @@ async function readBusinessCreateRequest(request: Request) {
   }
 
   return {
-    values: Object.fromEntries(form),
+    values: { ...Object.fromEntries(form), categoryIds: form.getAll("categoryIds").map(String) },
     logo: form.get("logo"),
     background: form.get("background"),
   };

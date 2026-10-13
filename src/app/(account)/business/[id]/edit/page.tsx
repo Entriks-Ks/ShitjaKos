@@ -1,3 +1,7 @@
+import {
+  getBusinessCategoryOptions,
+  getBusinessCategorySelection,
+} from "@/repositories/businesses";
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/session";
 import { BusinessForm } from "@/components/business-form";
@@ -17,6 +21,15 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
   }
 
   const business = membership.business;
+  const categoryOptions = await getBusinessCategoryOptions();
+  const categories = categoryOptions.map((c) => ({
+    id: c.id,
+    name:
+      c.translations.find((t) => t.locale === "sq")?.name ??
+      c.translations.find((t) => t.locale === "en")?.name ??
+      c.slug,
+  }));
+  const selectedCategories = await getBusinessCategorySelection(id);
 
   return (
     <main className="wrap max-w-3xl py-10">
@@ -29,7 +42,9 @@ export default async function Page({ params }: { params: Promise<{ id: string }>
       </p>
 
       <BusinessForm
+        categories={categories}
         initial={{
+          categoryIds: selectedCategories.map((c) => c.categoryId),
           id: business.id,
           legalName: business.legalName,
           publicName: business.publicName,

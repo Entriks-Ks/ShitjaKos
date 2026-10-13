@@ -23,7 +23,7 @@ export function findCategoryForFields(tx: Prisma.TransactionClient, id: string) 
     include: {
       children: true,
       attributes: true,
-      _count: { select: { listings: true } },
+      _count: { select: { listings: true, businesses: true } },
     },
   });
 }
@@ -34,7 +34,7 @@ export function findCategoryForDeletion(tx: Prisma.TransactionClient, id: string
     include: {
       children: true,
       attributes: { include: { _count: { select: { values: true } } } },
-      _count: { select: { listings: true } },
+      _count: { select: { listings: true, businesses: true } },
     },
   });
 }

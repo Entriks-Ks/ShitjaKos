@@ -1,3 +1,4 @@
+import { shopFilters } from "@/lib/validations/business-categories";
 import "server-only";
 import type { Actor } from "@/lib/permissions";
 import { canManageListing, isStaff } from "@/lib/permissions";
@@ -167,7 +168,7 @@ export async function readSearch(raw: unknown) {
 }
 export async function readShops(query: unknown) {
   const { page, limit } = pagination.parse(query);
-  return pageOf(await records.apiShops(page, limit), page, limit);
+  return pageOf(await records.apiShops(page, limit, shopFilters.parse(query)), page, limit);
 }
 export async function readShop(slug: string, query: unknown) {
   const shop = await getPublicShop(apiId.parse(slug));
@@ -179,6 +180,7 @@ export async function readShop(slug: string, query: unknown) {
     address: shop.address,
     openingHours: shop.openingHours,
     business: {
+      categories: shop.business.categories,
       id: shop.businessId,
       publicName: shop.business.publicName,
       city: shop.business.city,

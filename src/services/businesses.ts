@@ -5,8 +5,12 @@ import { cities } from "@/lib/catalog";
 import { Actor, assertBusinessDeletionAllowed } from "@/lib/permissions";
 import { recordAudit } from "@/repositories/audit";
 import { withTransaction } from "@/repositories/transaction";
-import { findUser } from "@/repositories/users";
+import { businessCategoryIds } from "@/lib/validations/business-categories";
 import {
+  findSelectableBusinessCategories,
+  replaceBusinessCategories,
+  lockBusinessForUpdate,
+  lockBusinessActor,
   createBusinessWithOwner,
   findBusinessWithMemberships,
   getBusinessDeletionContext,
@@ -36,6 +40,7 @@ export async function deleteBusiness(actor: Actor, businessId: string) {
 }
 
 const input = z.object({
+  categoryIds: businessCategoryIds,
   legalName: z.string().trim().min(3).max(150),
   publicName: z.string().trim().min(3).max(100),
   city: z.enum(cities),
@@ -45,6 +50,13 @@ const input = z.object({
   address: z.string().max(200),
   openingHours: z.string().max(300),
 });
+
+type BusinessTx = Parameters<Parameters<typeof withTransaction>[0]>[0];
+async function validateCategories(tx: BusinessTx, ids: string[]) {
+  const rows = await findSelectableBusinessCategories(tx, ids);
+  if (rows.length !== ids.length)
+    throw new Error("Choose active top-level categories for your business.");
+}
 
 function shopSlug(publicName: string) {
   const base =
@@ -60,16 +72,18 @@ export async function createBusiness(actor: Actor, raw: unknown) {
   const v = input.parse(raw);
   if (actor.suspendedAt) throw new Error("Account suspended.");
   return withTransaction(async (tx) => {
-    const user = await findUser(tx, actor.id);
-    if (!user.emailVerified || user.suspendedAt)
+    const user = await lockBusinessActor(tx, actor.id);
+    if (!user.emailVerified || user.suspendedAt || user.deletedAt)
       throw new Error("An active, verified account is required.");
-    const { address, openingHours, ...data } = v;
+    const { address, openingHours, categoryIds, ...data } = v;
+    await validateCategories(tx, categoryIds);
     const business = await createBusinessWithOwner(tx, {
       data,
       ownerId: actor.id,
       shop: { slug: shopSlug(v.publicName), address, openingHours },
     });
-    await recordAudit(tx, actor.id, "business.submitted", business.id, {});
+    await replaceBusinessCategories(tx, business.id, categoryIds);
+    await recordAudit(tx, actor.id, "business.submitted", business.id, { categoryIds });
     return business.id;
   });
 }
@@ -118,13 +132,17 @@ export async function createBusinessWithImages(
 
 export async function updateBusiness(actor: Actor, businessId: string, raw: unknown) {
   const v = input.partial().parse(raw);
-  if (actor.suspendedAt) throw new Error("Account suspended.");
   return withTransaction(async (tx) => {
+    const user = await lockBusinessActor(tx, actor.id);
+    if (user.suspendedAt || user.deletedAt || !user.emailVerified)
+      throw new Error("An active, verified account is required.");
+    await lockBusinessForUpdate(tx, businessId);
     const business = await findBusinessWithMemberships(tx, businessId);
-    const membership = business.memberships.find((m) => m.userId === actor.id);
-    if (!membership || membership.role !== "OWNER")
-      throw new Error("Not authorized to update this business.");
-    const { address, openingHours, ...data } = v;
+    if (business.suspendedAt) throw new Error("This business is suspended.");
+    if (!business.memberships.some((m) => m.userId === user.id && m.role === "OWNER"))
+      throw new Error("Only the owner can edit this business.");
+    const { address, openingHours, categoryIds, ...data } = v;
+    if (categoryIds !== undefined) await validateCategories(tx, categoryIds);
     await updateBusinessDetails(
       tx,
       businessId,
@@ -133,6 +151,14 @@ export async function updateBusiness(actor: Actor, businessId: string, raw: unkn
         ? { address, openingHours }
         : undefined,
     );
-    await recordAudit(tx, actor.id, "business.updated", businessId, {});
+    if (categoryIds !== undefined)
+      await replaceBusinessCategories(tx, businessId, categoryIds);
+    await recordAudit(
+      tx,
+      user.id,
+      "business.updated",
+      businessId,
+      categoryIds ? { categoryIds } : {},
+    );
   });
 }

@@ -121,7 +121,21 @@ export default async function Page({
               </div>
             )}
             <div className="shop-profile-copy">
-              <div className="flex items-center justify-between gap-3"><h1>{shop.business.publicName}</h1><ContentReportControl targetKind="BUSINESS" targetId={shop.businessId} /></div>
+              <div className="flex items-center justify-between gap-3">
+                <h1>{shop.business.publicName}</h1>
+                <ContentReportControl targetKind="BUSINESS" targetId={shop.businessId} />
+              </div>
+              <div className="my-2 flex flex-wrap gap-2">
+                {shop.business.categories.map((c) => (
+                  <span
+                    key={c.categoryId}
+                    className="rounded-full bg-stone-100 px-3 py-1 text-xs"
+                  >
+                    {c.category.translations.find((t) => t.locale === locale)?.name ??
+                      c.category.slug}
+                  </span>
+                ))}
+              </div>
               {shop.tagline.trim() ? (
                 <p className="shop-profile-tagline">{shop.tagline}</p>
               ) : null}
