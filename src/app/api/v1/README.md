@@ -401,7 +401,7 @@ Create body:
 }
 ```
 
-Frequency is OFF, DAILY or WEEKLY. PUT accepts only name and frequency.
+Frequency is OFF, INSTANT, DAILY or WEEKLY. All enabled frequencies send in-app alerts and email when new matches exist. INSTANT uses frequent scheduled polling; DAILY/WEEKLY create scheduled summaries. All require scheduled processing: use the protected cron endpoint or the optional CLI worker (see docs/saved-searches.md). PUT accepts only name and frequency.
 Filter values are strings: q, category (ID), city, country (xk/al/mk/me), min/max
 (in euros), seller (private/business/verified), condition, intent, attribute (ID)
 and value. A field filter requires its category and value. Unknown fields are
@@ -423,4 +423,4 @@ summary. The readingConversationId option excludes only active-chat unread count
 Native clients must integrate these screens and optional OS notifications themselves.
 
 Requires migration `20261006170000_saved_searches` and a scheduled worker.
-See docs/saved-searches.md. No email or native push is sent by these endpoints.
+See docs/saved-searches.md. Endpoints do not send mail synchronously: scheduled processing delivers saved-search emails. Native push is not implemented.

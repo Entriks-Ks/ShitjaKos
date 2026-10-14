@@ -1,10 +1,12 @@
 // An ephemeral Postgres engine: never reads .env or connects to Supabase.
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
+import { pg_trgm } from "@electric-sql/pglite/contrib/pg_trgm";
+import { unaccent } from "@electric-sql/pglite/contrib/unaccent";
 import { PGlite } from "@electric-sql/pglite";
 import { PGLiteSocketServer } from "@electric-sql/pglite-socket";
 
-const engine = await PGlite.create();
+const engine = await PGlite.create({ extensions: { pg_trgm, unaccent } });
 const server = new PGLiteSocketServer({ db: engine, port: 0, host: "127.0.0.1" });
 let disconnect: (() => Promise<void>) | undefined;
 try {
@@ -94,6 +96,26 @@ try {
     data.alerts[0].listings.map((v) => v.id),
     ["match"],
   );
+  const dailyEmails: string[] = [];
+  assert.equal(
+    (
+      await api.processSavedSearchEmails(100, async (to, _subject, body) => {
+        assert.equal(to, "buyer@example.invalid");
+        assert.ok(body.includes("/listings/match"));
+        dailyEmails.push(body);
+      })
+    ).sent,
+    1,
+  );
+  assert.equal(
+    (
+      await api.processSavedSearchEmails(100, async () => {
+        throw new Error("Duplicate delivery");
+      })
+    ).sent,
+    0,
+  );
+  assert.equal(dailyEmails.length, 1);
   await due();
   assert.equal((await api.processSavedSearchAlerts()).notified, 0);
   await db.listing.update({ where: { id: "match" }, data: { status: "PAUSED" } });
@@ -170,9 +192,172 @@ try {
     }),
     /30/,
   );
+  await db.rateLimit.deleteMany({
+    where: { key: { startsWith: "account-security:buyer:" } },
+  });
+  // Clear earlier pending alerts whose searches were disabled, without sending mail.
+  await api.processSavedSearchEmails(100, async () => {
+    throw new Error("Disabled search sent mail");
+  });
+  const weekly = await api.createSavedSearch(user, {
+    name: "Weekly chairs",
+    frequency: "WEEKLY",
+    filters: { q: "chair" },
+  });
+  await listing("weekly-one", { title: "Wooden chair" });
+  await listing("weekly-two", { title: "Office chair" });
+  assert.equal((await api.processSavedSearchAlerts()).notified, 0);
+  await db.savedSearch.update({
+    where: { id: weekly.id },
+    data: { nextRunAt: new Date(0) },
+  });
+  assert.equal((await api.processSavedSearchAlerts()).notified, 1);
+  let weeklyEmails = 0;
+  assert.equal(
+    (
+      await api.processSavedSearchEmails(100, async (_to, _subject, body) => {
+        assert.ok(body.includes("/listings/weekly-one"));
+        assert.ok(body.includes("/listings/weekly-two"));
+        weeklyEmails++;
+      })
+    ).sent,
+    1,
+  );
+  assert.equal(weeklyEmails, 1);
+  await db.savedSearch.update({
+    where: { id: weekly.id },
+    data: { nextRunAt: new Date(0) },
+  });
+  assert.equal((await api.processSavedSearchAlerts()).notified, 0);
+  assert.equal(
+    (
+      await api.processSavedSearchEmails(100, async () => {
+        throw new Error("Empty digest sent mail");
+      })
+    ).sent,
+    0,
+  );
+  const instant = await api.createSavedSearch(user, {
+    name: "Instant desks",
+    frequency: "INSTANT",
+    filters: { q: "desk" },
+  });
+  await listing("instant-match");
+  async function instantDue() {
+    await db.savedSearch.update({
+      where: { id: instant.id },
+      data: { nextRunAt: new Date(0) },
+    });
+  }
+  await instantDue();
+  await api.processSavedSearchAlerts();
+  const queued = await db.savedSearchAlert.findFirstOrThrow({
+    where: { savedSearchId: instant.id },
+  });
+  assert.ok(queued.emailNextAttemptAt);
+  assert.ok(
+    (await db.savedSearch.findUniqueOrThrow({ where: { id: instant.id } })).nextRunAt,
+  );
+  assert.equal((await api.processSavedSearchAlerts()).notified, 0);
+  assert.equal(
+    (
+      await api.processSavedSearchEmails(100, async () => {
+        throw new Error("SMTP unavailable");
+      })
+    ).failed,
+    1,
+  );
+  const retry = await db.savedSearchAlert.findUniqueOrThrow({ where: { id: queued.id } });
+  assert.equal(retry.emailAttempts, 1);
+  assert.ok(retry.emailNextAttemptAt);
+  assert.equal(retry.emailSentAt, null);
+  await db.savedSearchAlert.update({
+    where: { id: queued.id },
+    data: { emailNextAttemptAt: new Date(0) },
+  });
+  const delivered: string[] = [];
+  const deliver = async (to: string, _subject: string, body: string) => {
+    assert.equal(to, "buyer@example.invalid");
+    assert.ok(body.includes("/listings/instant-match"));
+    assert.ok(body.includes("/dashboard/saved-searches"));
+    delivered.push(body);
+  };
+  assert.equal((await api.processSavedSearchEmails(100, deliver)).sent, 1);
+  assert.equal((await api.processSavedSearchEmails(100, deliver)).sent, 0);
+  await instantDue();
+  await api.processSavedSearchAlerts();
+  assert.equal(
+    await db.savedSearchAlert.count({ where: { savedSearchId: instant.id } }),
+    1,
+  );
+  assert.equal(delivered.length, 1);
+  assert.equal((await api.processSavedSearchAlerts()).notified, 0);
+  // Republishing does not send the same match twice.
+  await db.listing.update({
+    where: { id: "instant-match" },
+    data: { status: "PUBLISHED" },
+  });
+  await instantDue();
+  await api.processSavedSearchAlerts();
+  assert.equal(
+    await db.savedSearchAlert.count({ where: { savedSearchId: instant.id } }),
+    1,
+  );
+  await listing("instant-cancelled");
+  await instantDue();
+  await api.processSavedSearchAlerts();
+  await api.updateSavedSearch(user, instant.id, {
+    name: "Instant desks",
+    frequency: "OFF",
+  });
+  assert.equal((await api.processSavedSearchEmails(100, deliver)).skipped, 1);
   await db.$transaction((tx) => anonymizeAccount(tx, "buyer", "buyer@example.invalid"));
   assert.equal(await db.savedSearch.count({ where: { userId: "buyer" } }), 0);
   assert.equal(await db.savedSearchAlert.count({ where: { userId: "buyer" } }), 0);
+  const { POST } = await import("../src/app/api/cron/saved-searches/route");
+  const originalSecret = process.env.SAVED_SEARCH_CRON_SECRET;
+  try {
+    delete process.env.SAVED_SEARCH_CRON_SECRET;
+    assert.equal(
+      (
+        await POST(
+          new Request("http://localhost/api/cron/saved-searches", { method: "POST" }),
+        )
+      ).status,
+      503,
+    );
+    process.env.SAVED_SEARCH_CRON_SECRET =
+      "test-scheduler-secret-with-at-least-32-characters";
+    assert.equal(
+      (
+        await POST(
+          new Request("http://localhost/api/cron/saved-searches", {
+            method: "POST",
+            headers: { Authorization: "Bearer wrong" },
+          }),
+        )
+      ).status,
+      401,
+    );
+    assert.equal(
+      (
+        await POST(
+          new Request("http://localhost/api/cron/saved-searches", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${process.env.SAVED_SEARCH_CRON_SECRET}` },
+          }),
+        )
+      ).status,
+      200,
+    );
+  } finally {
+    if (originalSecret === undefined) delete process.env.SAVED_SEARCH_CRON_SECRET;
+    else process.env.SAVED_SEARCH_CRON_SECRET = originalSecret;
+  }
+  const removedQueue = await db.$queryRaw<
+    Array<{ name: string | null }>
+  >`SELECT to_regclass('public."SavedSearchEvent"')::text AS name`;
+  assert.equal(removedQueue[0].name, null);
   console.log(
     "PASS: all migrations, filter matching, deduplication, ownership, publication, suspension, unavailable filters, and deletion cleanup.",
   );

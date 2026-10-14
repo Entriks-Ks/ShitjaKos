@@ -1,5 +1,5 @@
 import "server-only";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Actor } from "@/lib/permissions";
 import {
@@ -12,6 +12,7 @@ import {
 import { withTransaction } from "@/repositories/transaction";
 import { consumeAccountSecurityAttempt } from "@/repositories/users";
 import * as records from "@/repositories/saved-searches";
+import { sendMail } from "@/lib/mail";
 import { searchUrl } from "@/lib/search-navigation";
 
 export class SavedSearchError extends Error {
@@ -165,11 +166,12 @@ export async function getSavedSearchNotificationSummary(actor: Actor) {
 }
 
 // Run from a scheduled job, never from publication or a public request.
-export async function processSavedSearchAlerts(limit = 100) {
+export async function processSavedSearchAlerts(limit = 100, deadline = Infinity) {
   const due = await records.dueSavedSearches(limit);
   let processed = 0,
     notified = 0;
   for (const item of due) {
+    if (Date.now() >= deadline) break;
     await withTransaction(
       async (tx) => {
         const user = await records.lockSavedSearchUser(tx, item.userId);
@@ -205,7 +207,9 @@ export async function processSavedSearchAlerts(limit = 100) {
           lastError: null,
           nextRunAt:
             matches.length > 100
-              ? new Date(now.getTime() + 300_000)
+              ? new Date(
+                  now.getTime() + (search.frequency === "INSTANT" ? 15_000 : 300_000),
+                )
               : nextSavedSearchRun(search.frequency, now),
         });
         processed++;
@@ -214,4 +218,74 @@ export async function processSavedSearchAlerts(limit = 100) {
     );
   }
   return { processed, notified };
+}
+
+// SMTP cannot be part of a database transaction. Failed attempts remain queued.
+export async function processSavedSearchEmails(limit = 100, deliver = sendMail) {
+  const origin = new URL(process.env.BETTER_AUTH_URL ?? "http://localhost:3001");
+  if (!["http:", "https:"].includes(origin.protocol))
+    throw new Error("Invalid application URL.");
+  if (process.env.NODE_ENV === "production" && !process.env.BETTER_AUTH_URL)
+    throw new Error("Set BETTER_AUTH_URL before sending saved-search emails.");
+  let sent = 0,
+    failed = 0,
+    skipped = 0;
+  for (let index = 0; index < limit; index++) {
+    const token = randomUUID();
+    const alert = await withTransaction((tx) => records.claimSavedSearchEmail(tx, token));
+    if (!alert) break;
+    if (
+      alert.savedSearch.frequency === "OFF" ||
+      !alert.user.emailVerified ||
+      alert.user.suspendedAt ||
+      alert.user.deletedAt ||
+      !alert.matches.length
+    ) {
+      await withTransaction((tx) =>
+        records.finishSavedSearchEmail(tx, alert.id, token, {
+          emailNextAttemptAt: null,
+          emailLastError: "Delivery cancelled: no longer eligible.",
+        }),
+      );
+      skipped++;
+      continue;
+    }
+    try {
+      const manage = new URL("/dashboard/saved-searches", origin).href;
+      const links = alert.matches
+        .map(
+          ({ listing }) =>
+            `${listing.title}\n${new URL(`/listings/${encodeURIComponent(listing.id)}`, origin).href}`,
+        )
+        .join("\n\n");
+      await deliver(
+        alert.user.email,
+        "New matches for your ShitjaKos saved search",
+        `New matches for: ${alert.savedSearch.name}\n\n${links}\n\nYou enabled email alerts for this saved search. Change frequency or turn alerts off here:\n${manage}`,
+      );
+      await withTransaction((tx) =>
+        records.finishSavedSearchEmail(tx, alert.id, token, {
+          emailSentAt: new Date(),
+          emailNextAttemptAt: null,
+          emailLastError: null,
+        }),
+      );
+      sent++;
+    } catch {
+      await withTransaction((tx) =>
+        records.finishSavedSearchEmail(tx, alert.id, token, {
+          emailNextAttemptAt:
+            alert.emailAttempts >= 8
+              ? null
+              : new Date(
+                  Date.now() + Math.min(3_600_000, 30_000 * 2 ** alert.emailAttempts),
+                ),
+          emailLastError:
+            "Email delivery failed. Check the worker SMTP configuration or provider.",
+        }),
+      );
+      failed++;
+    }
+  }
+  return { sent, failed, skipped };
 }

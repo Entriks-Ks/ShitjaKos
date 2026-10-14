@@ -126,10 +126,12 @@ export function findNewSearchMatches(
   tx: Tx,
   search: { id: string; userId: string; eligibleSince: Date },
   filters: SavedSearchFilters,
+  listingId?: string,
 ) {
   return tx.listing.findMany({
     where: {
       AND: [
+        ...(listingId ? [{ id: listingId }] : []),
         buildListingSearchWhere(filters),
         {
           firstPublication: { createdAt: { gt: search.eligibleSince } },
@@ -157,6 +159,8 @@ export function insertSavedSearchAlert(
     data: {
       userId: search.userId,
       savedSearchId: search.id,
+      // Every new alert has a durable email delivery entry. Scheduling belongs to the service.
+      emailNextAttemptAt: new Date(),
       matches: {
         create: listingIds.map((listingId) => ({ listingId, savedSearchId: search.id })),
       },
@@ -169,4 +173,50 @@ export async function savedSearchClock(tx: Tx) {
     Array<{ now: Date }>
   >`SELECT timezone('UTC', clock_timestamp()) AS now`;
   return rows[0].now;
+}
+
+// A durable email outbox on the alert row. Claim atomically; SMTP runs after commit.
+export async function claimSavedSearchEmail(tx: Tx, token: string) {
+  const rows = await tx.$queryRaw<Array<{ id: string }>>`
+    UPDATE "SavedSearchAlert" SET
+      "emailLeaseToken" = ${token},
+      "emailAttempts" = "emailAttempts" + 1,
+      "emailNextAttemptAt" = timezone('UTC', clock_timestamp()) + interval '5 minutes'
+    WHERE id = (
+      SELECT id FROM "SavedSearchAlert"
+      WHERE "emailNextAttemptAt" <= timezone('UTC', clock_timestamp())
+        AND "emailSentAt" IS NULL AND "emailAttempts" < 8
+      ORDER BY "emailNextAttemptAt", id
+      FOR UPDATE SKIP LOCKED LIMIT 1
+    ) RETURNING id`;
+  if (!rows.length) return null;
+  return tx.savedSearchAlert.findUnique({
+    where: { id: rows[0].id },
+    include: {
+      user: {
+        select: { email: true, emailVerified: true, suspendedAt: true, deletedAt: true },
+      },
+      savedSearch: { select: { name: true, frequency: true } },
+      matches: {
+        where: { listing: publicWhere() },
+        select: { listing: { select: { id: true, title: true } } },
+        take: 100,
+      },
+    },
+  });
+}
+
+export function finishSavedSearchEmail(
+  tx: Tx,
+  id: string,
+  token: string,
+  data: Pick<
+    Prisma.SavedSearchAlertUpdateManyMutationInput,
+    "emailSentAt" | "emailNextAttemptAt" | "emailLastError"
+  >,
+) {
+  return tx.savedSearchAlert.updateMany({
+    where: { id, emailLeaseToken: token },
+    data: { ...data, emailLeaseToken: null },
+  });
 }

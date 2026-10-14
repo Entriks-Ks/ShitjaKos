@@ -126,13 +126,15 @@ export function SaveSearchButton({
                 Alert frequency
                 <select name="frequency" defaultValue={existing?.frequency ?? "DAILY"}>
                   <option value="OFF">Off — save filters only</option>
+                  <option value="INSTANT">Instant</option>
                   <option value="DAILY">Daily</option>
                   <option value="WEEKLY">Weekly</option>
                 </select>
               </label>
               <p className="text-xs text-stone-500">
                 Alerts cover new listings from now on. They appear in Saved searches and
-                on your account badge. No email is sent.
+                on your account badge and by email at your selected frequency. No new
+                matches means no email.
               </p>
               {error && (
                 <p role="alert" className="notice error">

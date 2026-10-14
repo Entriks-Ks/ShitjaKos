@@ -60,7 +60,7 @@ export const savedSearchFilters = z
     return normalized;
   });
 export type SavedSearchFilters = z.infer<typeof savedSearchFilters>;
-export const savedSearchFrequency = z.enum(["OFF", "DAILY", "WEEKLY"]);
+export const savedSearchFrequency = z.enum(["OFF", "INSTANT", "DAILY", "WEEKLY"]);
 export const createSavedSearchInput = z
   .object({
     name: z.string().trim().min(1).max(80),
@@ -87,5 +87,10 @@ export function nextSavedSearchRun(
 ) {
   return frequency === "OFF"
     ? null
-    : new Date(now.getTime() + (frequency === "DAILY" ? 1 : 7) * 86_400_000);
+    : new Date(
+        now.getTime() +
+          (frequency === "INSTANT"
+            ? 15_000
+            : (frequency === "DAILY" ? 1 : 7) * 86_400_000),
+      );
 }

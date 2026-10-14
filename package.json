@@ -25,6 +25,7 @@
     "test:e2e": "playwright test",
     "format": "prettier --write src prisma/*.ts scripts tests playwright.config.ts",
     "format:check": "prettier --check src prisma/*.ts scripts tests playwright.config.ts",
+    "saved-searches:watch": "node --conditions=react-server --import tsx scripts/saved-search-alerts.ts --watch",
     "saved-searches:alerts": "node --conditions=react-server --import tsx scripts/saved-search-alerts.ts"
   },
   "dependencies": {

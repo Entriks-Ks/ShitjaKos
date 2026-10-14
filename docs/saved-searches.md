@@ -1,79 +1,92 @@
-# Saved searches and in-app alerts
+# Saved searches: scheduled polling and email
 
-## User flow
+## Behavior
 
-Search results -> Save search -> name + Off/Daily/Weekly -> dashboard Saved searches.
-The dashboard supports opening filters, renaming, changing frequency, deleting,
-and reading alerts. Filters are immutable after saving: open results, adjust them
-and save a new search when you want different criteria. Maximum 30 per account.
-The account icon combines chat unread messages and unread search-alert digests;
-the Messages navigation badge remains chat-only. No bell is added.
+Instant, Daily and Weekly all create in-app alerts and queue email when new matches
+exist. OFF disables both. Empty checks send nothing. Instant is eligible every
+15 seconds; actual latency depends on how often the scheduler runs and backlog.
+Daily/Weekly use elapsed 24 hours / 7 days, starting when saved or rescheduled.
 
-Alerts are durable in-app records. Browser alerts use the existing permission and
-SSE connection when the browser is open. Email, web push with the browser closed,
-and native push delivery are not part of this implementation.
+The shared filter builder enforces public visibility and excludes the subscriber's
+own personal/business listings. First-publication timestamps determine eligibility.
+Re-enabling starts fresh; changing between enabled frequencies preserves unseen
+eligible matches. The unique search/listing match ledger prevents repeat alerts.
+Each alert includes at most 100 listings; large backlogs use additional batches.
+No PostgreSQL LISTEN connection or separate paid worker is needed for saved searches.
+Chat/SSE notifications are unchanged.
 
 ## Architecture
 
-Web form -> Server Action -> saved-search service -> repositories -> PostgreSQL.
-Mobile routes -> same service. Services validate, authenticate against current
-user state, check ownership, enforce limits, and manage transactions. The existing
-listing repository exports the same filter builder for live search and alerts.
+Web form -> action -> service -> repository -> database.
+Mobile API -> same service. Scheduler endpoint -> same services.
+Matching saves alerts, match records and email work in a transaction. SMTP delivery
+runs outside transactions with a five-minute claim lease and up to eight attempts.
+User eligibility, search frequency and current listing visibility are checked before
+email submission. SMTP cannot guarantee exactly-once delivery: provider acceptance
+followed by a crash before recording success can cause a duplicate on retry.
 
-`ListingPublication` is populated by a database trigger on first publication.
-Existing published/previously published listings are backfilled during migration.
-Republishing doesn't reset that timestamp. The worker matches publications after
-search creation (or re-enabling alerts); it excludes the subscriber's personal and
-business listings, ineligible/hidden listings and already delivered matches.
-Edits to an already delivered listing never generate a second match.
-An undelivered publication can match later if it becomes visible or its fields change.
-
-SavedSearchMatch's unique (search, listing) key is the delivery ledger. A worker
-locks each user then due search and saves the digest, matches and next run together.
-Concurrent workers skip claimed searches. A crash rolls everything back. There is
-no moving timestamp cursor to skip a transaction that commits late. Each digest
-has at most 100 listings; remaining matches are checked five minutes later.
-
-Frequency is elapsed 24 hours or 7 days, not a local calendar time. First check is
-one interval after saving. OFF creates no alerts. Re-enabling starts with new
-publications from that point. Renaming preserves the schedule. Changing an active
-frequency reschedules the next check without dropping unseen eligible matches.
-Removed categories/fields disable alerts with an explanation. Each digest is
-rechecked for current public visibility when read. Unavailable listings are omitted.
-Existing digests can be marked read even if all their matches were removed.
-
-Suspended/unverified/deleted users are skipped. Permanent account deletion removes
-saved searches, their notifications and delivery ledgers. Deleting an individual
-saved search does the same and never deletes listings. Retain ledgers while the
-search exists: deleting old digests also deletes their deduplication records.
-
-## Database and scheduler
-
-Apply committed migrations (not db push):
+## Apply migrations
 
 ```powershell
 npm run db:deploy
 npm run db:generate
 ```
 
-Restart the web server. First-publication and notification triggers require the
-migration; Prisma generation alone is insufficient.
+Restart the web service. The forward rollback migration removes only the Instant
+event queue/triggers, preserving saved searches, matches, alerts and pending emails.
+Existing Instant searches become due again. Do not delete applied migration history.
 
-Run one batch manually:
+## Deployment without a separate worker
+
+Configure an external scheduler to call your existing web service, for example
+once per minute (or at the interval your scheduler supports):
+
+- Method: POST
+- URL: https://YOUR-DOMAIN/api/cron/saved-searches
+- Header: Authorization: Bearer YOUR_RANDOM_SECRET
+- Set the identical SAVED_SEARCH_CRON_SECRET on the web service, at least 32 characters.
+- Store the secret in scheduler configuration, never a URL or browser code.
+
+Generate a secret locally with:
+
+```powershell
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+No scheduler account/job has been created automatically. Without calls, no matching
+or automatic emails occur. A one-minute schedule means approximately minute-scale
+Instant alerts, not 15-second delivery. A sleeping or unavailable web service and
+provider request timeouts can delay processing; configure scheduler retries.
+
+Each call handles at most ten due searches (with a soft 20-second matching budget)
+and two queued emails. This limits request work; more work remains due for later
+calls. Individual operations can exceed the soft budget. Monitor overdue searches,
+pending email age, response failures and provider timeouts. This is suitable for
+small initial traffic, not an unlimited replacement for a worker. Hosting/scheduler
+pricing and execution limits depend on the provider and plan.
+
+SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, MAIL_FROM and BETTER_AUTH_URL must
+be configured on the web service. MAIL_MODE=file writes to .local-mail instead of
+sending real email. Existing SMTP credentials are reused. Inspect emailAttempts,
+emailLastError and emailNextAttemptAt for failures; after eight attempts an operator
+must investigate and explicitly reset/requeue. Old alerts are not backfilled.
+
+## Local testing
+
+Run one batch:
 
 ```powershell
 npm run saved-searches:alerts
 ```
 
-For Render, create a Cron Job against this repository with a schedule such as
-`*/5 * * * *` and command `npm run saved-searches:alerts`. Build with `npm ci`.
-Provide the same DATABASE_URL as the web service. The CLI does not need an HTTP
-endpoint or a public cron secret. Each invocation handles at most 100 due searches.
-Monitor `processed`/`notified`, job failures and overdue nextRunAt as traffic grows.
-A hosting schedule has NOT been created by this code change. Without scheduling,
-filters still work, but automated notifications won't run.
+Or use the optional local polling loop in a second terminal:
 
-No SMTP is invoked by the worker. Do not describe these records as email delivery.
+```powershell
+npm run saved-searches:watch
+```
+
+The watch command waits 15 seconds between batches; do not deploy it as a second
+service if using the external scheduler. npm run dev alone does not schedule work.
 
 ## Verification
 
@@ -82,9 +95,6 @@ npx tsx --test tests/saved-searches.test.ts
 node --conditions=react-server --import tsx tests/saved-searches.integration.ts
 ```
 
-The integration test uses Prisma's installed PGlite packages, applies every
-migration to a temporary in-memory database, and connects only to an ephemeral
-127.0.0.1 port. It does not read .env or touch Supabase. It checks real repository
-queries, filter matching, idempotence, ownership, suspension, disabled filters and
-account-deletion cleanup. PGlite serializes connections: production multi-process
-lock behavior still warrants a PostgreSQL concurrency test before a large rollout.
+Integration tests use an isolated PGlite database, never Supabase. They verify
+matching, deduplication, Daily/Weekly/Instant emails with a fake sender, retries,
+permissions, deletion, migration rollback and scheduler endpoint authentication.

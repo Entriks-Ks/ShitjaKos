@@ -526,6 +526,7 @@ enum MessageSide {
 }
 
 enum SavedSearchFrequency {
+  INSTANT
   OFF
   DAILY
   WEEKLY
@@ -570,7 +571,13 @@ model SavedSearchAlert {
   user          User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   savedSearch   SavedSearch        @relation(fields: [savedSearchId], references: [id], onDelete: Cascade)
   matches       SavedSearchMatch[]
+  emailNextAttemptAt DateTime?
+  emailAttempts Int @default(0)
+  emailLeaseToken String?
+  emailSentAt DateTime?
+  emailLastError String?
 
+  @@index([emailNextAttemptAt])
   @@index([userId, readAt, createdAt])
 }
 

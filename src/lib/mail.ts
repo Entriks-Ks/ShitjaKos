@@ -4,12 +4,20 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 export async function sendAuthMail(to: string, subject: string, url: string) {
+  return sendMail(
+    to,
+    subject,
+    `${subject}\n\n${url}\n\nIf you did not request this, ignore this message.`,
+  );
+}
+
+export async function sendMail(to: string, subject: string, text: string) {
   if (process.env.MAIL_MODE === "file") {
     const dir = join(process.cwd(), ".local-mail");
     await mkdir(dir, { recursive: true });
     await writeFile(
       join(dir, `${Date.now()}-${randomUUID()}.txt`),
-      `${subject}\nTo: ${to}\n\n${url}\n`,
+      `${subject}\nTo: ${to}\n\n${text}\n`,
       { mode: 0o600 },
     );
     return;
@@ -20,6 +28,9 @@ export async function sendAuthMail(to: string, subject: string, url: string) {
     host: process.env.SMTP_HOST,
     port: Number(process.env.SMTP_PORT ?? 587),
     secure: process.env.SMTP_PORT === "465",
+    connectionTimeout: 10_000,
+    greetingTimeout: 10_000,
+    socketTimeout: 30_000,
     auth: process.env.SMTP_USER
       ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
       : undefined,
@@ -28,6 +39,6 @@ export async function sendAuthMail(to: string, subject: string, url: string) {
     from: process.env.MAIL_FROM,
     to,
     subject,
-    text: `${subject}\n\n${url}\n\nIf you did not request this, ignore this message.`,
+    text,
   });
 }

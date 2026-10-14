@@ -64,3 +64,16 @@ test("alert intervals use elapsed days and OFF has no schedule", () => {
     "2026-10-13T12:00:00.000Z",
   );
 });
+
+test("instant searches have a short polling schedule and are accepted by the shared API schema", () => {
+  const now = new Date(0);
+  assert.equal(nextSavedSearchRun("INSTANT", now)?.getTime(), 15_000);
+  assert.equal(
+    createSavedSearchInput.safeParse({
+      name: "New cars",
+      frequency: "INSTANT",
+      filters: {},
+    }).success,
+    true,
+  );
+});

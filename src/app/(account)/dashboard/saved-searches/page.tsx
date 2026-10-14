@@ -82,9 +82,11 @@ export default async function SavedSearchesPage({
             <p className="text-sm text-stone-600">
               {search.frequency === "OFF"
                 ? "Alerts off"
-                : search.frequency === "DAILY"
-                  ? "Daily alerts"
-                  : "Weekly alerts"}
+                : search.frequency === "INSTANT"
+                  ? "Instant alerts + email"
+                  : search.frequency === "DAILY"
+                    ? "Daily alerts + email"
+                    : "Weekly alerts + email"}
             </p>
             {search.lastError && (
               <p role="status" className="notice error">
