@@ -291,19 +291,31 @@ export async function findInboxPage(tx: Tx, userId: string, page: number) {
   });
 }
 
-export function countUnread(
+// The service supplies only authorized, visible conversations and each user's
+// effective read/deletion boundary. Keep each boundary paired with its ID.
+export async function countUnreadForConversations(
   tx: Tx,
-  conversationId: string,
-  side: "BUYER" | "SELLER",
-  after: number,
-) {
-  return tx.message.count({
+  conversations: ReadonlyArray<{
+    conversationId: string;
+    side: "BUYER" | "SELLER";
+    after: number;
+  }>,
+): Promise<Map<string, number>> {
+  if (conversations.length === 0) return new Map();
+
+  const counts = await tx.message.groupBy({
+    by: ["conversationId"],
     where: {
-      conversationId,
-      senderSide: { not: side },
-      sequence: { gt: after },
+      OR: conversations.map(({ conversationId, side, after }) => ({
+        conversationId,
+        senderSide: { not: side },
+        sequence: { gt: after },
+      })),
     },
+    _count: { _all: true },
   });
+
+  return new Map(counts.map((row) => [row.conversationId, row._count._all]));
 }
 
 type UnreadSummaryRow = {

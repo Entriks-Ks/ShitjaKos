@@ -257,6 +257,11 @@ export async function getChatInbox(
       );
 
     const items: ChatInboxItem[] = [];
+    const unreadScopes: Array<{
+      conversationId: string;
+      side: "BUYER" | "SELLER";
+      after: number;
+    }> = [];
 
     for (
       const conversation of conversations.slice(0, 20)
@@ -291,6 +296,7 @@ export async function getChatInbox(
         participantState?.deletedThroughSequence ?? 0,
       );
 
+      unreadScopes.push({ conversationId: conversation.id, side, after: unreadAfter });
       items.push({
         id: conversation.id,
         title: conversation.listingTitle,
@@ -306,14 +312,12 @@ export async function getChatInbox(
             0,
             120,
           ) ?? "",
-        unread: await records.countUnread(
-          tx,
-          conversation.id,
-          side,
-          unreadAfter,
-        ),
+        unread: 0,
       });
     }
+
+    const unreadCounts = await records.countUnreadForConversations(tx, unreadScopes);
+    for (const item of items) item.unread = unreadCounts.get(item.id) ?? 0;
 
     return {
       items,
