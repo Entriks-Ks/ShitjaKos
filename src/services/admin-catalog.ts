@@ -5,6 +5,8 @@ import { Actor, isStaff } from "@/lib/permissions";
 import {
   categoryInput,
   fieldBatchInput,
+  fieldDefinitionInput,
+  fieldEditInput,
   fieldInput,
 } from "@/lib/validations/admin-catalog";
 import { recordAudit } from "@/repositories/audit";
@@ -20,8 +22,10 @@ import {
   findCategoryForDeletion,
   findCategoryForFields,
   findCategoryWithFamily,
+  findCatalogAdmin,
   nextCategorySortOrder,
   setCategoriesActive,
+  updateAttributeDefinition,
 } from "@/repositories/admin-catalog";
 
 const locales = ["sq", "en", "de"] as const;
@@ -176,6 +180,92 @@ export async function createCatalogField(actor: Actor, raw: unknown) {
   return id;
 }
 
+export async function updateCatalogField(actor: Actor, fieldId: string, raw: unknown) {
+  if (!isStaff(actor)) throw new Error("Admin access is required.");
+  if (!fieldId) throw new Error("Choose a field.");
+  const input = fieldEditInput.parse(raw);
+  fieldDefinitionInput.parse({
+    ...input,
+    options: input.options.map((option) => option.names),
+  });
+
+  return withTransaction(async (tx) => {
+    const admin = await findCatalogAdmin(tx, actor.id);
+    if (!admin || !isStaff(admin)) throw new Error("Admin access is required.");
+    const field = await findAttributeDefinition(tx, fieldId);
+    if (!field || field.category.ownerPortal !== "SHITJAKOS") {
+      throw new Error("Field not found.");
+    }
+    const hasAnswers = field._count.values > 0;
+    if (hasAnswers && field.type !== input.type) {
+      throw new Error("A field with saved answers cannot change its answer type.");
+    }
+    if (!field.required && input.required && field.category._count.listings > 0) {
+      throw new Error("Existing listings make this field optional. Keep it optional.");
+    }
+    if (
+      input.filterable &&
+      field.category.attributes.some(
+        (other) => other.id !== fieldId && other.type === "SELECT" && other.filterable,
+      )
+    ) {
+      throw new Error("A subcategory can currently have one choice filter in search.");
+    }
+    if (hasAnswers && field.type === "NUMBER") {
+      if ((field.unit ?? "") !== input.unit) {
+        throw new Error("A number field with saved answers cannot change its unit.");
+      }
+      if (
+        (input.min !== null && (field.min === null || input.min > field.min)) ||
+        (input.max !== null && (field.max === null || input.max < field.max))
+      ) {
+        throw new Error("Number limits cannot be tightened after answers are saved.");
+      }
+    }
+
+    const oldOptions = Array.isArray(field.options) ? field.options : [];
+    const existingValues = new Set(
+      oldOptions.flatMap((item) =>
+        item &&
+        typeof item === "object" &&
+        !Array.isArray(item) &&
+        typeof item.value === "string"
+          ? [item.value]
+          : [],
+      ),
+    );
+    const options = input.options.map(({ value, names }) => {
+      if (value !== null && !existingValues.has(value)) {
+        throw new Error("A choice changed while you were editing. Reload and try again.");
+      }
+      return { value: value ?? keyOf(names.en), labels: names };
+    });
+    const nextValues = options.map((option) => option.value);
+    if (new Set(nextValues).size !== nextValues.length) {
+      throw new Error("Each choice needs a different value or English name.");
+    }
+    if (hasAnswers && [...existingValues].some((value) => !nextValues.includes(value))) {
+      throw new Error("A choice cannot be removed after listings have saved answers.");
+    }
+
+    await updateAttributeDefinition(tx, fieldId, {
+      type: input.type,
+      required: input.required,
+      filterable: input.filterable,
+      unit: input.type === "NUMBER" ? input.unit || null : null,
+      min: input.type === "NUMBER" ? input.min : null,
+      max: input.type === "NUMBER" ? input.max : null,
+      options,
+      translations: locales.map((locale) => ({ locale, label: input.names[locale] })),
+    });
+    await recordAudit(tx, actor.id, "category-field.updated", fieldId, {
+      categoryId: field.categoryId,
+      names: input.names,
+      type: input.type,
+    });
+  });
+}
+
 export async function setCatalogCategoryActive(
   actor: Actor,
   categoryId: string,
@@ -218,7 +308,8 @@ export async function deleteCatalogCategory(actor: Actor, categoryId: string) {
     if (category.children.length) {
       throw new Error("Delete or move this category’s subcategories first.");
     }
-    if (category._count.businesses) throw new Error("This category is used by businesses. Archive it instead.");
+    if (category._count.businesses)
+      throw new Error("This category is used by businesses. Archive it instead.");
     if (category._count.listings) {
       throw new Error("This subcategory has listings. Archive it instead.");
     }

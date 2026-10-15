@@ -8,6 +8,7 @@ import {
   deleteCatalogCategory,
   deleteCatalogField,
   setCatalogCategoryActive,
+  updateCatalogField,
 } from "../src/services/admin-catalog";
 import { getCategories } from "../src/repositories/catalog";
 
@@ -147,6 +148,65 @@ try {
   await db.listingAttributeValue.create({
     data: { listingId: listing.id, attributeId: fieldId, value: "wood" },
   });
+  const editedField = {
+    names: labels("Material updated"),
+    type: "SELECT",
+    required: false,
+    filterable: true,
+    unit: "",
+    min: null,
+    max: null,
+    options: [
+      { value: "wood", names: labels("Timber") },
+      { value: "metal", names: labels("Metal") },
+      { value: null, names: labels("Glass") },
+    ],
+  };
+  await updateCatalogField(actor, fieldId, editedField);
+  const updated = await db.attributeDefinition.findUniqueOrThrow({
+    where: { id: fieldId },
+    include: { translations: true },
+  });
+  assert.equal(updated.key, "material");
+  assert.equal(
+    updated.translations.find((row) => row.locale === "en")?.label,
+    "Material updated",
+  );
+  assert.deepEqual(
+    (updated.options as { value: string }[]).map((option) => option.value),
+    ["wood", "metal", "glass"],
+  );
+  assert.equal(
+    (
+      await db.listingAttributeValue.findUniqueOrThrow({
+        where: { listingId_attributeId: { listingId: listing.id, attributeId: fieldId } },
+      })
+    ).value,
+    "wood",
+  );
+  await assert.rejects(
+    updateCatalogField(actor, fieldId, {
+      ...editedField,
+      options: editedField.options.slice(1),
+    }),
+    /cannot be removed/,
+  );
+  await assert.rejects(
+    updateCatalogField(actor, fieldId, {
+      ...editedField,
+      type: "TEXT",
+      filterable: false,
+      options: [],
+    }),
+    /cannot change its answer type/,
+  );
+  await assert.rejects(
+    updateCatalogField(actor, fieldId, {
+      ...editedField,
+      required: true,
+    }),
+    /Keep it optional/,
+  );
   await assert.rejects(deleteCatalogField(actor, fieldId), /saved listing answers/);
   await assert.rejects(deleteCatalogCategory(actor, child), /has listings/);
   await assert.rejects(deleteCatalogCategory(actor, group), /subcategories first/);

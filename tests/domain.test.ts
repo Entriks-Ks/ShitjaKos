@@ -2,7 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { canManageListing, canTransition, isStaff } from "../src/lib/permissions";
 import { validateAttributes } from "../src/lib/validations/listing";
-import { fieldInput } from "../src/lib/validations/admin-catalog";
+import { fieldEditInput, fieldInput } from "../src/lib/validations/admin-catalog";
+import { MAX_SELECT_CHOICES } from "../src/lib/catalog-limits";
 const actor = { id: "alice", role: "USER", suspendedAt: null };
 test("personal ownership never grants access to someone else's listing", () => {
   assert.equal(
@@ -106,6 +107,40 @@ test("catalog fields reject choices without enough options and invalid number ra
   assert.equal(
     fieldInput.safeParse({ ...field, type: "TEXT", options: [], filterable: true })
       .success,
+    false,
+  );
+});
+
+test("catalog choice limits match for creation and editing", () => {
+  const names = { sq: "Marka", en: "Make", de: "Marke" };
+  const choices = Array.from({ length: MAX_SELECT_CHOICES }, (_, index) => ({
+    sq: `Marka ${index}`,
+    en: `Make ${index}`,
+    de: `Marke ${index}`,
+  }));
+  const field = {
+    categoryId: "cars",
+    names,
+    type: "SELECT",
+    required: false,
+    filterable: true,
+    unit: "",
+    min: null,
+    max: null,
+    options: choices,
+  };
+  assert.equal(fieldInput.safeParse(field).success, true);
+  assert.equal(
+    fieldInput.safeParse({ ...field, options: [...choices, names] }).success,
+    false,
+  );
+  const edit = { ...field, options: choices.map((names) => ({ value: null, names })) };
+  assert.equal(fieldEditInput.safeParse(edit).success, true);
+  assert.equal(
+    fieldEditInput.safeParse({
+      ...edit,
+      options: [...edit.options, { value: null, names }],
+    }).success,
     false,
   );
 });

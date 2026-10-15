@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_SELECT_CHOICES } from "@/lib/catalog-limits";
 
 const name = z.string().trim().min(2, "Enter a name of at least two characters.").max(80);
 const names = z.object({ sq: name, en: name, de: name });
@@ -39,7 +40,9 @@ export const fieldDefinitionInput = z
     unit: z.string().trim().max(20).default(""),
     min: z.number().finite().nullable(),
     max: z.number().finite().nullable(),
-    options: z.array(names).max(20),
+    options: z
+      .array(names)
+      .max(MAX_SELECT_CHOICES, `Add no more than ${MAX_SELECT_CHOICES} choices.`),
   })
   .superRefine((value, context) => {
     if (value.type === "SELECT" && value.options.length < 2) {
@@ -85,6 +88,19 @@ export const fieldDefinitionInput = z
 export const fieldInput = fieldDefinitionInput.and(
   z.object({ categoryId: z.string().trim().min(1) }),
 );
+
+export const fieldEditInput = z.object({
+  names,
+  type: z.enum(["TEXT", "NUMBER", "SELECT", "BOOLEAN"]),
+  required: z.boolean(),
+  filterable: z.boolean(),
+  unit: z.string().trim().max(20).default(""),
+  min: z.number().finite().nullable(),
+  max: z.number().finite().nullable(),
+  options: z
+    .array(z.object({ value: z.string().min(1).max(100).nullable(), names }))
+    .max(MAX_SELECT_CHOICES, `Add no more than ${MAX_SELECT_CHOICES} choices.`),
+});
 
 export const fieldBatchInput = z.object({
   categoryId: z.string().trim().min(1),

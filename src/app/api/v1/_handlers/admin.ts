@@ -76,3 +76,11 @@ export const fieldDelete = endpoint(async (r, c) => {
   await catalog.deleteCatalogField(await apiActor(r, true), (await paramsOf(c)).id);
   catalogChanged();
 });
+export const fieldPut = endpoint(async (r, c) => {
+  await catalog.updateCatalogField(
+    await apiActor(r, true),
+    (await paramsOf(c)).id,
+    await readJson(r),
+  );
+  catalogChanged();
+});

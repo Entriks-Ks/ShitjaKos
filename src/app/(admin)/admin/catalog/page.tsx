@@ -5,7 +5,7 @@ import {
   SubcategoryCreateForm,
 } from "@/components/admin-catalog-forms";
 import { FieldBatchCreateForm } from "@/components/admin-field-batch-form";
-import { CategoryActions, FieldDeleteAction } from "@/components/admin-catalog-actions";
+import { CategoryActions, FieldActions } from "@/components/admin-catalog-actions";
 import { requireUser } from "@/lib/session";
 import { isStaff } from "@/lib/permissions";
 import { translated } from "@/lib/catalog";
@@ -143,10 +143,43 @@ export default async function Page() {
                                 <span className="text-xs">
                                   {translated(field.translations, "en")} · {field.type}
                                 </span>
-                                <FieldDeleteAction
-                                  id={field.id}
+                                <FieldActions
                                   name={translated(field.translations, "en")}
-                                  hasValues={field._count.values > 0}
+                                  field={{
+                                    id: field.id,
+                                    names: {
+                                      sq: translated(field.translations, "sq"),
+                                      en: translated(field.translations, "en"),
+                                      de: translated(field.translations, "de"),
+                                    },
+                                    type: field.type,
+                                    required: field.required,
+                                    filterable: field.filterable,
+                                    unit: field.unit ?? "",
+                                    min: field.min,
+                                    max: field.max,
+                                    options: (
+                                      field.options as {
+                                        value: string;
+                                        labels: Record<string, string>;
+                                      }[]
+                                    ).map((option) => ({
+                                      value: option.value,
+                                      names: {
+                                        sq: option.labels.sq ?? option.labels.en ?? "",
+                                        en: option.labels.en ?? "",
+                                        de: option.labels.de ?? option.labels.en ?? "",
+                                      },
+                                    })),
+                                    hasValues: field._count.values > 0,
+                                    hasListings: category._count.listings > 0,
+                                    hasOtherFilter: category.attributes.some(
+                                      (other) =>
+                                        other.id !== field.id &&
+                                        other.type === "SELECT" &&
+                                        other.filterable,
+                                    ),
+                                  }}
                                 />
                               </div>
                             ))}

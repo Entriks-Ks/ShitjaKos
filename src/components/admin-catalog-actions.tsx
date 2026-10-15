@@ -1,7 +1,8 @@
 "use client";
 
 import { startTransition, useRef, useState } from "react";
-import { Archive, MoreHorizontal, RotateCcw, Trash2 } from "lucide-react";
+import { Archive, MoreHorizontal, Pencil, RotateCcw, Trash2 } from "lucide-react";
+import { FieldEditForm, type EditableField } from "@/components/admin-field-edit-form";
 import {
   categoryStatusAction,
   deleteCategoryAction,
@@ -122,16 +123,9 @@ export function CategoryActions({
   );
 }
 
-export function FieldDeleteAction({
-  id,
-  name,
-  hasValues,
-}: {
-  id: string;
-  name: string;
-  hasValues: boolean;
-}) {
+export function FieldActions({ field, name }: { field: EditableField; name: string }) {
   const menu = useRef<HTMLDetailsElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -141,7 +135,7 @@ export function FieldDeleteAction({
     setError("");
     startTransition(async () => {
       try {
-        const result = await deleteFieldAction(id);
+        const result = await deleteFieldAction(field.id);
         if (result.error) setError(result.error);
         else {
           menu.current?.removeAttribute("open");
@@ -155,45 +149,64 @@ export function FieldDeleteAction({
   }
 
   return (
-    <details
-      className="catalog-action-menu field-menu"
-      name="catalog-actions"
-      ref={menu}
-      onToggle={(event) => {
-        if (!event.currentTarget.open) {
-          setConfirming(false);
-          setError("");
-        }
-      }}
-    >
-      <summary aria-label={`Actions for field ${name}`} title="Field actions">
-        <MoreHorizontal size={16} />
-      </summary>
-      <div className="catalog-action-popover">
-        {hasValues ? (
-          <p className="catalog-action-hint">
-            This field is in use and cannot be deleted because listings have saved
-            answers.
-          </p>
-        ) : !confirming ? (
-          <button type="button" className="danger" onClick={() => setConfirming(true)}>
-            <Trash2 size={15} /> Delete field
-          </button>
-        ) : (
-          <div className="catalog-delete-confirm">
-            <strong>Delete “{name}”?</strong>
-            <div className="flex gap-2 justify-end mt-3">
-              <button type="button" disabled={busy} onClick={() => setConfirming(false)}>
-                Cancel
-              </button>
-              <button type="button" className="danger" disabled={busy} onClick={remove}>
-                {busy ? "Deleting…" : "Delete"}
-              </button>
+    <>
+      <details
+        className="catalog-action-menu field-menu"
+        name="catalog-actions"
+        ref={menu}
+        onToggle={(event) => {
+          if (!event.currentTarget.open) {
+            setConfirming(false);
+            setError("");
+          }
+        }}
+      >
+        <summary aria-label={`Actions for field ${name}`} title="Field actions">
+          <MoreHorizontal size={16} />
+        </summary>
+        <div className="catalog-action-popover">
+          {!confirming && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => {
+                menu.current?.removeAttribute("open");
+                dialog.current?.showModal();
+              }}
+            >
+              <Pencil size={15} /> Edit field
+            </button>
+          )}
+          {field.hasValues ? (
+            <p className="catalog-action-hint">
+              This field is in use and cannot be deleted because listings have saved
+              answers.
+            </p>
+          ) : !confirming ? (
+            <button type="button" className="danger" onClick={() => setConfirming(true)}>
+              <Trash2 size={15} /> Delete field
+            </button>
+          ) : (
+            <div className="catalog-delete-confirm">
+              <strong>Delete “{name}”?</strong>
+              <div className="flex gap-2 justify-end mt-3">
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setConfirming(false)}
+                >
+                  Cancel
+                </button>
+                <button type="button" className="danger" disabled={busy} onClick={remove}>
+                  {busy ? "Deleting…" : "Delete"}
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-        <MenuError message={error} />
-      </div>
-    </details>
+          )}
+          <MenuError message={error} />
+        </div>
+      </details>
+      <FieldEditForm field={field} dialog={dialog} />
+    </>
   );
 }

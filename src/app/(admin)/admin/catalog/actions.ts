@@ -10,6 +10,7 @@ import {
   deleteCatalogCategory,
   deleteCatalogField,
   setCatalogCategoryActive,
+  updateCatalogField,
 } from "@/services/admin-catalog";
 
 function errorMessage(error: unknown) {
@@ -47,6 +48,17 @@ export async function createFieldsAction(raw: unknown) {
     const ids = await createCatalogFields(actor, raw);
     revalidateCatalog();
     return { ids };
+  } catch (error) {
+    return { error: errorMessage(error) };
+  }
+}
+
+export async function updateFieldAction(fieldId: string, raw: unknown) {
+  const actor = await requireUser();
+  try {
+    await updateCatalogField(actor, fieldId, raw);
+    revalidateCatalog();
+    return { ok: true };
   } catch (error) {
     return { error: errorMessage(error) };
   }

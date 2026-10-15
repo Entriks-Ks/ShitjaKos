@@ -3,6 +3,13 @@ import type { Prisma } from "@/generated/prisma/client";
 
 const PORTAL = "SHITJAKOS" as const;
 
+export function findCatalogAdmin(tx: Prisma.TransactionClient, id: string) {
+  return tx.user.findUnique({
+    where: { id },
+    select: { id: true, role: true, suspendedAt: true },
+  });
+}
+
 export type CategoryTranslationWrite = { locale: string; name: string };
 export type FieldTranslationWrite = { locale: string; label: string };
 
@@ -110,7 +117,45 @@ export async function deleteCategoryWithFields(
 export function findAttributeDefinition(tx: Prisma.TransactionClient, id: string) {
   return tx.attributeDefinition.findUnique({
     where: { id },
-    include: { category: true, _count: { select: { values: true } } },
+    include: {
+      category: {
+        include: {
+          _count: { select: { listings: true } },
+          attributes: { select: { id: true, type: true, filterable: true } },
+        },
+      },
+      _count: { select: { values: true } },
+    },
+  });
+}
+
+export async function updateAttributeDefinition(
+  tx: Prisma.TransactionClient,
+  id: string,
+  data: {
+    type: Prisma.AttributeDefinitionUncheckedUpdateInput["type"];
+    required: boolean;
+    filterable: boolean;
+    unit: string | null;
+    min: number | null;
+    max: number | null;
+    options: Prisma.InputJsonValue;
+    translations: FieldTranslationWrite[];
+  },
+) {
+  const { translations, ...values } = data;
+  await tx.attributeDefinition.update({
+    where: { id },
+    data: {
+      ...values,
+      translations: {
+        upsert: translations.map(({ locale, label }) => ({
+          where: { attributeId_locale: { attributeId: id, locale } },
+          create: { locale, label },
+          update: { label },
+        })),
+      },
+    },
   });
 }
 

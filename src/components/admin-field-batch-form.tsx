@@ -4,6 +4,7 @@ import { startTransition, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Trash2 } from "lucide-react";
 import { createFieldsAction } from "@/app/(admin)/admin/catalog/actions";
+import { MAX_SELECT_CHOICES } from "@/lib/catalog-limits";
 
 type Names = { sq: string; en: string; de: string };
 type FieldType = "TEXT" | "NUMBER" | "SELECT" | "BOOLEAN";
@@ -234,7 +235,9 @@ export function FieldBatchCreateForm({
               )}
               {field.type === "SELECT" && (
                 <div className="space-y-3">
-                  <p className="font-medium text-sm">Choices</p>
+                  <p className="font-medium text-sm">
+                    Choices ({field.options.length}/{MAX_SELECT_CHOICES})
+                  </p>
                   {field.options.map((option, optionIndex) => (
                     <div className="rounded-lg bg-stone-50 p-3" key={optionIndex}>
                       <div className="flex justify-between gap-3 mb-2 text-sm">
@@ -278,7 +281,7 @@ export function FieldBatchCreateForm({
                       </div>
                     </div>
                   ))}
-                  {field.options.length < 20 && (
+                  {field.options.length < MAX_SELECT_CHOICES && (
                     <button
                       type="button"
                       className="btn btn-outline"
