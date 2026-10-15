@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function Page({
   searchParams,
 }: {
-  searchParams: Promise<{ lang?: string; category?: string; city?: string }>;
+  searchParams: Promise<{ lang?: string; q?: string; category?: string; city?: string }>;
 }) {
   const query = await searchParams;
   const locale = localeOf(query.lang);
@@ -25,6 +25,8 @@ export default async function Page({
   ]);
   const labels = {
     sq: {
+      query: "Emri i dyqanit",
+      queryPlaceholder: "Jam duke kërkuar...",
       category: "Kategoria",
       all: "Të gjitha kategoritë",
       city: "Qyteti",
@@ -34,6 +36,8 @@ export default async function Page({
       clear: "Pastro filtrat",
     },
     en: {
+      query: "Shop name",
+      queryPlaceholder: "I'm looking for...",
       category: "Category",
       all: "All categories",
       city: "City",
@@ -43,6 +47,8 @@ export default async function Page({
       clear: "Clear filters",
     },
     de: {
+      query: "Shopname",
+      queryPlaceholder: "Ich suche...",
       category: "Kategorie",
       all: "Alle Kategorien",
       city: "Stadt",
@@ -68,9 +74,20 @@ export default async function Page({
         <form
           action="/shops"
           method="get"
-          className="mb-7 grid gap-3 rounded-2xl border border-stone-200 bg-white p-4 sm:grid-cols-[1fr_1fr_auto]"
+          className="mb-7 grid gap-3 rounded-2xl border border-stone-200 bg-white p-4 md:grid-cols-2 lg:grid-cols-[minmax(0,1.4fr)_1fr_1fr_auto]"
         >
           <input type="hidden" name="lang" value={locale} />
+          <label className="field">
+            {labels.query}
+            <input
+              key={query.q ?? ""}
+              name="q"
+              type="search"
+              autoComplete="off"
+              placeholder={labels.queryPlaceholder}
+              defaultValue={query.q ?? ""}
+            />
+          </label>
           <label className="field">
             {labels.category}
             <select
@@ -99,7 +116,7 @@ export default async function Page({
           </label>
           <button className="btn btn-primary self-end">{labels.find}</button>
         </form>
-        {(filters.category || filters.city) && (
+        {(filters.q || filters.category || filters.city) && (
           <Link
             className="mb-5 inline-block text-sm underline"
             href={`/shops?lang=${locale}`}
@@ -143,7 +160,7 @@ export default async function Page({
               </Link>
             ))}
           </div>
-        ) : filters.category || filters.city ? (
+        ) : filters.q || filters.category || filters.city ? (
           <div className="empty">
             <h2>{labels.empty}</h2>
           </div>

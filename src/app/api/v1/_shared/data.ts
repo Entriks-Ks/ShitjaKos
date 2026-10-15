@@ -51,7 +51,10 @@ export function apiFavorites(userId: string, page: number, limit: number) {
   );
 }
 const businessSelect = {
-  categories: { include: { category: { include: { translations: true } } }, orderBy: { position: "asc" as const } },
+  categories: {
+    include: { category: { include: { translations: true } } },
+    orderBy: { position: "asc" as const },
+  },
   id: true,
   publicName: true,
   legalName: true,
@@ -106,7 +109,11 @@ export function apiPublicListing(id: string) {
     }),
   );
 }
-export function apiShops(page: number, limit: number, filters: { category?: string; city?: string } = {}) {
+export function apiShops(
+  page: number,
+  limit: number,
+  filters: { q?: string; category?: string; city?: string } = {},
+) {
   return withTransaction((db) =>
     db.shop.findMany({
       where: publicShopWhere(filters),

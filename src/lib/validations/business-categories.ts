@@ -5,6 +5,8 @@ export const businessCategoryIds = z
   .max(4, "Choose at most four categories.")
   .refine((ids) => new Set(ids).size === ids.length, "Choose each category only once.");
 export const shopFilters = z.object({
+  q: z.string().trim().max(120).optional(),
   category: z.string().trim().max(100).optional(),
   city: z.string().trim().max(100).optional(),
 });
+export type ShopFilters = z.infer<typeof shopFilters>;

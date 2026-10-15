@@ -11,8 +11,9 @@ test("business category selections require a primary and at most three extras", 
 });
 test("shop filters strip unrelated input and bound query size", () => {
   assert.deepEqual(
-    shopFilters.parse({ category: "a", city: "Prishtina", role: "ADMIN" }),
-    { category: "a", city: "Prishtina" },
+    shopFilters.parse({ q: " bilete ", category: "a", city: "Prishtina", role: "ADMIN" }),
+    { q: "bilete", category: "a", city: "Prishtina" },
   );
   assert.equal(shopFilters.safeParse({ category: "x".repeat(101) }).success, false);
+  assert.equal(shopFilters.safeParse({ q: "x".repeat(121) }).success, false);
 });
