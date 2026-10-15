@@ -69,7 +69,7 @@ export function BusinessForm({
         }
       }}
     >
-      <BusinessCategoryFields options={categories} initialIds={initial?.categoryIds} />
+
       <div className="grid sm:grid-cols-2 gap-5">
         <label className="field">
           Registered legal name
@@ -124,6 +124,7 @@ export function BusinessForm({
           defaultValue={initial?.openingHours ?? ""}
         />
       </label>
+      <BusinessCategoryFields options={categories} initialIds={initial?.categoryIds} />
       {initial ? (
         <ShopImages
           businessId={initial.id}
