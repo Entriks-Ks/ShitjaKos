@@ -363,10 +363,12 @@ model ListingAttributeValue {
   listingId   String
   attributeId String
   value       Json
+  numberValue Float?
   listing     Listing             @relation(fields: [listingId], references: [id], onDelete: Cascade)
   attribute   AttributeDefinition @relation(fields: [attributeId], references: [id], onDelete: Restrict)
 
   @@id([listingId, attributeId])
+  @@index([attributeId, numberValue])
 }
 
 model ListingMedia {

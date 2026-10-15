@@ -395,8 +395,15 @@ async function seed(db: PrismaClient) {
         where: {
           listingId_attributeId: { listingId: id, attributeId: value.attributeId },
         },
-        create: { listingId: id, ...value },
-        update: { value: value.value },
+        create: {
+          listingId: id,
+          ...value,
+          numberValue: typeof value.value === "number" ? value.value : null,
+        },
+        update: {
+          value: value.value,
+          numberValue: typeof value.value === "number" ? value.value : null,
+        },
       });
     }
     await db.listingMedia.upsert({

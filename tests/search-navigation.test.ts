@@ -14,6 +14,9 @@ test("changing category preserves general filters and removes the old category's
         page: "3",
         attribute: "phones-brand",
         value: "Apple",
+        field_brand: "bmw",
+        from_year: "2018",
+        to_year: "2023",
       },
       "home",
     ),
@@ -25,7 +28,7 @@ test("changing category preserves general filters and removes the old category's
   assert.equal(url.searchParams.get("seller"), "private");
   assert.equal(url.searchParams.get("min"), "10");
   assert.equal(url.searchParams.get("category"), "home");
-  for (const key of ["page", "attribute", "value"])
+  for (const key of ["page", "attribute", "value", "field_brand", "from_year", "to_year"])
     assert.equal(url.searchParams.has(key), false);
 });
 

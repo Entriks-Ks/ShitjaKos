@@ -117,15 +117,6 @@ async function createFieldsInTransaction(
   if (category._count.listings > 0 && fields.some(({ input }) => input.required)) {
     throw new Error("This subcategory already has listings. Add new fields as optional.");
   }
-  const newFilters = fields.filter(
-    ({ input }) => input.type === "SELECT" && input.filterable,
-  ).length;
-  const existingFilter = category.attributes.some(
-    (attribute) => attribute.type === "SELECT" && attribute.filterable,
-  );
-  if (newFilters > 1 || (existingFilter && newFilters)) {
-    throw new Error("A subcategory can currently have one choice filter in search.");
-  }
   const existingKeys = new Set(category.attributes.map((attribute) => attribute.key));
   const duplicate = fields.find(({ key }) => existingKeys.has(key));
   if (duplicate) {
@@ -202,14 +193,6 @@ export async function updateCatalogField(actor: Actor, fieldId: string, raw: unk
     }
     if (!field.required && input.required && field.category._count.listings > 0) {
       throw new Error("Existing listings make this field optional. Keep it optional.");
-    }
-    if (
-      input.filterable &&
-      field.category.attributes.some(
-        (other) => other.id !== fieldId && other.type === "SELECT" && other.filterable,
-      )
-    ) {
-      throw new Error("A subcategory can currently have one choice filter in search.");
     }
     if (hasAnswers && field.type === "NUMBER") {
       if ((field.unit ?? "") !== input.unit) {

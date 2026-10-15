@@ -72,10 +72,7 @@ try {
     createCatalogField(actor, { ...field, categoryId: group }),
     /active subcategory/,
   );
-  await assert.rejects(
-    createCatalogField(actor, { ...field, names: labels("Other filter") }),
-    /one choice filter/,
-  );
+  await createCatalogField(actor, { ...field, names: labels("Other filter") });
   const batchIds = await createCatalogFields(actor, {
     categoryId: child,
     fields: [
@@ -121,7 +118,7 @@ try {
     catalog.find((category) => category.id === child)?.attributes[0]?.id,
     fieldId,
   );
-  assert.equal(await db.auditEvent.count({ where: { actorId: id } }), 5);
+  assert.equal(await db.auditEvent.count({ where: { actorId: id } }), 6);
   await setCatalogCategoryActive(actor, group, false);
   assert.equal(
     await db.category.count({ where: { id: { in: [group, child] }, active: false } }),

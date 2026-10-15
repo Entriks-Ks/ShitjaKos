@@ -9,6 +9,7 @@ import { getPublicShop } from "@/repositories/shops";
 import { getCategories, getAdminCatalog } from "@/repositories/catalog";
 import { findAdminUsers, findAdminBusinesses } from "@/repositories/admin-accounts";
 import { z } from "zod";
+import { attributeFilterEntries, parseAttributeFilters } from "@/lib/attribute-search";
 
 type Card = Awaited<ReturnType<typeof searchListings>>["items"][number];
 export function listingCard(item: Card) {
@@ -26,10 +27,10 @@ export function listingCard(item: Card) {
     publishedAt: item.publishedAt,
     seller: item.business
       ? {
-        kind: "BUSINESS",
-        name: item.business.publicName,
-        slug: item.business.shop?.slug ?? null,
-      }
+          kind: "BUSINESS",
+          name: item.business.publicName,
+          slug: item.business.shop?.slug ?? null,
+        }
       : { kind: "PERSONAL", name: item.personalProfile?.displayName ?? "Seller" },
     media: item.media.map((m) => ({
       id: m.id,
@@ -101,10 +102,10 @@ export async function readListing(id: string) {
     contactPhone: item.phoneVisible ? item.contactPhone : null,
     seller: item.business
       ? {
-        kind: "BUSINESS",
-        name: item.business.publicName,
-        slug: item.business.shop?.slug ?? null,
-      }
+          kind: "BUSINESS",
+          name: item.business.publicName,
+          slug: item.business.shop?.slug ?? null,
+        }
       : { kind: "PERSONAL", name: item.personalProfile?.displayName ?? "Seller" },
     media: item.media.map((m) => ({ ...m, url: `/api/v1/media/${m.id}` })),
     additionalData: item.additionalData,
@@ -162,13 +163,24 @@ const searchInput = pagination.extend({
   value: z.string().max(200).optional(),
 });
 export async function readSearch(raw: unknown) {
-  const { limit, ...query } = searchInput.parse(raw);
-  const result = await searchListings({ ...query, page: String(query.page) }, limit);
+  const rawQuery = z.record(z.string(), z.string()).parse(raw);
+  const dynamic = Object.fromEntries(attributeFilterEntries(rawQuery));
+  if (Object.keys(dynamic).length && !parseAttributeFilters(dynamic).length)
+    throw new ApiError(400, "Invalid subcategory field filters.");
+  const { limit, ...query } = searchInput.parse(rawQuery);
+  const result = await searchListings(
+    { ...query, ...dynamic, page: String(query.page) },
+    limit,
+  );
   return { ...result, limit, items: result.items.map(listingCard) };
 }
 export async function readShops(query: unknown) {
   const { page, limit } = pagination.parse(query);
-  return pageOf(await records.apiShops(page, limit, shopFilters.parse(query)), page, limit);
+  return pageOf(
+    await records.apiShops(page, limit, shopFilters.parse(query)),
+    page,
+    limit,
+  );
 }
 export async function readShop(slug: string, query: unknown) {
   const shop = await getPublicShop(apiId.parse(slug));

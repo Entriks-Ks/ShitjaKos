@@ -2,6 +2,7 @@ import "server-only";
 import { getPrisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { countryById } from "@/lib/catalog";
+import { attributeFilterEntries, parseAttributeFilters } from "@/lib/attribute-search";
 import {
   expandSearchWords,
   normalizeSearchText,
@@ -136,7 +137,12 @@ export function createListing(
       createdById: input.createdById,
       personalProfileId: input.personalProfileId,
       businessId: input.businessId,
-      attributes: { create: input.attributes },
+      attributes: {
+        create: input.attributes.map((attribute) => ({
+          ...attribute,
+          numberValue: typeof attribute.value === "number" ? attribute.value : null,
+        })),
+      },
       additionalData: { create: input.additionalData },
     },
   });
@@ -173,7 +179,11 @@ export async function replaceListingAttributes(
 ) {
   await tx.listingAttributeValue.deleteMany({ where: { listingId } });
   await tx.listingAttributeValue.createMany({
-    data: attributes.map((attribute) => ({ ...attribute, listingId })),
+    data: attributes.map((attribute) => ({
+      ...attribute,
+      listingId,
+      numberValue: typeof attribute.value === "number" ? attribute.value : null,
+    })),
   });
 }
 
@@ -273,6 +283,50 @@ export function buildListingSearchWhere(
         some: { attributeId: params.attribute, value: { equals: params.value } },
       },
     });
+  const requestedFields = attributeFilterEntries(params);
+  const fieldFilters = parseAttributeFilters(params);
+  if (requestedFields.length && (!params.category || !fieldFilters.length)) {
+    filters.push({ id: "__invalid_attribute_filter__" });
+  } else if (params.category) {
+    for (const filter of fieldFilters) {
+      if (filter.choice !== undefined) {
+        const boolean = filter.choice === "true" || filter.choice === "false";
+        filters.push({
+          attributes: {
+            some: {
+              attributeId: filter.id,
+              attribute: { categoryId: params.category },
+              OR: [
+                { attribute: { type: "SELECT" }, value: { equals: filter.choice } },
+                ...(boolean
+                  ? [
+                      {
+                        attribute: { type: "BOOLEAN" as const },
+                        value: { equals: filter.choice === "true" },
+                      },
+                    ]
+                  : []),
+              ],
+            },
+          },
+        });
+      }
+      if (filter.from !== undefined || filter.to !== undefined) {
+        filters.push({
+          attributes: {
+            some: {
+              attributeId: filter.id,
+              attribute: { categoryId: params.category, type: "NUMBER" },
+              numberValue: {
+                ...(filter.from !== undefined ? { gte: filter.from } : {}),
+                ...(filter.to !== undefined ? { lte: filter.to } : {}),
+              },
+            },
+          },
+        });
+      }
+    }
+  }
   return { AND: [where, ...filters] };
 }
 

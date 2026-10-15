@@ -1,5 +1,11 @@
 import { z } from "zod";
 import { countries, cities } from "@/lib/catalog";
+import {
+  attributeFilterEntries,
+  attributeFilterKey,
+  MAX_ATTRIBUTE_FILTERS,
+  parseAttributeFilters,
+} from "@/lib/attribute-search";
 
 export const searchFilterKeys = [
   "q",
@@ -41,8 +47,36 @@ export const savedSearchFilters = z
     attribute: z.string().min(1).max(100).optional(),
     value: z.string().min(1).max(200).optional(),
   })
-  .strict()
+  .catchall(z.string().max(200))
   .superRefine((v, ctx) => {
+    const dynamic = attributeFilterEntries(v);
+    const parsed = parseAttributeFilters(v);
+    if (
+      dynamic.length &&
+      (!v.category || !parsed.length || parsed.length > MAX_ATTRIBUTE_FILTERS)
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Choose a subcategory and valid field filters.",
+      });
+    for (const key of Object.keys(v)) {
+      if (
+        !searchFilterKeys.includes(key as (typeof searchFilterKeys)[number]) &&
+        !attributeFilterKey(key)
+      )
+        ctx.addIssue({ code: "custom", message: `Unknown search filter: ${key}.` });
+    }
+    for (const filter of parsed) {
+      if (
+        (filter.choice !== undefined &&
+          (filter.from !== undefined || filter.to !== undefined)) ||
+        (filter.from !== undefined && filter.to !== undefined && filter.from > filter.to)
+      )
+        ctx.addIssue({
+          code: "custom",
+          message: "Check the field filter range and value.",
+        });
+    }
     if (v.min && v.max && Number(v.min) > Number(v.max))
       ctx.addIssue({ code: "custom", message: "Minimum price exceeds maximum price." });
     if (!!v.attribute !== !!v.value || (v.attribute && !v.category))
@@ -77,9 +111,10 @@ export const updateSavedSearchInput = z
 export const savedSearchId = z.string().min(1).max(100);
 
 export function filtersFromSearchParams(params: Record<string, string | undefined>) {
-  return Object.fromEntries(
-    searchFilterKeys.filter((key) => params[key]).map((key) => [key, params[key]!]),
-  );
+  return Object.fromEntries([
+    ...searchFilterKeys.filter((key) => params[key]).map((key) => [key, params[key]!]),
+    ...attributeFilterEntries(params),
+  ]);
 }
 export function nextSavedSearchRun(
   frequency: z.infer<typeof savedSearchFrequency>,

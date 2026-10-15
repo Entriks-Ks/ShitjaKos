@@ -43,7 +43,8 @@ export default async function Page() {
           <h1 className="mt-3">Categories &amp; listing fields</h1>
           <p className="muted max-w-3xl">
             Build the catalog in order: category → subcategory → fields. Names and choices
-            need Albanian, English and German labels.
+            need Albanian, English and German labels. Choice, number and yes/no fields
+            appear automatically in advanced search for their subcategory.
           </p>
         </header>
 
@@ -73,9 +74,6 @@ export default async function Page() {
                     "en",
                   ),
                   hasListings: category._count.listings > 0,
-                  hasChoiceFilter: category.attributes.some(
-                    (field) => field.type === "SELECT" && field.filterable,
-                  ),
                 }))}
               />
             </div>
@@ -173,12 +171,6 @@ export default async function Page() {
                                     })),
                                     hasValues: field._count.values > 0,
                                     hasListings: category._count.listings > 0,
-                                    hasOtherFilter: category.attributes.some(
-                                      (other) =>
-                                        other.id !== field.id &&
-                                        other.type === "SELECT" &&
-                                        other.filterable,
-                                    ),
                                   }}
                                 />
                               </div>

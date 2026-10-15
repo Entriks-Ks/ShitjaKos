@@ -1,3 +1,5 @@
+import { attributeFilterKey } from "@/lib/attribute-search";
+
 export type SearchParams = Record<string, string | undefined>;
 
 export const legacyCategories: Record<string, string> = {
@@ -15,7 +17,10 @@ export function searchUrl(params: SearchParams, changes: SearchParams = {}) {
 }
 
 export function categoryUrl(params: SearchParams, category?: string) {
-  return searchUrl(params, {
+  const withoutFields = Object.fromEntries(
+    Object.entries(params).filter(([key]) => !attributeFilterKey(key)),
+  );
+  return searchUrl(withoutFields, {
     category,
     page: undefined,
     attribute: undefined,

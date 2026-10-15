@@ -230,7 +230,12 @@ Public: categories, locations, listings, listing detail, shops and shop detail.
 Search parameters: q, category, city, country, seller (private/business/verified),
 intent (FOR_SALE/WANTED), condition (NEW/LIKE_NEW/USED/DEFECTIVE/FOR_PARTS),
 sort (newest/price-asc/price-desc), min/max (euro decimal strings),
-attribute/value, page/limit. Category responses include translated field definitions.
+attribute/value (legacy single-choice filter), page/limit. Category responses include
+translated field definitions. Structured subcategory fields also support dynamic filters:
+`field_<FIELD_ID>=<OPTION_VALUE>` for a choice, `field_<FIELD_ID>=true|false`
+for a Yes/No field, and `from_<FIELD_ID>` / `to_<FIELD_ID>` for numeric ranges.
+For example, a Cars search can send Make and Year together. Use field IDs and option
+values returned by `GET /api/v1/categories`; changing the category clears its field filters.
 Shop detail includes a paginated listings object.
 
 ## Profile and favorites
@@ -404,7 +409,9 @@ Create body:
 Frequency is OFF, INSTANT, DAILY or WEEKLY. All enabled frequencies send in-app alerts and email when new matches exist. INSTANT uses frequent scheduled polling; DAILY/WEEKLY create scheduled summaries. All require scheduled processing: use the protected cron endpoint or the optional CLI worker (see docs/saved-searches.md). PUT accepts only name and frequency.
 Filter values are strings: q, category (ID), city, country (xk/al/mk/me), min/max
 (in euros), seller (private/business/verified), condition, intent, attribute (ID)
-and value. A field filter requires its category and value. Unknown fields are
+and value. A field filter requires its category and value. The same dynamic
+`field_`, `from_`, and `to_` keys accepted by listing search may be stored alongside
+the category for saved searches. Unknown fields are
 rejected; do not send page, sort, lang or userId inside filters. Duplicate filters
 return 409, ownership misses return 404, invalid input 400, exhausted budget 429.
 

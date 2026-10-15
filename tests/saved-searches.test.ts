@@ -6,6 +6,7 @@ import {
   filtersFromSearchParams,
   nextSavedSearchRun,
 } from "../src/lib/validations/saved-searches";
+import { parseAttributeFilters } from "../src/lib/attribute-search";
 
 test("saved filters exclude presentation and pagination parameters", () => {
   assert.deepEqual(
@@ -40,6 +41,42 @@ test("invalid ranges and incomplete attribute filters are rejected", () => {
     { arbitrary: "SQL" },
   ])
     assert.equal(savedSearchFilters.safeParse(filters).success, false);
+});
+test("saved searches keep dynamic subcategory filters and reject invalid ranges", () => {
+  const filters = filtersFromSearchParams({
+    category: "cars",
+    field_make: "bmw",
+    from_year: "2018",
+    to_year: "2023",
+    page: "2",
+  });
+  assert.deepEqual(savedSearchFilters.parse(filters), {
+    category: "cars",
+    field_make: "bmw",
+    from_year: "2018",
+    to_year: "2023",
+  });
+  assert.deepEqual(parseAttributeFilters(filters), [
+    { id: "make", choice: "bmw" },
+    { id: "year", from: 2018, to: 2023 },
+  ]);
+  assert.equal(
+    savedSearchFilters.safeParse({ ...filters, from_year: "2024" }).success,
+    false,
+  );
+  assert.equal(savedSearchFilters.safeParse({ field_make: "bmw" }).success, false);
+  assert.equal(
+    savedSearchFilters.safeParse({ ...filters, from_year: "oops" }).success,
+    false,
+  );
+  assert.equal(
+    savedSearchFilters.safeParse({ ...filters, field_year: "2020" }).success,
+    false,
+  );
+  assert.equal(
+    savedSearchFilters.safeParse({ ...filters, field_make: "x".repeat(201) }).success,
+    false,
+  );
 });
 test("clients cannot assign searches to another user", () => {
   assert.equal(

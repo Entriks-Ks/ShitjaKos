@@ -41,7 +41,6 @@ export function FieldBatchCreateForm({
     name: string;
     group: string;
     hasListings: boolean;
-    hasChoiceFilter: boolean;
   }[];
 }) {
   const router = useRouter();
@@ -135,9 +134,6 @@ export function FieldBatchCreateForm({
 
       <div className="space-y-4">
         {fields.map((field, index) => {
-          const anotherFilter = fields.some(
-            (candidate) => candidate.id !== field.id && candidate.filterable,
-          );
           return (
             <fieldset
               className="rounded-xl border border-stone-200 p-4 space-y-4"
@@ -294,22 +290,9 @@ export function FieldBatchCreateForm({
                       Add choice
                     </button>
                   )}
-                  <label className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={field.filterable}
-                      disabled={selected?.hasChoiceFilter || anotherFilter}
-                      onChange={(event) =>
-                        updateField(field.id, { filterable: event.target.checked })
-                      }
-                    />
-                    Let buyers filter results by this field
-                  </label>
-                  {(selected?.hasChoiceFilter || anotherFilter) && (
-                    <p className="muted text-sm">
-                      Only one choice field per subcategory can be a search filter.
-                    </p>
-                  )}
+                  <p className="muted text-sm">
+                    This choice field appears automatically in advanced search.
+                  </p>
                 </div>
               )}
             </fieldset>

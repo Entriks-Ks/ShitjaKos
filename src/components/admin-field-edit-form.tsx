@@ -21,7 +21,6 @@ export type EditableField = {
   options: { value: string | null; names: Names }[];
   hasValues: boolean;
   hasListings: boolean;
-  hasOtherFilter: boolean;
 };
 
 export function FieldEditForm({
@@ -233,20 +232,9 @@ export function FieldEditForm({
                 <Plus size={15} /> Add choice
               </button>
             )}
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={filterable}
-                disabled={field.hasOtherFilter}
-                onChange={(event) => setFilterable(event.target.checked)}
-              />
-              Let buyers filter results by this field
-            </label>
-            {field.hasOtherFilter && (
-              <p className="muted text-sm">
-                Another choice field is already used as the search filter.
-              </p>
-            )}
+            <p className="muted text-sm">
+              This choice field appears automatically in advanced search.
+            </p>
           </div>
         )}
         {error && (

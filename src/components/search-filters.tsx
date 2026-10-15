@@ -14,6 +14,7 @@ import {
 } from "@/lib/catalog";
 import { SearchParams } from "@/lib/search-navigation";
 import type { getCategories } from "@/repositories/catalog";
+import { attributeFilterEntries, MAX_ATTRIBUTE_FILTERS } from "@/lib/attribute-search";
 
 const advancedKeys = [
   "seller",
@@ -39,14 +40,16 @@ export function SearchFilters({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const [open, setOpen] = useState(false);
   const attributes =
-    selected?.attributes.filter(
-      (attribute) => attribute.type === "SELECT" && attribute.filterable,
-    ) ?? [];
+    selected?.attributes
+      .filter((attribute) => ["SELECT", "NUMBER", "BOOLEAN"].includes(attribute.type))
+      .slice(0, MAX_ATTRIBUTE_FILTERS) ?? [];
 
-  const activeCount = advancedKeys.filter((key) => {
-    if (key === "sort") return Boolean(p.sort && p.sort !== "newest");
-    return Boolean(p[key]);
-  }).length;
+  const activeCount =
+    attributeFilterEntries(p).length +
+    advancedKeys.filter((key) => {
+      if (key === "sort") return Boolean(p.sort && p.sort !== "newest");
+      return Boolean(p[key]);
+    }).length;
 
   const labels = {
     sq: {
@@ -199,25 +202,79 @@ export function SearchFilters({
                   )}
                 </select>
               </label>
-              {attributes[0] && (
-                <label className="field">
-                  {translated(attributes[0].translations, locale)}
-                  <input type="hidden" name="attribute" value={attributes[0].id} />
-                  <select name="value" defaultValue={p.value ?? ""}>
-                    <option value="">All</option>
-                    {(
-                      attributes[0].options as {
-                        value: string;
-                        labels: Record<string, string>;
-                      }[]
-                    ).map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {optionLabel(option, locale)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
+              {attributes.map((attribute) => {
+                const label = translated(attribute.translations, locale);
+                if (attribute.type === "NUMBER")
+                  return (
+                    <fieldset className="field" key={attribute.id}>
+                      <legend>
+                        {label}
+                        {attribute.unit ? ` (${attribute.unit})` : ""}
+                      </legend>
+                      <div className="flex gap-2">
+                        <input
+                          aria-label={`${label} minimum`}
+                          name={`from_${attribute.id}`}
+                          type="number"
+                          step="any"
+                          placeholder="Min"
+                          min={attribute.min ?? undefined}
+                          max={attribute.max ?? undefined}
+                          defaultValue={p[`from_${attribute.id}`] ?? ""}
+                        />
+                        <input
+                          aria-label={`${label} maximum`}
+                          name={`to_${attribute.id}`}
+                          type="number"
+                          step="any"
+                          placeholder="Max"
+                          min={attribute.min ?? undefined}
+                          max={attribute.max ?? undefined}
+                          defaultValue={p[`to_${attribute.id}`] ?? ""}
+                        />
+                      </div>
+                    </fieldset>
+                  );
+                if (attribute.type === "BOOLEAN")
+                  return (
+                    <label className="field" key={attribute.id}>
+                      {label}
+                      <select
+                        name={`field_${attribute.id}`}
+                        defaultValue={p[`field_${attribute.id}`] ?? ""}
+                      >
+                        <option value="">Any</option>
+                        <option value="true">Yes</option>
+                        <option value="false">No</option>
+                      </select>
+                    </label>
+                  );
+                return (
+                  <label className="field" key={attribute.id}>
+                    {label}
+                    <select
+                      name={`field_${attribute.id}`}
+                      defaultValue={
+                        p[`field_${attribute.id}`] ??
+                        (p.attribute === attribute.id ? p.value : "") ??
+                        ""
+                      }
+                    >
+                      <option value="">All</option>
+                      {(
+                        attribute.options as {
+                          value: string;
+                          labels: Record<string, string>;
+                        }[]
+                      ).map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {optionLabel(option, locale)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                );
+              })}
             </div>
 
             <div className="filter-dialog-actions">

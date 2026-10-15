@@ -3,6 +3,7 @@ import type { Prisma } from "@/generated/prisma/client";
 import { getPrisma } from "@/lib/prisma";
 import { buildListingSearchWhere, publicWhere } from "@/repositories/listings";
 import type { SavedSearchFilters } from "@/lib/validations/saved-searches";
+import { parseAttributeFilters } from "@/lib/attribute-search";
 
 type Tx = Prisma.TransactionClient;
 export async function lockSavedSearchUser(tx: Tx, id: string, exclusive = false) {
@@ -41,6 +42,49 @@ export async function searchCatalogValid(tx: Tx, filters: SavedSearchFilters) {
     }))
   )
     return false;
+  const dynamic = parseAttributeFilters(filters);
+  if (dynamic.length) {
+    const definitions = await tx.attributeDefinition.findMany({
+      where: {
+        categoryId: filters.category,
+        id: { in: dynamic.map((field) => field.id) },
+      },
+      select: { id: true, type: true, min: true, max: true, options: true },
+    });
+    const byId = new Map(definitions.map((field) => [field.id, field]));
+    for (const filter of dynamic) {
+      const definition = byId.get(filter.id);
+      if (!definition) return false;
+      if (filter.choice !== undefined) {
+        if (definition.type === "BOOLEAN") {
+          if (filter.choice !== "true" && filter.choice !== "false") return false;
+        } else if (definition.type === "SELECT") {
+          const options = Array.isArray(definition.options) ? definition.options : [];
+          if (
+            !options.some(
+              (item) =>
+                item &&
+                typeof item === "object" &&
+                !Array.isArray(item) &&
+                item.value === filter.choice,
+            )
+          )
+            return false;
+        } else return false;
+      } else if (definition.type !== "NUMBER") return false;
+      if (definition.type === "NUMBER") {
+        if (
+          (filter.from !== undefined &&
+            definition.min !== null &&
+            filter.from < definition.min) ||
+          (filter.to !== undefined &&
+            definition.max !== null &&
+            filter.to > definition.max)
+        )
+          return false;
+      }
+    }
+  }
   return true;
 }
 export function insertSavedSearch(tx: Tx, data: Prisma.SavedSearchUncheckedCreateInput) {
