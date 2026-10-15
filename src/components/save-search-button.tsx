@@ -33,7 +33,7 @@ export function SaveSearchButton({
     <>
       <button
         type="button"
-        className="btn btn-outline"
+        className="search-saved-search-button"
         aria-haspopup="dialog"
         onClick={() => {
           setError("");

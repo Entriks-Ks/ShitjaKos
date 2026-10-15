@@ -4,7 +4,8 @@ import { Plus, ArrowUpRight, Package, Store, CircleCheck, Pencil } from "lucide-
 import { StatusButton } from "@/components/listing-form";
 import { AccountShops } from "@/components/account-shops";
 import { DeleteListingButton } from "@/components/delete-listing-button";
-import { EmptyState, StatCard, StatusBadge } from "@/components/workspace-ui";
+import { StatCard, StatusBadge } from "@/components/workspace-ui";
+import { EmptyListings } from "@/components/empty-listings";
 import { requireUser } from "@/lib/session";
 import { getOwnedListings } from "@/repositories/dashboard";
 import { money } from "@/lib/catalog";
@@ -140,15 +141,7 @@ export default async function DashboardPage() {
           </div>
         ) : (
           <div className="workspace-card">
-            <EmptyState icon={Package} title="Your next chapter starts here.">
-              Add a few photos and a description to publish your first listing.
-            </EmptyState>
-            <div className="text-center pb-5">
-              <Link className="btn btn-primary" href="/listings/new">
-                <Plus size={16} />
-                Create your first listing
-              </Link>
-            </div>
+            <EmptyListings locale="en" />
           </div>
         )}
       </section>

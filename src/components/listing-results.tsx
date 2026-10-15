@@ -1,6 +1,8 @@
 import Link from "@/components/navigation-link";
-import { Search, ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { ListingCard } from "@/components/listing-card";
+import { EmptyListings } from "@/components/empty-listings";
+import { EmptySearchResults } from "@/components/empty-search-results";
 import { copy, Locale } from "@/lib/catalog";
 import { SearchParams, searchUrl } from "@/lib/search-navigation";
 import type { searchListings } from "@/repositories/listings";
@@ -12,6 +14,7 @@ export function ListingResults({
   locale,
   params,
   compact = false,
+  emptyState = "listings",
   viewerSignedIn,
   favoriteIds = [],
 }: {
@@ -19,6 +22,7 @@ export function ListingResults({
   locale: Locale;
   params: SearchParams;
   compact?: boolean;
+  emptyState?: "listings" | "search";
   viewerSignedIn: boolean;
   favoriteIds?: string[];
 }) {
@@ -51,18 +55,10 @@ export function ListingResults({
         />
       ))}
     </div>
+  ) : emptyState === "search" ? (
+    <EmptySearchResults locale={locale} />
   ) : (
-    <div className={`empty${compact ? " search-results-empty" : ""}`}>
-      <Search size={30} className="mx-auto mb-4 text-stone-400" />
-      <h2>{t.empty}</h2>
-      <p className="muted mt-2 mb-5">
-        Try another category or city, or share the first listing.
-      </p>
-      <Link href="/listings/new" className="btn btn-primary">
-        {t.sell}
-        <ArrowRight size={16} />
-      </Link>
-    </div>
+    <EmptyListings locale={locale} />
   );
 
   const prevBtn =

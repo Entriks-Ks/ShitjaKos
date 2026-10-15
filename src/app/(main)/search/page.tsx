@@ -113,6 +113,7 @@ export default async function SearchPage({
               locale={locale}
               params={params}
               compact
+              emptyState="search"
               viewerSignedIn={!!user}
               favoriteIds={favoriteIds}
             />
