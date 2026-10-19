@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import Link from "@/components/navigation-link";
-import { CategoryIcon } from "@/components/category-icon";
+import { CategoryOrbPhoto } from "@/components/category-icon";
 
 export function HomeCategorySlider({
   items,
@@ -54,7 +54,7 @@ export function HomeCategorySlider({
         {items.map((item) => (
           <Link key={item.id} className="category-orb" href={item.href}>
             <span className="category-orb-icon">
-              <CategoryIcon name={item.icon} size={26} />
+              <CategoryOrbPhoto id={item.id} icon={item.icon} size={64} />
             </span>
             <span className="category-orb-name">{item.name}</span>
           </Link>

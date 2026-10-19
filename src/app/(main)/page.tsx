@@ -4,7 +4,7 @@ import { ListingSearchBar } from "@/components/listing-search-bar";
 import { ArrowRight, ShieldCheck, Store, Tag, Users } from "lucide-react";
 import { Header } from "@/components/header";
 import { ListingResults } from "@/components/listing-results";
-import { CategoryIcon } from "@/components/category-icon";
+import { CategoryOrbPhoto } from "@/components/category-icon";
 import { redirect } from "next/navigation";
 import { searchUrl } from "@/lib/search-navigation";
 import { copy, localeOf, translated } from "@/lib/catalog";
@@ -106,7 +106,7 @@ export default async function Home({
                     href={searchUrl({ category: c.id, lang: locale })}
                   >
                     <span className="category-orb-icon">
-                      <CategoryIcon name={c.icon} size={26} />
+                      <CategoryOrbPhoto id={c.id} icon={c.icon} size={64} />
                     </span>
                     <span className="category-orb-name">
                       {translated(c.translations, locale)}
