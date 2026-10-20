@@ -105,7 +105,9 @@ export default async function SearchPage({
                   signedIn={!!user}
                   suggestedName={title}
                 />
-                <SearchFilters params={params} locale={locale} selected={selected} />
+                {!selected?.parentId && (
+                  <SearchFilters params={params} locale={locale} selected={selected} />
+                )}
               </div>
             </div>
             <ListingResults

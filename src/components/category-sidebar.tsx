@@ -7,6 +7,8 @@ import { CategoryIcon } from "@/components/category-icon";
 import { copy, Locale, translated } from "@/lib/catalog";
 import { categoryUrl, SearchParams } from "@/lib/search-navigation";
 import type { getCategories } from "@/repositories/catalog";
+import { MAX_ATTRIBUTE_FILTERS } from "@/lib/attribute-search";
+import { SidebarAttributeFilters } from "@/components/sidebar-attribute-filters";
 
 const PREVIEW_COUNT = 2;
 
@@ -66,8 +68,32 @@ export function CategorySidebar({
     return index >= PREVIEW_COUNT ? selectedGroupId : null;
   }, [params.category, selectedGroupId, childrenByParent]);
 
+  const selectedCategory = useMemo(
+    () => categories.find((category) => category.id === params.category),
+    [categories, params.category],
+  );
+
+  const isSubcategory = Boolean(selectedCategory?.parentId);
+
+  const attributes = useMemo(() => {
+    if (!isSubcategory) return [];
+
+    return (selectedCategory?.attributes ?? [])
+      .filter((attribute) => ["SELECT", "NUMBER", "BOOLEAN"].includes(attribute.type))
+      .slice(0, MAX_ATTRIBUTE_FILTERS);
+  }, [selectedCategory, isSubcategory]);
+
   return (
     <aside className="category-sidebar">
+      {isSubcategory && selectedCategory && (
+        <SidebarAttributeFilters
+          key={JSON.stringify(params)}
+          attributes={attributes}
+          categoryName={translated(selectedCategory.translations, locale)}
+          params={params}
+          locale={locale}
+        />
+      )}
       <details className="category-disclosure" open>
         <summary>
           {copy[locale].browse}
