@@ -73,6 +73,12 @@ export function SearchCategoryMenu({
     setHoveredId(null);
   }
 
+  function chooseGroup(id: string) {
+    setSelectedId(id);
+    setHoveredId((current) => (current === id ? null : id));
+    // Do not close the dropdown
+  }
+
   return (
     <div className="search-category" ref={rootRef}>
       <input type="hidden" name="category" value={selectedId} />
@@ -126,14 +132,19 @@ export function SearchCategoryMenu({
                 <button
                   type="button"
                   key={group.id}
-                  className={`search-category-group${active ? " is-active" : ""}${
-                    picked ? " is-selected" : ""
-                  }`}
+                  className={`search-category-group${active ? " is-active" : ""}${picked ? " is-selected" : ""
+                    }`}
                   role="option"
                   aria-selected={picked}
                   onMouseEnter={() => setHoveredId(hasChildren ? group.id : null)}
                   onFocus={() => setHoveredId(hasChildren ? group.id : null)}
-                  onClick={() => choose(group.id)}
+                  onClick={() => {
+                    if (hasChildren) {
+                      chooseGroup(group.id);
+                    } else {
+                      choose(group.id);
+                    }
+                  }}
                 >
                   <CategoryIcon name={group.icon} size={17} />
                   <span>{group.name}</span>
@@ -163,9 +174,8 @@ export function SearchCategoryMenu({
                 <button
                   type="button"
                   key={child.id}
-                  className={`search-category-sub${
-                    selectedId === child.id ? " is-selected" : ""
-                  }`}
+                  className={`search-category-sub${selectedId === child.id ? " is-selected" : ""
+                    }`}
                   role="option"
                   aria-selected={selectedId === child.id}
                   onClick={() => choose(child.id)}
