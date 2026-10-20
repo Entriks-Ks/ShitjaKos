@@ -1,1 +1,1 @@
-export const MAX_SELECT_CHOICES = 100;
+export const MAX_SELECT_CHOICES = 3000;

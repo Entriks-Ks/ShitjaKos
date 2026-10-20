@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { cities } from "../catalog";
+import { availableOptions } from "../attribute-dependencies";
 export const listingInput = z
   .object({
     id: z.string().optional(),
@@ -68,6 +69,7 @@ type Definition = {
   min: number | null;
   max: number | null;
   options: unknown;
+  dependsOnId?: string | null;
 };
 export function validateAttributes(
   definitions: Definition[],
@@ -108,7 +110,7 @@ export function validateAttributes(
       if (!value) throw new Error(`${d.key} cannot be blank.`);
       if (
         d.type === "SELECT" &&
-        !(d.options as { value: string }[]).some((o) => o.value === value)
+        !availableOptions(d, input).some((o) => o.value === value)
       )
         throw new Error(`${d.key} is not a valid option.`);
     }

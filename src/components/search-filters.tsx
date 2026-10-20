@@ -3,15 +3,13 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "@/components/navigation-link";
 import { SlidersHorizontal, X } from "lucide-react";
-import { SearchForm } from "@/components/search-form";
+import { AttributeSelect } from "@/components/attribute-select";
 import {
-  copy,
-  countries,
-  countryName,
-  Locale,
-  optionLabel,
-  translated,
-} from "@/lib/catalog";
+  changeAttributeValue,
+  searchAttributeValues,
+} from "@/lib/attribute-dependencies";
+import { SearchForm } from "@/components/search-form";
+import { copy, countries, countryName, Locale, translated } from "@/lib/catalog";
 import { SearchParams } from "@/lib/search-navigation";
 import type { getCategories } from "@/repositories/catalog";
 import { attributeFilterEntries, MAX_ATTRIBUTE_FILTERS } from "@/lib/attribute-search";
@@ -43,6 +41,10 @@ export function SearchFilters({
     selected?.attributes
       .filter((attribute) => ["SELECT", "NUMBER", "BOOLEAN"].includes(attribute.type))
       .slice(0, MAX_ATTRIBUTE_FILTERS) ?? [];
+
+  const [values, setValues] = useState<Record<string, unknown>>(() =>
+    searchAttributeValues(attributes, p),
+  );
 
   const activeCount =
     attributeFilterEntries(p).length +
@@ -104,7 +106,10 @@ export function SearchFilters({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-controls={titleId}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setValues(searchAttributeValues(attributes, p));
+          setOpen(true);
+        }}
       >
         <SlidersHorizontal size={17} aria-hidden="true" />
         <span>{labels.filters}</span>
@@ -203,6 +208,7 @@ export function SearchFilters({
                 </select>
               </label>
               {attributes.map((attribute) => {
+                if (attribute.dependsOnId && !values[attribute.dependsOnId]) return null;
                 const label = translated(attribute.translations, locale);
                 if (attribute.type === "NUMBER")
                   return (
@@ -252,26 +258,19 @@ export function SearchFilters({
                 return (
                   <label className="field" key={attribute.id}>
                     {label}
-                    <select
+                    <AttributeSelect
+                      field={attribute}
+                      fields={attributes}
+                      values={values}
+                      locale={locale}
                       name={`field_${attribute.id}`}
-                      defaultValue={
-                        p[`field_${attribute.id}`] ??
-                        (p.attribute === attribute.id ? p.value : "") ??
-                        ""
+                      emptyLabel="All"
+                      onChange={(id, value) =>
+                        setValues((current) =>
+                          changeAttributeValue(attributes, current, id, value),
+                        )
                       }
-                    >
-                      <option value="">All</option>
-                      {(
-                        attribute.options as {
-                          value: string;
-                          labels: Record<string, string>;
-                        }[]
-                      ).map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {optionLabel(option, locale)}
-                        </option>
-                      ))}
-                    </select>
+                    />
                   </label>
                 );
               })}

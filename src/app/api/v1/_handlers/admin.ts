@@ -80,7 +80,7 @@ export const fieldPut = endpoint(async (r, c) => {
   await catalog.updateCatalogField(
     await apiActor(r, true),
     (await paramsOf(c)).id,
-    await readJson(r),
+    await readJson(r, 512 * 1024),
   );
   catalogChanged();
 });

@@ -16,6 +16,7 @@
     "db:studio": "prisma studio",
     "db:local": "prisma dev --name shitjakos --port 51213 --db-port 51214 --shadow-db-port 51215",
     "db:seed": "tsx prisma/seed.ts",
+    "db:catalog:models": "tsx scripts/setup-brand-models.ts",
     "db:seed:demo": "tsx scripts/demo-content.ts seed",
     "db:clear:demo": "tsx scripts/demo-content.ts clear",
     "setup:local": "node scripts/setup-local.mjs",

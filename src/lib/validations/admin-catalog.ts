@@ -3,6 +3,8 @@ import { MAX_SELECT_CHOICES } from "@/lib/catalog-limits";
 
 const name = z.string().trim().min(2, "Enter a name of at least two characters.").max(80);
 const names = z.object({ sq: name, en: name, de: name });
+const choiceName = z.string().trim().min(1).max(80);
+const choiceNames = z.object({ sq: choiceName, en: choiceName, de: choiceName });
 
 export const categoryInput = z.object({
   parentId: z.string().trim().max(100).default(""),
@@ -41,7 +43,7 @@ export const fieldDefinitionInput = z
     min: z.number().finite().nullable(),
     max: z.number().finite().nullable(),
     options: z
-      .array(names)
+      .array(choiceNames)
       .max(MAX_SELECT_CHOICES, `Add no more than ${MAX_SELECT_CHOICES} choices.`),
   })
   .superRefine((value, context) => {
@@ -90,6 +92,7 @@ export const fieldInput = fieldDefinitionInput.and(
 );
 
 export const fieldEditInput = z.object({
+  dependsOnId: z.string().min(1).max(100).nullable().optional(),
   names,
   type: z.enum(["TEXT", "NUMBER", "SELECT", "BOOLEAN"]),
   required: z.boolean(),
@@ -98,7 +101,13 @@ export const fieldEditInput = z.object({
   min: z.number().finite().nullable(),
   max: z.number().finite().nullable(),
   options: z
-    .array(z.object({ value: z.string().min(1).max(100).nullable(), names }))
+    .array(
+      z.object({
+        value: z.string().min(1).max(200).nullable(),
+        names: choiceNames,
+        parentValues: z.array(z.string().min(1).max(200)).max(100).optional(),
+      }),
+    )
     .max(MAX_SELECT_CHOICES, `Add no more than ${MAX_SELECT_CHOICES} choices.`),
 });
 

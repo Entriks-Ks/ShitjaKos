@@ -279,12 +279,16 @@ model AttributeDefinition {
   min          Float?
   max          Float?
   options      Json                    @default("[]")
+  dependsOnId  String?
+  dependsOn    AttributeDefinition?    @relation("FieldDependency", fields: [dependsOnId], references: [id], onDelete: Restrict)
+  dependents   AttributeDefinition[]   @relation("FieldDependency")
   sortOrder    Int                     @default(0)
   category     Category                @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   translations AttributeTranslation[]
   values       ListingAttributeValue[]
 
   @@unique([categoryId, key])
+  @@index([dependsOnId])
 }
 
 model AttributeTranslation {

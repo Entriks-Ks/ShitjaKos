@@ -18,7 +18,13 @@ export type EditableField = {
   unit: string;
   min: number | null;
   max: number | null;
-  options: { value: string | null; names: Names }[];
+  dependsOnId?: string | null;
+  parentFields?: {
+    id: string;
+    name: string;
+    options: { value: string; label: string }[];
+  }[];
+  options: { value: string | null; names: Names; parentValues?: string[] }[];
   hasValues: boolean;
   hasListings: boolean;
 };
@@ -39,6 +45,13 @@ export function FieldEditForm({
   const [min, setMin] = useState(field.min?.toString() ?? "");
   const [max, setMax] = useState(field.max?.toString() ?? "");
   const [options, setOptions] = useState(field.options);
+  const [dependsOnId, setDependsOnId] = useState(field.dependsOnId ?? "");
+  const [choiceFilter, setChoiceFilter] = useState(
+    field.parentFields?.find((item) => item.id === field.dependsOnId)?.options[0]
+      ?.value ?? "",
+  );
+  const [query, setQuery] = useState("");
+  const parent = field.parentFields?.find((item) => item.id === dependsOnId);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -61,6 +74,7 @@ export function FieldEditForm({
                 min: type === "NUMBER" && min !== "" ? Number(min) : null,
                 max: type === "NUMBER" && max !== "" ? Number(max) : null,
                 options: type === "SELECT" ? options : [],
+                dependsOnId: type === "SELECT" ? dependsOnId || null : null,
               });
               if (result.error) setError(result.error);
               else {
@@ -168,66 +182,152 @@ export function FieldEditForm({
         )}
         {type === "SELECT" && (
           <div className="space-y-3">
+            <label className="field">
+              Depends on
+              <select
+                value={dependsOnId}
+                disabled={field.hasValues}
+                onChange={(event) => {
+                  setDependsOnId(event.target.value);
+                  setChoiceFilter("");
+                  setOptions(options.map((option) => ({ ...option, parentValues: [] })));
+                }}
+              >
+                <option value="">Independent field</option>
+                {field.parentFields?.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            {parent && (
+              <label className="field">
+                Show choices for {parent.name}
+                <select
+                  value={choiceFilter}
+                  onChange={(event) => setChoiceFilter(event.target.value)}
+                >
+                  <option value="">All choices</option>
+                  {parent.options.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className="field">
+              Find a choice
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
+            </label>
             <p className="font-medium text-sm">
               Choices ({options.length}/{MAX_SELECT_CHOICES})
             </p>
-            {options.map((option, index) => (
-              <div
-                className="rounded-xl border border-stone-200 p-3"
-                key={option.value ?? `new-${index}`}
-              >
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <strong className="text-sm">Choice {index + 1}</strong>
-                  {options.length > 2 && !field.hasValues && (
-                    <button
-                      type="button"
-                      className="btn btn-outline"
-                      onClick={() => setOptions(options.filter((_, i) => i !== index))}
-                    >
-                      <Trash2 size={14} /> Remove
-                    </button>
-                  )}
-                </div>
-                <div className="grid gap-2 sm:grid-cols-3">
-                  {(["sq", "en", "de"] as const).map((locale) => (
-                    <label className="field" key={locale}>
-                      {locale.toUpperCase()}
-                      <input
+            {options.map((option, index) => {
+              if (
+                (choiceFilter && !option.parentValues?.includes(choiceFilter)) ||
+                (query &&
+                  !Object.values(option.names).some((name) =>
+                    name.toLowerCase().includes(query.toLowerCase()),
+                  ))
+              )
+                return null;
+              return (
+                <div
+                  className="rounded-xl border border-stone-200 p-3"
+                  key={option.value ?? `new-${index}`}
+                >
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <strong className="text-sm">Choice {index + 1}</strong>
+                    {options.length > 2 && !field.hasValues && (
+                      <button
+                        type="button"
+                        className="btn btn-outline"
+                        onClick={() => setOptions(options.filter((_, i) => i !== index))}
+                      >
+                        <Trash2 size={14} /> Remove
+                      </button>
+                    )}
+                  </div>
+                  {parent && (
+                    <label className="field mb-3">
+                      Available for {parent.name}
+                      <select
+                        multiple
                         required
-                        minLength={2}
-                        maxLength={80}
-                        value={option.names[locale]}
-                        onChange={(event) =>
+                        disabled={field.hasValues && option.value !== null}
+                        value={option.parentValues ?? []}
+                        onChange={(event) => {
+                          const parentValues = Array.from(
+                            event.target.selectedOptions,
+                            (item) => item.value,
+                          );
                           setOptions(
                             options.map((current, i) =>
-                              i === index
-                                ? {
-                                    ...current,
-                                    names: {
-                                      ...current.names,
-                                      [locale]: event.target.value,
-                                    },
-                                  }
-                                : current,
+                              i === index ? { ...current, parentValues } : current,
                             ),
-                          )
-                        }
-                      />
+                          );
+                        }}
+                      >
+                        {parent.options.map((item) => (
+                          <option key={item.value} value={item.value}>
+                            {item.label}
+                          </option>
+                        ))}
+                      </select>
                     </label>
-                  ))}
+                  )}
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    {(["sq", "en", "de"] as const).map((locale) => (
+                      <label className="field" key={locale}>
+                        {locale.toUpperCase()}
+                        <input
+                          required
+                          minLength={1}
+                          maxLength={80}
+                          value={option.names[locale]}
+                          onChange={(event) =>
+                            setOptions(
+                              options.map((current, i) =>
+                                i === index
+                                  ? {
+                                      ...current,
+                                      names: {
+                                        ...current.names,
+                                        [locale]: event.target.value,
+                                      },
+                                    }
+                                  : current,
+                              ),
+                            )
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {options.length < MAX_SELECT_CHOICES && (
               <button
                 type="button"
                 className="btn btn-outline"
-                onClick={() =>
+                onClick={() => {
+                  setQuery("");
                   setOptions([
                     ...options,
-                    { value: null, names: { sq: "", en: "", de: "" } },
-                  ])
-                }
+                    {
+                      value: null,
+                      names: { sq: "", en: "", de: "" },
+                      parentValues: choiceFilter ? [choiceFilter] : [],
+                    },
+                  ]);
+                }}
               >
                 <Plus size={15} /> Add choice
               </button>

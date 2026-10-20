@@ -9,6 +9,7 @@ import { CategoryActions, FieldActions } from "@/components/admin-catalog-action
 import { requireUser } from "@/lib/session";
 import { isStaff } from "@/lib/permissions";
 import { translated } from "@/lib/catalog";
+import { catalogOptions } from "@/lib/attribute-dependencies";
 import { getAdminCatalog } from "@/repositories/catalog";
 
 export const metadata = {
@@ -145,6 +146,24 @@ export default async function Page() {
                                   name={translated(field.translations, "en")}
                                   field={{
                                     id: field.id,
+                                    dependsOnId: field.dependsOnId,
+                                    parentFields: category.attributes
+                                      .filter(
+                                        (item) =>
+                                          item.id !== field.id &&
+                                          item.type === "SELECT" &&
+                                          !item.dependsOnId,
+                                      )
+                                      .map((item) => ({
+                                        id: item.id,
+                                        name: translated(item.translations, "en"),
+                                        options: catalogOptions(item.options).map(
+                                          (option) => ({
+                                            value: option.value,
+                                            label: option.labels.en ?? option.value,
+                                          }),
+                                        ),
+                                      })),
                                     names: {
                                       sq: translated(field.translations, "sq"),
                                       en: translated(field.translations, "en"),
@@ -156,19 +175,17 @@ export default async function Page() {
                                     unit: field.unit ?? "",
                                     min: field.min,
                                     max: field.max,
-                                    options: (
-                                      field.options as {
-                                        value: string;
-                                        labels: Record<string, string>;
-                                      }[]
-                                    ).map((option) => ({
-                                      value: option.value,
-                                      names: {
-                                        sq: option.labels.sq ?? option.labels.en ?? "",
-                                        en: option.labels.en ?? "",
-                                        de: option.labels.de ?? option.labels.en ?? "",
-                                      },
-                                    })),
+                                    options: catalogOptions(field.options).map(
+                                      (option) => ({
+                                        value: option.value,
+                                        parentValues: option.parentValues,
+                                        names: {
+                                          sq: option.labels.sq ?? option.labels.en ?? "",
+                                          en: option.labels.en ?? "",
+                                          de: option.labels.de ?? option.labels.en ?? "",
+                                        },
+                                      }),
+                                    ),
                                     hasValues: field._count.values > 0,
                                     hasListings: category._count.listings > 0,
                                   }}

@@ -2,6 +2,7 @@ import "dotenv/config";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient, AttributeType, Prisma } from "../src/generated/prisma/client";
 import { groups, definitions } from "./taxonomy";
+import { seedBrandModels } from "./seed-brand-models";
 const db = new PrismaClient({
   adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL!, max: 1 }),
 });
@@ -64,6 +65,11 @@ async function seed(db: Prisma.TransactionClient) {
   await db.category.updateMany({ where: { id: "tools" }, data: { active: false } });
   for (const d of definitions) {
     const id = `${d.categoryId}-${d.key}`;
+    const configured = await db.attributeDefinition.findUnique({
+      where: { id }, include: { _count: { select: { dependents: true } } },
+    });
+    // Never replace admin-managed dependent catalogs with the old flat seed.
+    if (configured?.dependsOnId || configured?._count.dependents) continue;
     const data = {
       categoryId: d.categoryId,
       key: d.key,
@@ -89,6 +95,7 @@ async function seed(db: Prisma.TransactionClient) {
         update: { label: d.labels[i] },
       });
   }
+  await seedBrandModels(db);
   console.log(
     `Seeded ${groups.length} category groups and ${groups.reduce((count, group) => count + group.children.length, 0)} subcategories from the reference PDF in Albanian, English and German.`,
   );

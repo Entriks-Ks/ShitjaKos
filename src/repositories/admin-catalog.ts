@@ -121,7 +121,7 @@ export function findAttributeDefinition(tx: Prisma.TransactionClient, id: string
       category: {
         include: {
           _count: { select: { listings: true } },
-          attributes: { select: { id: true, type: true, filterable: true } },
+          attributes: true,
         },
       },
       _count: { select: { values: true } },
@@ -140,6 +140,7 @@ export async function updateAttributeDefinition(
     min: number | null;
     max: number | null;
     options: Prisma.InputJsonValue;
+    dependsOnId?: string | null;
     translations: FieldTranslationWrite[];
   },
 ) {

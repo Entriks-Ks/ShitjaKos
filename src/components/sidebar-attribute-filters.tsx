@@ -1,10 +1,16 @@
 "use client";
 
+import { useState } from "react";
+import { AttributeSelect } from "@/components/attribute-select";
+import {
+  changeAttributeValue,
+  searchAttributeValues,
+} from "@/lib/attribute-dependencies";
 import { ChevronDown, SlidersHorizontal } from "lucide-react";
 import Link from "@/components/navigation-link";
 import { SearchForm } from "@/components/search-form";
 import { attributeFilterKey } from "@/lib/attribute-search";
-import { optionLabel, translated, type Locale } from "@/lib/catalog";
+import { translated, type Locale } from "@/lib/catalog";
 import { searchUrl, type SearchParams } from "@/lib/search-navigation";
 import type { getCategories } from "@/repositories/catalog";
 import styles from "./sidebar-attribute-filters.module.css";
@@ -77,6 +83,9 @@ export function SidebarAttributeFilters({
   locale: Locale;
 }) {
   const t = labels[locale];
+  const [values, setValues] = useState<Record<string, unknown>>(() =>
+    searchAttributeValues(attributes, params),
+  );
   // Keep query, location and seller; replace sidebar filters and reset pagination.
   const preserved = Object.fromEntries(
     Object.entries(params).filter(
@@ -125,6 +134,7 @@ export function SidebarAttributeFilters({
           </div>
         </fieldset>
         {attributes.map((attribute) => {
+          if (attribute.dependsOnId && !values[attribute.dependsOnId]) return null;
           const label = translated(attribute.translations, locale);
           if (attribute.type === "NUMBER") {
             return (
@@ -154,33 +164,30 @@ export function SidebarAttributeFilters({
           return (
             <label className={styles.field} key={attribute.id}>
               <span>{label}</span>
-              <select
-                name={`field_${attribute.id}`}
-                defaultValue={
-                  params[`field_${attribute.id}`] ??
-                  (params.attribute === attribute.id ? params.value : "") ??
-                  ""
-                }
-              >
-                <option value="">{t.all}</option>
-                {attribute.type === "BOOLEAN" ? (
-                  <>
-                    <option value="true">{t.yes}</option>
-                    <option value="false">{t.no}</option>
-                  </>
-                ) : (
-                  (
-                    attribute.options as {
-                      value: string;
-                      labels: Record<string, string>;
-                    }[]
-                  ).map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {optionLabel(option, locale)}
-                    </option>
-                  ))
-                )}
-              </select>
+              {attribute.type === "SELECT" ? (
+                <AttributeSelect
+                  field={attribute}
+                  fields={attributes}
+                  values={values}
+                  locale={locale}
+                  name={`field_${attribute.id}`}
+                  emptyLabel={t.all}
+                  onChange={(id, value) =>
+                    setValues((current) =>
+                      changeAttributeValue(attributes, current, id, value),
+                    )
+                  }
+                />
+              ) : (
+                <select
+                  name={`field_${attribute.id}`}
+                  defaultValue={String(values[attribute.id] ?? "")}
+                >
+                  <option value="">{t.all}</option>
+                  <option value="true">{t.yes}</option>
+                  <option value="false">{t.no}</option>
+                </select>
+              )}
             </label>
           );
         })}

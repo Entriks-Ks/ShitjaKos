@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { translated, optionLabel } from "@/lib/catalog";
+import { translated } from "@/lib/catalog";
 import { CountryCityFields } from "@/components/country-city-fields";
 import { saveListingAction, suggestListingCategoryAction, statusAction } from "@/actions/listings";
 import type { getCategories } from "@/repositories/catalog";
 import type { ListingInput } from "@/lib/validations/listing";
 import Image from "next/image";
+import { AttributeSelect } from "@/components/attribute-select";
+import { changeAttributeValue } from "@/lib/attribute-dependencies";
 
 
 type Initial = ListingInput & {
@@ -343,22 +345,16 @@ export function ListingForm({
                   {a.unit ? ` (${a.unit})` : ""}
                   {a.required ? " *" : ""}
                   {a.type === "SELECT" ? (
-                    <select
+                    <AttributeSelect
+                      field={a}
+                      fields={category.attributes}
+                      values={attributes}
                       required={a.required}
-                      value={String(attributes[a.id] ?? "")}
-                      onChange={(e) =>
-                        setAttributes({ ...attributes, [a.id]: e.target.value })
-                      }
-                    >
-                      <option value="">Choose an option</option>
-                      {(
-                        a.options as { value: string; labels: Record<string, string> }[]
-                      ).map((o) => (
-                        <option key={o.value} value={o.value}>
-                          {optionLabel(o, "en")}
-                        </option>
-                      ))}
-                    </select>
+                      locale="en"
+                      emptyLabel="Choose an option"
+                      onChange={(id, value) => setAttributes((current) =>
+                        changeAttributeValue(category.attributes, current, id, value))}
+                    />
                   ) : a.type === "BOOLEAN" ? (
                     <select
                       required={a.required}

@@ -12,7 +12,7 @@ const databaseKey = createHash("sha256")
   .digest("hex");
 export const getCachedCategories = unstable_cache(
   getCategories,
-  ["public-catalog-v1", databaseKey],
+  ["public-catalog-v3-brand-model-choices", databaseKey],
   {
     tags: [CATALOG_TAG],
     revalidate: 300,

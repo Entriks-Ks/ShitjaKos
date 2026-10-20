@@ -50,11 +50,11 @@ export async function boundedBytes(request: Request, maximum = 64 * 1024) {
   }
   return bytes;
 }
-export async function readJson(request: Request): Promise<Record<string, unknown>> {
+export async function readJson(request: Request, maximum = 64 * 1024): Promise<Record<string, unknown>> {
   if (request.headers.get("content-type")?.split(";")[0].trim() !== "application/json") {
     throw new ApiError(415, "Use application/json.");
   }
-  const bytes = await boundedBytes(request);
+  const bytes = await boundedBytes(request, maximum);
   let value: unknown;
   try {
     value = JSON.parse(new TextDecoder().decode(bytes));

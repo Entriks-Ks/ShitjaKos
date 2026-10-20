@@ -11,6 +11,7 @@ import {
 } from "@/lib/validations/admin-catalog";
 import { recordAudit } from "@/repositories/audit";
 import { withTransaction } from "@/repositories/transaction";
+import { catalogOptions } from "@/lib/attribute-dependencies";
 import {
   createAttributeDefinition,
   createCategory,
@@ -188,6 +189,30 @@ export async function updateCatalogField(actor: Actor, fieldId: string, raw: unk
       throw new Error("Field not found.");
     }
     const hasAnswers = field._count.values > 0;
+    const dependsOnId =
+      input.dependsOnId === undefined ? field.dependsOnId : input.dependsOnId;
+    const parent = field.category.attributes.find((item) => item.id === dependsOnId);
+    if (
+      dependsOnId &&
+      (!parent ||
+        parent.id === field.id ||
+        parent.type !== "SELECT" ||
+        parent.dependsOnId ||
+        input.type !== "SELECT")
+    ) {
+      throw new Error("Choose an independent selection field in the same subcategory.");
+    }
+    if (hasAnswers && dependsOnId !== field.dependsOnId) {
+      throw new Error("Dependencies cannot change after answers are saved.");
+    }
+    const children = field.category.attributes.filter(
+      (item) => item.dependsOnId === field.id,
+    );
+    if (children.length && (input.type !== "SELECT" || dependsOnId)) {
+      throw new Error(
+        "This field is used by dependent fields. Keep it an independent selection.",
+      );
+    }
     if (hasAnswers && field.type !== input.type) {
       throw new Error("A field with saved answers cannot change its answer type.");
     }
@@ -217,11 +242,37 @@ export async function updateCatalogField(actor: Actor, fieldId: string, raw: unk
           : [],
       ),
     );
-    const options = input.options.map(({ value, names }) => {
+    const options = input.options.map(({ value, names, parentValues }) => {
       if (value !== null && !existingValues.has(value)) {
         throw new Error("A choice changed while you were editing. Reload and try again.");
       }
-      return { value: value ?? keyOf(names.en), labels: names };
+      const old = catalogOptions(field.options).find((option) => option.value === value);
+      const parents = parentValues ?? old?.parentValues ?? [];
+      if (
+        dependsOnId &&
+        (!parents.length ||
+          parents.some(
+            (v) => !catalogOptions(parent!.options).some((option) => option.value === v),
+          ))
+      ) {
+        throw new Error("Assign every dependent choice to a valid parent choice.");
+      }
+      if (
+        hasAnswers &&
+        old &&
+        dependsOnId &&
+        JSON.stringify([...parents].sort()) !==
+          JSON.stringify([...(old.parentValues ?? [])].sort())
+      ) {
+        throw new Error(
+          "Existing choice dependencies cannot change after answers are saved.",
+        );
+      }
+      return {
+        value: value ?? keyOf(names.en),
+        labels: names,
+        ...(dependsOnId ? { parentValues: [...new Set(parents)] } : {}),
+      };
     });
     const nextValues = options.map((option) => option.value);
     if (new Set(nextValues).size !== nextValues.length) {
@@ -229,6 +280,15 @@ export async function updateCatalogField(actor: Actor, fieldId: string, raw: unk
     }
     if (hasAnswers && [...existingValues].some((value) => !nextValues.includes(value))) {
       throw new Error("A choice cannot be removed after listings have saved answers.");
+    }
+    if (
+      children.some((child) =>
+        catalogOptions(child.options).some((option) =>
+          option.parentValues?.some((value) => !nextValues.includes(value)),
+        ),
+      )
+    ) {
+      throw new Error("A choice used by a dependent field cannot be removed.");
     }
 
     await updateAttributeDefinition(tx, fieldId, {
@@ -239,6 +299,7 @@ export async function updateCatalogField(actor: Actor, fieldId: string, raw: unk
       min: input.type === "NUMBER" ? input.min : null,
       max: input.type === "NUMBER" ? input.max : null,
       options,
+      dependsOnId,
       translations: locales.map((locale) => ({ locale, label: input.names[locale] })),
     });
     await recordAudit(tx, actor.id, "category-field.updated", fieldId, {
@@ -319,6 +380,9 @@ export async function deleteCatalogField(actor: Actor, fieldId: string) {
     }
     if (field._count.values) {
       throw new Error("This field has saved listing answers and cannot be deleted.");
+    }
+    if (field.category.attributes.some((item) => item.dependsOnId === field.id)) {
+      throw new Error("Delete dependent fields before deleting their parent.");
     }
     await deleteAttributeDefinition(tx, fieldId);
     await recordAudit(tx, actor.id, "category-field.deleted", fieldId, {
