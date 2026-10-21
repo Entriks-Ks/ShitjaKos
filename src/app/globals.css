@@ -3912,7 +3912,16 @@ input[type="checkbox"] {
   background: white;
   border: 1px solid #e4e8df;
   border-radius: 15px;
-  overflow: hidden;
+  position: sticky;
+  top: 16px;
+  max-height: calc(100dvh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.category-sidebar::-webkit-scrollbar {
+  display: none;
 }
 
 .category-disclosure>summary {
@@ -4160,6 +4169,8 @@ input[type="checkbox"] {
     width: 100%;
     max-width: none;
     min-width: 0;
+    position: static;
+    max-height: 65dvh;
   }
 
   .search-results-grid {
@@ -4175,8 +4186,8 @@ input[type="checkbox"] {
   }
 
   .category-disclosure[open] .category-tree {
-    max-height: 55vh;
-    overflow-y: auto;
+    max-height: none;
+    overflow: visible;
   }
 }
 

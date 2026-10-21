@@ -1,8 +1,8 @@
 .panel {
   min-width: 0;
-  margin-bottom: 20px;
+  margin: 0 14px 20px;
   border-bottom: 1px solid #e4e8df;
-  padding: 14px 14px 18px;
+  padding: 14px 0 18px;
 }
 
 .heading {
@@ -40,13 +40,13 @@
   transition: transform 150ms ease;
 }
 
-.panel[open] .chevron {
+.panel[open] > .heading .chevron {
   transform: rotate(180deg);
 }
 
 .form {
   display: grid;
-  gap: 14px;
+  gap: 0;
   min-width: 0;
 }
 
@@ -146,4 +146,38 @@
   .chevron {
     transition: none;
   }
+}
+
+.section {
+  min-width: 0;
+  border-top: 1px solid #e4e8df;
+  padding: 12px 0;
+}
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #344331;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.sectionHeading::-webkit-details-marker {
+  display: none;
+}
+.sectionHeading svg {
+  flex-shrink: 0;
+}
+.section[open] > .sectionHeading {
+  margin-bottom: 10px;
+}
+.section[open] > .sectionHeading svg {
+  transform: rotate(180deg);
+}
+.sectionHeading:focus-visible {
+  outline: 2px solid var(--brand-primary, #235641);
+  outline-offset: 3px;
+  border-radius: 3px;
 }

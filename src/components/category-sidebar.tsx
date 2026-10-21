@@ -84,7 +84,7 @@ export function CategorySidebar({
   }, [selectedCategory, isSubcategory]);
 
   return (
-    <aside className="category-sidebar">
+    <aside className="category-sidebar" tabIndex={0} aria-label={copy[locale].browse}>
       {isSubcategory && selectedCategory && (
         <SidebarAttributeFilters
           key={JSON.stringify(params)}

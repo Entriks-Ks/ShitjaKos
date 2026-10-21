@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { AttributeSearchChoice } from "@/components/attribute-search-choice";
 import {
   changeAttributeValue,
@@ -16,6 +16,18 @@ import type { getCategories } from "@/repositories/catalog";
 import styles from "./sidebar-attribute-filters.module.css";
 
 type Attribute = Awaited<ReturnType<typeof getCategories>>[number]["attributes"][number];
+
+function FilterSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <details className={styles.section} open>
+      <summary className={styles.sectionHeading}>
+        <span>{title}</span>
+        <ChevronDown size={15} aria-hidden="true" />
+      </summary>
+      <div className={styles.field}>{children}</div>
+    </details>
+  );
+}
 
 const labels = {
   sq: {
@@ -115,8 +127,7 @@ export function SidebarAttributeFilters({
           <input key={key} type="hidden" name={key} value={value} />
         ))}
         {!preserved.lang && <input type="hidden" name="lang" value={locale} />}
-        <fieldset className={styles.field}>
-          <legend>{t.price}</legend>
+        <FilterSection title={t.price}>
           <div className={styles.range}>
             {(["min", "max"] as const).map((key) => (
               <input
@@ -132,7 +143,7 @@ export function SidebarAttributeFilters({
               />
             ))}
           </div>
-        </fieldset>
+        </FilterSection>
         {attributes.map((attribute) => {
           if (
             attribute.dependsOnId &&
@@ -144,11 +155,10 @@ export function SidebarAttributeFilters({
           const label = translated(attribute.translations, locale);
           if (attribute.type === "NUMBER") {
             return (
-              <fieldset className={styles.field} key={attribute.id}>
-                <legend>
-                  {label}
-                  {attribute.unit ? ` (${attribute.unit})` : ""}
-                </legend>
+              <FilterSection
+                key={attribute.id}
+                title={`${label}${attribute.unit ? ` (${attribute.unit})` : ""}`}
+              >
                 <div className={styles.range}>
                   {(["from", "to"] as const).map((kind) => (
                     <input
@@ -164,12 +174,11 @@ export function SidebarAttributeFilters({
                     />
                   ))}
                 </div>
-              </fieldset>
+              </FilterSection>
             );
           }
           return (
-            <fieldset className={styles.field} key={attribute.id}>
-              <legend>{label}</legend>
+            <FilterSection key={attribute.id} title={label}>
               {attribute.type === "SELECT" ? (
                 <AttributeSearchChoice
                   field={attribute}
@@ -186,6 +195,7 @@ export function SidebarAttributeFilters({
                 />
               ) : (
                 <select
+                  aria-label={label}
                   name={`field_${attribute.id}`}
                   defaultValue={String(values[attribute.id] ?? "")}
                 >
@@ -194,12 +204,15 @@ export function SidebarAttributeFilters({
                   <option value="false">{t.no}</option>
                 </select>
               )}
-            </fieldset>
+            </FilterSection>
           );
         })}
-        <label className={styles.field}>
-          <span>{t.condition}</span>
-          <select name="condition" defaultValue={params.condition ?? ""}>
+        <FilterSection title={t.condition}>
+          <select
+            aria-label={t.condition}
+            name="condition"
+            defaultValue={params.condition ?? ""}
+          >
             <option value="">{t.all}</option>
             {["NEW", "LIKE_NEW", "USED", "DEFECTIVE", "FOR_PARTS"].map((value, index) => (
               <option key={value} value={value}>
@@ -207,15 +220,14 @@ export function SidebarAttributeFilters({
               </option>
             ))}
           </select>
-        </label>
-        <label className={styles.field}>
-          <span>{t.sort}</span>
-          <select name="sort" defaultValue={params.sort ?? "newest"}>
+        </FilterSection>
+        <FilterSection title={t.sort}>
+          <select aria-label={t.sort} name="sort" defaultValue={params.sort ?? "newest"}>
             <option value="newest">{t.newest}</option>
             <option value="price-asc">{t.low}</option>
             <option value="price-desc">{t.high}</option>
           </select>
-        </label>
+        </FilterSection>
         <div className={styles.actions}>
           <button type="submit" className={styles.apply}>
             {t.apply}
