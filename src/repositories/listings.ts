@@ -289,6 +289,17 @@ export function buildListingSearchWhere(
     filters.push({ id: "__invalid_attribute_filter__" });
   } else if (params.category) {
     for (const filter of fieldFilters) {
+      if (filter.choices) {
+        filters.push({
+          attributes: {
+            some: {
+              attributeId: filter.id,
+              attribute: { categoryId: params.category, type: "SELECT" },
+              OR: filter.choices.map((choice) => ({ value: { equals: choice } })),
+            },
+          },
+        });
+      }
       if (filter.choice !== undefined) {
         const boolean = filter.choice === "true" || filter.choice === "false";
         filters.push({

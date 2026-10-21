@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AttributeSelect } from "@/components/attribute-select";
+import { AttributeSearchChoice } from "@/components/attribute-search-choice";
 import {
   changeAttributeValue,
   searchAttributeValues,
@@ -134,7 +134,13 @@ export function SidebarAttributeFilters({
           </div>
         </fieldset>
         {attributes.map((attribute) => {
-          if (attribute.dependsOnId && !values[attribute.dependsOnId]) return null;
+          if (
+            attribute.dependsOnId &&
+            (!values[attribute.dependsOnId] ||
+              (Array.isArray(values[attribute.dependsOnId]) &&
+                !(values[attribute.dependsOnId] as string[]).length))
+          )
+            return null;
           const label = translated(attribute.translations, locale);
           if (attribute.type === "NUMBER") {
             return (
@@ -162,10 +168,10 @@ export function SidebarAttributeFilters({
             );
           }
           return (
-            <label className={styles.field} key={attribute.id}>
-              <span>{label}</span>
+            <fieldset className={styles.field} key={attribute.id}>
+              <legend>{label}</legend>
               {attribute.type === "SELECT" ? (
-                <AttributeSelect
+                <AttributeSearchChoice
                   field={attribute}
                   fields={attributes}
                   values={values}
@@ -188,7 +194,7 @@ export function SidebarAttributeFilters({
                   <option value="false">{t.no}</option>
                 </select>
               )}
-            </label>
+            </fieldset>
           );
         })}
         <label className={styles.field}>

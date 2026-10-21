@@ -1,0 +1,37 @@
+.choices {
+  display: grid;
+  gap: 3px;
+  max-height: 260px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 2px;
+}
+.choice {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 30px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 400;
+}
+.choice input[type="checkbox"],
+.choice input[type="radio"] {
+  appearance: auto;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--brand-primary, #235641);
+  box-shadow: none;
+}
+.choice span {
+  overflow-wrap: anywhere;
+}
+.choice input:focus-visible {
+  outline: 2px solid var(--brand-primary, #235641);
+  outline-offset: 2px;
+  box-shadow: none;
+}

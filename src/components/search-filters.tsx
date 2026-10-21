@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "@/components/navigation-link";
 import { SlidersHorizontal, X } from "lucide-react";
-import { AttributeSelect } from "@/components/attribute-select";
+import { AttributeSearchChoice } from "@/components/attribute-search-choice";
 import {
   changeAttributeValue,
   searchAttributeValues,
@@ -208,7 +208,13 @@ export function SearchFilters({
                 </select>
               </label>
               {attributes.map((attribute) => {
-                if (attribute.dependsOnId && !values[attribute.dependsOnId]) return null;
+                if (
+                  attribute.dependsOnId &&
+                  (!values[attribute.dependsOnId] ||
+                    (Array.isArray(values[attribute.dependsOnId]) &&
+                      !(values[attribute.dependsOnId] as string[]).length))
+                )
+                  return null;
                 const label = translated(attribute.translations, locale);
                 if (attribute.type === "NUMBER")
                   return (
@@ -256,9 +262,9 @@ export function SearchFilters({
                     </label>
                   );
                 return (
-                  <label className="field" key={attribute.id}>
-                    {label}
-                    <AttributeSelect
+                  <fieldset className="field" key={attribute.id}>
+                    <legend>{label}</legend>
+                    <AttributeSearchChoice
                       field={attribute}
                       fields={attributes}
                       values={values}
@@ -271,7 +277,7 @@ export function SearchFilters({
                         )
                       }
                     />
-                  </label>
+                  </fieldset>
                 );
               })}
             </div>

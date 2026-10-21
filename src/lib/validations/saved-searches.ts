@@ -47,7 +47,7 @@ export const savedSearchFilters = z
     attribute: z.string().min(1).max(100).optional(),
     value: z.string().min(1).max(200).optional(),
   })
-  .catchall(z.string().max(200))
+  .catchall(z.string().max(10400))
   .superRefine((v, ctx) => {
     const dynamic = attributeFilterEntries(v);
     const parsed = parseAttributeFilters(v);
@@ -68,7 +68,7 @@ export const savedSearchFilters = z
     }
     for (const filter of parsed) {
       if (
-        (filter.choice !== undefined &&
+        ((filter.choice !== undefined || filter.choices !== undefined) &&
           (filter.from !== undefined || filter.to !== undefined)) ||
         (filter.from !== undefined && filter.to !== undefined && filter.from > filter.to)
       )

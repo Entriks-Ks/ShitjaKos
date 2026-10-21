@@ -279,6 +279,7 @@ model AttributeDefinition {
   min          Float?
   max          Float?
   options      Json                    @default("[]")
+  filterDisplay String @default("DROPDOWN")
   dependsOnId  String?
   dependsOn    AttributeDefinition?    @relation("FieldDependency", fields: [dependsOnId], references: [id], onDelete: Restrict)
   dependents   AttributeDefinition[]   @relation("FieldDependency")

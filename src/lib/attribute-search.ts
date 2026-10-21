@@ -3,16 +3,19 @@ export const MAX_ATTRIBUTE_FILTERS = 64;
 export type AttributeSearchFilter = {
   id: string;
   choice?: string;
+  choices?: string[];
   from?: number;
   to?: number;
 };
 
-const fieldKey = /^(field|from|to)_([a-zA-Z0-9_-]{1,100})$/;
+const fieldKey = /^(field|choices|from|to)_([a-zA-Z0-9_-]{1,100})$/;
 const finiteNumber = /^-?\d{1,10}(?:\.\d{1,4})?$/;
 
 export function attributeFilterKey(key: string) {
   const match = fieldKey.exec(key);
-  return match ? { kind: match[1] as "field" | "from" | "to", id: match[2] } : null;
+  return match
+    ? { kind: match[1] as "field" | "choices" | "from" | "to", id: match[2] }
+    : null;
 }
 
 export function attributeFilterEntries(params: Record<string, string | undefined>) {
@@ -29,7 +32,12 @@ export function parseAttributeFilters(params: Record<string, string | undefined>
     const parsed = attributeFilterKey(key)!;
     if (!byId.has(parsed.id) && byId.size >= MAX_ATTRIBUTE_FILTERS) return [];
     const filter = byId.get(parsed.id) ?? { id: parsed.id };
-    if (parsed.kind === "field") {
+    if (parsed.kind === "choices") {
+      const choices = decodeFilterChoices(raw!);
+      if (!choices.length || filter.choice !== undefined) return [];
+      filter.choices = choices;
+    } else if (parsed.kind === "field") {
+      if (filter.choices) return [];
       if (raw!.length > 200) return [];
       filter.choice = raw;
     } else {
@@ -41,4 +49,23 @@ export function parseAttributeFilters(params: Record<string, string | undefined>
     byId.set(parsed.id, filter);
   }
   return [...byId.values()];
+}
+
+export function decodeFilterChoices(raw: string): string[] {
+  if (raw.length > 10400) return [];
+  try {
+    const values: unknown = JSON.parse(raw);
+    if (
+      !Array.isArray(values) ||
+      !values.length ||
+      values.length > 50 ||
+      !values.every(
+        (value) => typeof value === "string" && value.length > 0 && value.length <= 200,
+      )
+    )
+      return [];
+    return [...new Set(values as string[])].sort();
+  } catch {
+    return [];
+  }
 }

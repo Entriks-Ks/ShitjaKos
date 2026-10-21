@@ -136,6 +136,7 @@ export async function updateAttributeDefinition(
     type: Prisma.AttributeDefinitionUncheckedUpdateInput["type"];
     required: boolean;
     filterable: boolean;
+    filterDisplay?: string;
     unit: string | null;
     min: number | null;
     max: number | null;
@@ -169,6 +170,7 @@ export async function createAttributeDefinition(
     type: Prisma.AttributeDefinitionUncheckedCreateInput["type"];
     required: boolean;
     filterable: boolean;
+    filterDisplay?: string;
     unit: string | null;
     min: number | null;
     max: number | null;

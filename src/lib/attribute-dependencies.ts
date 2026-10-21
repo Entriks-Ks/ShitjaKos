@@ -1,3 +1,5 @@
+import { decodeFilterChoices } from "@/lib/attribute-search";
+
 // Shared catalog contract for web forms, search and mobile clients.
 export type CatalogOption = {
   value: string;
@@ -22,8 +24,14 @@ export function availableOptions(
   const options = catalogOptions(field.options);
   if (!field.dependsOnId) return options;
   const parent = values[field.dependsOnId];
-  if (typeof parent !== "string" || !parent) return [];
-  return options.filter((option) => option.parentValues?.includes(parent));
+  const parents = Array.isArray(parent)
+    ? parent
+    : typeof parent === "string" && parent
+      ? [parent]
+      : [];
+  return options.filter((option) =>
+    option.parentValues?.some((value) => parents.includes(value)),
+  );
 }
 
 export function changeAttributeValue(
@@ -56,7 +64,10 @@ export function searchAttributeValues(
   return Object.fromEntries(
     fields.map((field) => [
       field.id,
-      params[`field_${field.id}`] ??
+      (params[`choices_${field.id}`]
+        ? decodeFilterChoices(params[`choices_${field.id}`]!)
+        : undefined) ??
+        params[`field_${field.id}`] ??
         (params.attribute === field.id ? params.value : "") ??
         "",
     ]),

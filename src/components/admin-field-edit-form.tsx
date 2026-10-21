@@ -15,6 +15,7 @@ export type EditableField = {
   type: FieldType;
   required: boolean;
   filterable: boolean;
+  filterDisplay?: string;
   unit: string;
   min: number | null;
   max: number | null;
@@ -41,6 +42,7 @@ export function FieldEditForm({
   const [type, setType] = useState(field.type);
   const [required, setRequired] = useState(field.required);
   const [filterable, setFilterable] = useState(field.filterable);
+  const [filterDisplay, setFilterDisplay] = useState(field.filterDisplay ?? "DROPDOWN");
   const [unit, setUnit] = useState(field.unit);
   const [min, setMin] = useState(field.min?.toString() ?? "");
   const [max, setMax] = useState(field.max?.toString() ?? "");
@@ -67,6 +69,7 @@ export function FieldEditForm({
             try {
               const result = await updateFieldAction(field.id, {
                 names,
+                filterDisplay,
                 type,
                 required,
                 filterable: type === "SELECT" && filterable,
@@ -182,6 +185,20 @@ export function FieldEditForm({
         )}
         {type === "SELECT" && (
           <div className="space-y-3">
+            <label className="field">
+              Display in search filters
+              <select
+                value={filterDisplay}
+                onChange={(event) => setFilterDisplay(event.target.value)}
+              >
+                <option value="DROPDOWN">Dropdown — choose one</option>
+                <option value="RADIO">Radio buttons — choose one</option>
+                <option value="CHECKBOX">Checkboxes — choose multiple</option>
+              </select>
+              <small className="muted">
+                Only changes search filters. Sellers still choose one answer.
+              </small>
+            </label>
             <label className="field">
               Depends on
               <select

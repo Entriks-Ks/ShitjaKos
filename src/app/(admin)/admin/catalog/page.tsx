@@ -172,6 +172,7 @@ export default async function Page() {
                                     type: field.type,
                                     required: field.required,
                                     filterable: field.filterable,
+                                    filterDisplay: field.filterDisplay,
                                     unit: field.unit ?? "",
                                     min: field.min,
                                     max: field.max,

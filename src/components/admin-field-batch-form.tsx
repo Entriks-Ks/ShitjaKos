@@ -14,6 +14,7 @@ type DraftField = {
   type: FieldType;
   required: boolean;
   filterable: boolean;
+  filterDisplay: string;
   unit: string;
   min: string;
   max: string;
@@ -27,6 +28,7 @@ const emptyField = (id: number): DraftField => ({
   type: "TEXT",
   required: false,
   filterable: false,
+  filterDisplay: "DROPDOWN",
   unit: "",
   min: "",
   max: "",
@@ -182,6 +184,7 @@ export function FieldBatchCreateForm({
                     updateField(field.id, {
                       type: event.target.value as FieldType,
                       filterable: false,
+                      filterDisplay: "DROPDOWN",
                     })
                   }
                 >
@@ -231,6 +234,22 @@ export function FieldBatchCreateForm({
               )}
               {field.type === "SELECT" && (
                 <div className="space-y-3">
+                  <label className="field">
+                    Display in search filters
+                    <select
+                      value={field.filterDisplay}
+                      onChange={(event) =>
+                        updateField(field.id, { filterDisplay: event.target.value })
+                      }
+                    >
+                      <option value="DROPDOWN">Dropdown — choose one</option>
+                      <option value="RADIO">Radio buttons — choose one</option>
+                      <option value="CHECKBOX">Checkboxes — choose multiple</option>
+                    </select>
+                    <small className="muted">
+                      Only changes search filters. Sellers still choose one answer.
+                    </small>
+                  </label>
                   <p className="font-medium text-sm">
                     Choices ({field.options.length}/{MAX_SELECT_CHOICES})
                   </p>
