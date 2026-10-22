@@ -52,21 +52,22 @@ export function CategorySidebar({
     return selected.parentId ?? selected.id;
   }, [categories, params.category]);
 
+  const orderedGroups = useMemo(() => {
+    if (!selectedGroupId) return groups;
+    const selected = groups.find(group => group.id === selectedGroupId);
+
+    if (!selected) return groups;
+
+    return [selected, ...groups.filter(group => group.id !== selectedGroupId)];
+  }, [groups, selectedGroupId]);
+
+
   const [expansionOverride, setExpansionOverride] = useState<{
     groupId: string;
     expanded: boolean;
   } | null>(null);
 
-  const selectedHiddenGroupId = useMemo(() => {
-    if (!params.category || !selectedGroupId) {
-      return null;
-    }
 
-    const children = childrenByParent.get(selectedGroupId) ?? [];
-    const index = children.findIndex((category) => category.id === params.category);
-
-    return index >= PREVIEW_COUNT ? selectedGroupId : null;
-  }, [params.category, selectedGroupId, childrenByParent]);
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === params.category),
@@ -82,6 +83,60 @@ export function CategorySidebar({
       .filter((attribute) => ["SELECT", "NUMBER", "BOOLEAN"].includes(attribute.type))
       .slice(0, MAX_ATTRIBUTE_FILTERS);
   }, [selectedCategory, isSubcategory]);
+  if (isSubcategory && selectedCategory) {
+    const parentCategory = categories.find(
+      (category) => category.id === selectedCategory.parentId,
+    );
+
+    return (
+      <aside
+        className="category-sidebar"
+        tabIndex={0}
+        aria-label={copy[locale].browse}
+      >
+        <nav
+          aria-label={copy[locale].browse}
+          className="sidebar-category-path"
+        >
+          <Link
+            href={categoryUrl(params)}
+            className="sidebar-category-path__all"
+          >
+            {all}
+          </Link>
+
+          <div className="sidebar-category-path__branch">
+            {parentCategory && (
+              <Link
+                href={categoryUrl(params, parentCategory.id)}
+                className="sidebar-category-path__parent"
+              >
+                <CategoryIcon name={parentCategory.icon} size={17} />
+
+                <span>
+                  {translated(parentCategory.translations, locale)}
+                </span>
+              </Link>
+            )}
+
+            <div className="sidebar-category-path__leaf">
+              <span aria-current="page">
+                {translated(selectedCategory.translations, locale)}
+              </span>
+            </div>
+          </div>
+        </nav>
+
+        <SidebarAttributeFilters
+          key={JSON.stringify(params)}
+          attributes={attributes}
+          categoryName={translated(selectedCategory.translations, locale)}
+          params={params}
+          locale={locale}
+        />
+      </aside>
+    );
+  }
 
   return (
     <aside className="category-sidebar" tabIndex={0} aria-label={copy[locale].browse}>
@@ -107,12 +162,12 @@ export function CategorySidebar({
           >
             {all}
           </Link>
-          {groups.map((group) => {
+          {orderedGroups.map((group) => {
             const children = childrenByParent.get(group.id) ?? [];
             const expanded =
               expansionOverride?.groupId === group.id
                 ? expansionOverride.expanded
-                : selectedHiddenGroupId === group.id;
+                : selectedGroupId === group.id;
             const visible = expanded ? children : children.slice(0, PREVIEW_COUNT);
             const hiddenCount = Math.max(0, children.length - PREVIEW_COUNT);
 
