@@ -122,13 +122,13 @@ export function SidebarAttributeFilters({
         </span>
         <ChevronDown size={16} className={styles.chevron} aria-hidden="true" />
       </summary>
-      <SearchForm className={styles.form}>
+      <SearchForm className={styles.form} autoSubmit>
         {Object.entries(preserved).map(([key, value]) => (
           <input key={key} type="hidden" name={key} value={value} />
         ))}
         {!preserved.lang && <input type="hidden" name="lang" value={locale} />}
         <FilterSection title={t.price}>
-          <div className={styles.range}>
+          <div className={styles.range} data-search-range>
             {(["min", "max"] as const).map((key) => (
               <input
                 key={key}
@@ -159,7 +159,7 @@ export function SidebarAttributeFilters({
                 key={attribute.id}
                 title={`${label}${attribute.unit ? ` (${attribute.unit})` : ""}`}
               >
-                <div className={styles.range}>
+                <div className={styles.range} data-search-range>
                   {(["from", "to"] as const).map((kind) => (
                     <input
                       key={kind}
@@ -229,9 +229,6 @@ export function SidebarAttributeFilters({
           </select>
         </FilterSection>
         <div className={styles.actions}>
-          <button type="submit" className={styles.apply}>
-            {t.apply}
-          </button>
           {active && (
             <Link
               href={searchUrl({ ...preserved, lang: locale })}
@@ -242,6 +239,6 @@ export function SidebarAttributeFilters({
           )}
         </div>
       </SearchForm>
-    </details>
+    </details >
   );
 }
