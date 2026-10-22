@@ -13,6 +13,7 @@ import { currentActor as currentUser } from "@/lib/session";
 import { getCachedCategories as getCategories } from "@/lib/catalog-cache";
 import { searchListings } from "@/repositories/listings";
 import { getFavoriteListingIds } from "@/repositories/favorites";
+import { ActiveSearchFilters } from "@/components/active-search-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -47,9 +48,9 @@ export default async function SearchPage({
   ]);
   const favoriteIds = user
     ? await getFavoriteListingIds(
-        user.id,
-        result.items.map((item) => item.id),
-      )
+      user.id,
+      result.items.map((item) => item.id),
+    )
     : [];
   const selected = categories.find((category) => category.id === params.category);
   const parent = categories.find((category) => category.id === selected?.parentId);
@@ -96,19 +97,32 @@ export default async function SearchPage({
           <section id="results" className="search-results">
             <div className="search-results-heading">
               <h1 className="mb-0">{title}</h1>
+
               <div className="search-results-heading-tools">
                 <span className="text-sm text-stone-500">
                   {result.count} {t.results}
                 </span>
+
                 <SaveSearchButton
                   params={params}
                   signedIn={!!user}
                   suggestedName={title}
                 />
+
                 {!selected?.parentId && (
-                  <SearchFilters params={params} locale={locale} selected={selected} />
+                  <SearchFilters
+                    params={params}
+                    locale={locale}
+                    selected={selected}
+                  />
                 )}
               </div>
+
+              <ActiveSearchFilters
+                categories={categories}
+                params={params}
+                locale={locale}
+              />
             </div>
             <ListingResults
               result={result}
