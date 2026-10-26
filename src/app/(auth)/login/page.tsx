@@ -7,8 +7,8 @@ export default async function Page({
   const { registered } = await searchParams;
   return (
     <>
-      <h1>Your Connection to the Western Balkans Marketplaces</h1>
-      <p className="muted mb-8">Log in or register</p>
+      <h1>Mirë se u ktheve.</h1>
+      <p className="muted mb-5">Log in to buy and sell near you.</p>
       {registered === "1" && (
         <p role="status" className="notice mb-5">
           Your account is verified and ready. Sign in to continue.
