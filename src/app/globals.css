@@ -3474,8 +3474,8 @@ input[type="checkbox"] {
 .auth-split {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
-  width: min(840px, 100%);
-  min-height: min(510px, calc(100dvh - 72px));
+  width: min(880px, 100%);
+  min-height: min(530px, calc(100dvh - 72px));
   background: #fff;
   border-radius: 18px;
   overflow: hidden;
