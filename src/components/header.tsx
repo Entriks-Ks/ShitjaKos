@@ -16,8 +16,8 @@ function SignedInAccountControl({ label }: { label: string }) {
       href="/dashboard"
       aria-label={unread > 0 ? `${label}, ${unread} unread notifications` : label}
     >
-      <User size={22} strokeWidth={1.5} />
-      <span>{label}</span>
+      <User size={20} strokeWidth={1.7} />
+      <span className="header-icon-label">{label}</span>
       {unread > 0 ? (
         <strong className="header-account-badge" aria-hidden="true">
           {unread > 99 ? "99+" : unread}
@@ -42,8 +42,8 @@ export function Header({
     <SignedInAccountControl label={t.account} />
   ) : (
     <Link className="header-icon-link" href="/login" aria-label={t.login}>
-      <User size={22} strokeWidth={1.5} />
-      <span>{t.login}</span>
+      <User size={20} strokeWidth={1.7} />
+      <span className="header-icon-label">{t.login}</span>
     </Link>
   );
   const favoritesControl = (
@@ -52,8 +52,8 @@ export function Header({
       href="/dashboard/favorites"
       aria-label={t.favorites}
     >
-      <Heart size={22} strokeWidth={1.5} />
-      <span>{t.favorites}</span>
+      <Heart size={20} strokeWidth={1.7} />
+      <span className="header-icon-label">{t.favorites}</span>
     </Link>
   );
   return (
@@ -137,7 +137,7 @@ function LanguageToggleFallback({ locale }: { locale: Locale }) {
         aria-haspopup="menu"
         aria-label="Language"
       >
-        <Globe size={16} strokeWidth={1.8} />
+        <Globe className="lang-globe" size={16} strokeWidth={1.8} />
         <span className="lang-code">{locale.toUpperCase()}</span>
         <ChevronDown className="lang-chevron" size={14} strokeWidth={2} />
       </button>
@@ -181,7 +181,7 @@ function LanguageToggle({ locale }: { locale: Locale }) {
         aria-label="Language"
         onClick={() => setOpen((value) => !value)}
       >
-        <Globe size={16} strokeWidth={1.8} />
+        <Globe className="lang-globe" size={16} strokeWidth={1.8} />
         <span className="lang-code">{locale.toUpperCase()}</span>
         <ChevronDown className="lang-chevron" size={14} strokeWidth={2} />
       </button>

@@ -1344,9 +1344,9 @@ h2 {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 16px;
-  padding-top: 10px;
-  padding-bottom: 10px;
+  gap: 20px;
+  padding-top: 12px;
+  padding-bottom: 12px;
 }
 
 .header-bar .brand {
@@ -1357,12 +1357,58 @@ h2 {
   display: none;
   align-items: center;
   justify-content: center;
-  gap: 32px;
+  gap: 28px;
 }
 
 @media (min-width: 768px) {
   .header-bar .site-nav {
     display: flex;
+  }
+
+  .header-icon-nav {
+    gap: 2px;
+    padding: 3px;
+    background: #e4eee6;
+    border-radius: 14px;
+  }
+
+  .header-icon-link {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    gap: 0;
+    border-radius: 11px;
+  }
+
+  .header-icon-link:hover {
+    background: #fff;
+    color: #173f35;
+  }
+
+  .header-icon-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+  }
+
+  .header-account-badge {
+    top: 2px;
+    right: 2px;
+    border-color: #e4eee6;
+  }
+
+  .lang-globe {
+    display: none;
+  }
+
+  .header-sell {
+    height: 40px;
+    padding: 0 16px;
+    font-size: 13px;
+    font-weight: 650;
   }
 }
 
@@ -1370,22 +1416,23 @@ h2 {
   position: relative;
   display: inline-flex;
   align-items: center;
-  padding: 0 0 5px;
-  color: #243028;
+  padding: 6px 2px 8px;
+  color: #5a6560;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 550;
   white-space: nowrap;
 }
 
 .site-nav-link::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
+  left: 50%;
   bottom: 0;
+  width: 16px;
   height: 2px;
-  border-radius: 2px;
+  border-radius: 99px;
   background: transparent;
+  transform: translateX(-50%);
 }
 
 .site-nav-link:hover,
@@ -1426,7 +1473,7 @@ h2 {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 10px;
   justify-self: end;
 }
 
@@ -1451,14 +1498,15 @@ h2 {
 .lang-toggle>button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 4px;
+  gap: 4px;
+  height: 40px;
+  padding: 0 8px;
   border: 0;
   background: transparent;
-  color: #5a6560;
-  font-size: 13px;
+  color: #6a756e;
+  font-size: 12px;
   font-weight: 650;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.04em;
   cursor: pointer;
 }
 
@@ -1526,7 +1574,7 @@ h2 {
 .header-icon-nav {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 2px;
 }
 
 .header-icon-link {
@@ -1536,7 +1584,7 @@ h2 {
   justify-content: center;
   gap: 3px;
   min-width: 44px;
-  color: #173f35;
+  color: #3d4a44;
   font-size: 10px;
   font-weight: 600;
   line-height: 1.15;
@@ -4499,8 +4547,12 @@ input[type="checkbox"] {
   .header-icon-link {
     min-width: 0;
     max-width: none;
+    width: auto;
+    height: auto;
     font-size: 9px;
     gap: 1px;
+    border-radius: 0;
+    background: transparent;
   }
 
   .header-icon-link span {
@@ -4533,6 +4585,7 @@ input[type="checkbox"] {
   }
 
   .lang-toggle>button {
+    height: auto;
     padding: 4px 2px;
     gap: 2px;
     font-size: 11px;
