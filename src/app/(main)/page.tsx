@@ -4,7 +4,7 @@ import { ListingSearchBar } from "@/components/listing-search-bar";
 import { ArrowRight, ShieldCheck, Store, Tag, Users } from "lucide-react";
 import { Header } from "@/components/header";
 import { ListingResults } from "@/components/listing-results";
-import { CategoryOrbPhoto } from "@/components/category-icon";
+import { HomeCategoryNav } from "@/components/home-category-nav";
 import { redirect } from "next/navigation";
 import { searchUrl } from "@/lib/search-navigation";
 import { copy, localeOf, translated } from "@/lib/catalog";
@@ -96,24 +96,24 @@ export default async function Home({
               <h2>{t.categories}</h2>
               <p className="home-categories-note">Për çdo ditë. Për këdo.</p>
             </div>
-            <div className="home-categories">
-              {categories
-                .filter((c) => !c.parentId)
-                .map((c) => (
-                  <Link
-                    key={c.id}
-                    className="category-orb"
-                    href={searchUrl({ category: c.id, lang: locale })}
-                  >
-                    <span className="category-orb-icon">
-                      <CategoryOrbPhoto id={c.id} icon={c.icon} size={64} />
-                    </span>
-                    <span className="category-orb-name">
-                      {translated(c.translations, locale)}
-                    </span>
-                  </Link>
-                ))}
-            </div>
+            <HomeCategoryNav
+              locale={locale}
+              items={categories
+                .filter((category) => !category.parentId)
+                .map((category) => ({
+                  id: category.id,
+                  name: translated(category.translations, locale),
+                  icon: category.icon,
+                  href: searchUrl({ category: category.id, lang: locale }),
+                  children: categories
+                    .filter((child) => child.parentId === category.id)
+                    .map((child) => ({
+                      id: child.id,
+                      name: translated(child.translations, locale),
+                      href: searchUrl({ category: child.id, lang: locale }),
+                    })),
+                }))}
+            />
           </section>
         </div>
         <section id="results" className="home-listings">
