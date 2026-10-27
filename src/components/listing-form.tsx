@@ -569,15 +569,17 @@ export function StatusButton({
   id,
   target,
   label,
+  className,
 }: {
   id: string;
   target: "PUBLISHED" | "PAUSED" | "SOLD" | "CLOSED";
   label: string;
+  className?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
-    <div>
+    <div className={className}>
       <button
         className="btn btn-outline"
         disabled={busy}

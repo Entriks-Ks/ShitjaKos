@@ -1,9 +1,33 @@
 import Link from "@/components/navigation-link";
+import {
+  Eye,
+  Heart,
+  MessageCircle,
+  MessagesSquare,
+  Store,
+} from "lucide-react";
 import { requireUser } from "@/lib/session";
 import {
   getBusinessPerformance,
   PerformanceError,
 } from "@/services/business-performance";
+
+const metricMeta = [
+  ["Listing views", "listingViews", Eye],
+  ["Shop views", "shopViews", Store],
+  ["Saved favorites", "favorites", Heart],
+  ["New inquiries", "conversations", MessageCircle],
+  ["Buyer messages", "messages", MessagesSquare],
+] as const;
+
+function shortDay(iso: string) {
+  const [year, month, day] = iso.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  });
+}
 
 export default async function PerformanceScreen({
   params,
@@ -20,41 +44,44 @@ export default async function PerformanceScreen({
   } catch (error) {
     if (!(error instanceof PerformanceError)) throw error;
     return (
-      <div className="wrap py-12">
+      <div className="perf-error">
         <p role="alert" className="notice error">
           {error.message}
         </p>
-        <Link href={`/dashboard/performance?business=${id}`} className="btn btn-outline">
-          Reset dates
-        </Link>
-        <Link href="/dashboard/shops" className="btn btn-outline">
-          My shops
-        </Link>
+        <div className="perf-error-actions">
+          <Link href={`/dashboard/performance?business=${id}`} className="btn btn-outline">
+            Reset dates
+          </Link>
+          <Link href="/dashboard/shops" className="btn btn-outline">
+            My shops
+          </Link>
+        </div>
       </div>
     );
   }
-  const metrics = [
-    ["Listing views", data.listingViews],
-    ["Shop views", data.shopViews],
-    ["Saved favorites", data.favorites],
-    ["New inquiries", data.conversations],
-    ["Buyer messages", data.messages],
-  ] as const;
+  const totals = {
+    listingViews: data.listingViews,
+    shopViews: data.shopViews,
+    favorites: data.favorites,
+    conversations: data.conversations,
+    messages: data.messages,
+  };
   const peak = Math.max(1, ...data.daily.map((day) => day.views));
   return (
-    <div className="space-y-6">
+    <div className="perf-screen">
       <header className="workspace-heading">
         <Link href="/dashboard/shops" className="text-action">
           ← My shops
         </Link>
-        <p className="eyebrow mt-6">BUSINESS INSIGHTS</p>
+        <p className="eyebrow mt-5">BUSINESS INSIGHTS</p>
         <h1>{data.name}</h1>
-        <p className="muted">See how customers discover and contact your shop.</p>
+        <p className="muted">How people find and contact this shop.</p>
       </header>
+
       <form
         method="get"
         action="/dashboard/performance"
-        className="workspace-card flex flex-wrap items-end gap-4"
+        className="perf-dates"
       >
         <input type="hidden" name="business" value={id} />
         <label className="field">
@@ -77,76 +104,86 @@ export default async function PerformanceScreen({
             max={new Date().toISOString().slice(0, 10)}
           />
         </label>
-        <button className="btn btn-primary">Apply dates</button>
+        <button className="btn btn-primary">Apply</button>
       </form>
-      <section
-        aria-label="Performance totals"
-        className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5"
-      >
-        {metrics.map(([label, value]) => (
-          <article className="workspace-card" key={label}>
-            <p className="muted text-sm">{label}</p>
-            <p className="text-3xl font-semibold mt-3">{value.toLocaleString("en-GB")}</p>
+
+      <section aria-label="Performance totals" className="perf-metrics">
+        {metricMeta.map(([label, key, Icon]) => (
+          <article className="perf-metric" key={key}>
+            <span className="perf-metric-icon" aria-hidden="true">
+              <Icon size={16} />
+            </span>
+            <strong>{totals[key].toLocaleString("en-GB")}</strong>
+            <span>{label}</span>
           </article>
         ))}
       </section>
-      <section className="workspace-card">
-        <h2 className="text-xl font-semibold">Views over time</h2>
-        <p className="muted text-sm mb-5">Shop and listing views combined · UTC dates</p>
+
+      <section className="perf-panel">
+        <div className="perf-panel-head">
+          <h2>Views over time</h2>
+          <p>Shop and listing views · UTC</p>
+        </div>
         {data.daily.length ? (
-          <div className="max-h-72 overflow-auto space-y-2">
+          <ol className="perf-chart">
             {data.daily.map((day) => (
-              <div key={day.day} className="flex items-center gap-3 text-sm">
-                <time className="w-24 shrink-0">{day.day}</time>
-                <div className="flex-1 bg-stone-100 rounded-full">
-                  <div
-                    className="h-3 bg-stone-800 rounded-full"
-                    style={{ width: `${(day.views / peak) * 100}%` }}
-                  />
+              <li key={day.day}>
+                <time dateTime={day.day}>{shortDay(day.day)}</time>
+                <div className="perf-bar" aria-hidden="true">
+                  <span style={{ width: `${Math.max(6, (day.views / peak) * 100)}%` }} />
                 </div>
-                <span className="w-12 text-right">{day.views}</span>
-              </div>
+                <span className="perf-bar-value">{day.views}</span>
+              </li>
             ))}
-          </div>
+          </ol>
         ) : (
-          <p className="muted py-8">No recorded views in this period yet.</p>
+          <p className="perf-empty">No recorded views in this period yet.</p>
         )}
       </section>
-      <section className="workspace-card overflow-x-auto">
-        <h2 className="text-xl font-semibold mb-4">Most viewed listings</h2>
-        <table className="w-full text-sm text-left">
-          <thead>
-            <tr>
-              <th className="p-3">Listing</th>
-              <th className="p-3">Views</th>
-              <th className="p-3">Saved favorites</th>
-              <th className="p-3">New inquiries</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.popular.map((item) => (
-              <tr key={item.id} className="border-t border-stone-100">
-                <td className="p-3">
-                  {item.title}
-                  <span className="block muted text-xs">{item.status}</span>
-                </td>
-                <td className="p-3">{item.views}</td>
-                <td className="p-3">{item.favorites}</td>
-                <td className="p-3">{item.inquiries}</td>
-              </tr>
+
+      <section className="perf-panel">
+        <div className="perf-panel-head">
+          <h2>Most viewed listings</h2>
+          <p>Ranked by views in this period</p>
+        </div>
+        {data.popular.length ? (
+          <ul className="perf-listings">
+            {data.popular.map((item, index) => (
+              <li key={item.id}>
+                <span className="perf-rank">{index + 1}</span>
+                <div>
+                  <Link href={`/listings/${item.id}`}>{item.title}</Link>
+                  <small>{item.status.charAt(0) + item.status.slice(1).toLowerCase()}</small>
+                </div>
+                <dl>
+                  <div>
+                    <dt>Views</dt>
+                    <dd>{item.views}</dd>
+                  </div>
+                  <div>
+                    <dt>Saved</dt>
+                    <dd>{item.favorites}</dd>
+                  </div>
+                  <div>
+                    <dt>Inquiries</dt>
+                    <dd>{item.inquiries}</dd>
+                  </div>
+                </dl>
+              </li>
             ))}
-          </tbody>
-        </table>
-        {!data.popular.length && (
-          <p className="muted py-6">Your most viewed listings will appear here.</p>
+          </ul>
+        ) : (
+          <p className="perf-empty">Your most viewed listings will appear here.</p>
         )}
       </section>
-      <aside className="workspace-card text-sm muted space-y-2">
+
+      <details className="perf-notes">
+        <summary>How these numbers are counted</summary>
         <p>
           Views estimate daily unique visitors per page, including guests. Signed-in
           owners, staff and administrators are excluded. Logged-out sellers may count.
-          Daily counts added together are not unique people across the whole period. Guest
-          counts begin when guest tracking is enabled; earlier counts only include
+          Daily counts added together are not unique people across the whole period.
+          Guest counts begin when guest tracking is enabled; earlier counts only include
           signed-in visitors.
         </p>
         <p>
@@ -161,7 +198,7 @@ export default async function PerformanceScreen({
           addresses or message content are shown. Popular listings are ranked by recorded
           views. Days with no views are omitted from the chart.
         </p>
-      </aside>
+      </details>
     </div>
   );
 }

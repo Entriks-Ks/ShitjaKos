@@ -1,14 +1,10 @@
 import Link from "@/components/navigation-link";
-import Image from "next/image";
-import { Plus, ArrowUpRight, Package, Store, CircleCheck, Pencil } from "lucide-react";
-import { StatusButton } from "@/components/listing-form";
+import { ArrowUpRight, Package, Store, CircleCheck, Pencil } from "lucide-react";
 import { AccountShops } from "@/components/account-shops";
-import { DeleteListingButton } from "@/components/delete-listing-button";
-import { StatCard, StatusBadge } from "@/components/workspace-ui";
-import { EmptyListings } from "@/components/empty-listings";
+import { DashboardListings } from "@/components/dashboard-listings";
+import { StatCard } from "@/components/workspace-ui";
 import { requireUser } from "@/lib/session";
 import { getOwnedListings } from "@/repositories/dashboard";
-import { money } from "@/lib/catalog";
 import { shopLogosForMemberships } from "@/services/shop-images";
 
 export const metadata = { title: "My account", robots: { index: false, follow: false } };
@@ -57,94 +53,7 @@ export default async function DashboardPage() {
         />
       </div>
       <AccountShops memberships={await shopLogosForMemberships(user.memberships)} />
-      <section className="workspace-section">
-        <div className="section-heading">
-          <div>
-            <h2>Your listings</h2>
-            <p>Manage your items from their first draft to the final sale.</p>
-          </div>
-          <Link className="btn btn-primary" href="/listings/new">
-            <Plus size={16} />
-            New listing
-          </Link>
-        </div>
-        {items.length ? (
-          <div className="account-listings">
-            {items.map((item) => (
-              <article className="account-listing" key={item.id}>
-                <Link
-                  className="account-listing-photo"
-                  href={`/listings/${item.id}`}
-                  aria-label={`Preview ${item.title}`}
-                >
-                  {item.media[0] ? (
-                    <Image
-                      src={`/api/media/${item.media[0].id}?size=thumb`}
-                      alt={item.title}
-                      fill
-                      unoptimized
-                      className="object-cover"
-                    />
-                  ) : (
-                    <Package size={28} />
-                  )}
-                </Link>
-                <div className="account-listing-info">
-                  <p>{item.business?.publicName ?? "Personal listing"}</p>
-                  <Link href={`/listings/${item.id}`}>
-                    <h3>{item.title}</h3>
-                  </Link>
-                  <strong>{money(item.priceCents)}</strong>
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    <StatusBadge
-                      tone={
-                        item.status === "PUBLISHED" &&
-                        item.moderationStatus === "APPROVED"
-                          ? "green"
-                          : "neutral"
-                      }
-                    >
-                      {item.status.charAt(0) + item.status.slice(1).toLowerCase()}
-                    </StatusBadge>
-                    {item.moderationStatus === "REJECTED" && (
-                      <StatusBadge tone="red">Blocked</StatusBadge>
-                    )}
-                  </div>
-                </div>
-                <div className="account-listing-actions">
-                  <Link className="btn btn-outline" href={`/listings/${item.id}`}>
-                    Preview
-                  </Link>
-                  {!["SOLD", "CLOSED"].includes(item.status) && (
-                    <Link className="btn btn-outline" href={`/listings/${item.id}/edit`}>
-                      <Pencil size={14} />
-                      Edit / photos
-                    </Link>
-                  )}
-                  {["DRAFT", "PAUSED"].includes(item.status) && (
-                    <StatusButton
-                      id={item.id}
-                      target="PUBLISHED"
-                      label="Publish listing"
-                    />
-                  )}
-                  {item.status === "PUBLISHED" && (
-                    <StatusButton id={item.id} target="PAUSED" label="Pause" />
-                  )}
-                  {["PUBLISHED", "PAUSED"].includes(item.status) && (
-                    <StatusButton id={item.id} target="SOLD" label="Mark sold" />
-                  )}
-                  <DeleteListingButton listingId={item.id} title={item.title} compact />
-                </div>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <div className="workspace-card">
-            <EmptyListings locale="en" />
-          </div>
-        )}
-      </section>
+      <DashboardListings items={items} />
     </>
   );
 }

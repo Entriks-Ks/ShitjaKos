@@ -30,16 +30,12 @@ export default async function Page({
   return (
     <>
       {shops.length > 1 && (
-        <nav aria-label="Choose shop performance" className="flex flex-wrap gap-2 mb-6">
+        <nav aria-label="Choose shop performance" className="perf-shops">
           {shops.map(({ business }) => (
             <Link
               key={business.id}
               href={`/dashboard/performance?business=${business.id}`}
-              className={
-                business.id === selected.business.id
-                  ? "btn btn-primary"
-                  : "btn btn-outline"
-              }
+              className={`perf-shop${business.id === selected.business.id ? " is-on" : ""}`}
               aria-current={business.id === selected.business.id ? "page" : undefined}
             >
               {business.publicName}

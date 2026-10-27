@@ -25,14 +25,14 @@ export default async function DashboardLayout({
           <div className="profile-avatar">{initials || "SK"}</div>
           <h2>{user.profile?.displayName || user.name}</h2>
           <p>
-            Member since{" "}
+            Since{" "}
             {user.createdAt.toLocaleDateString("en-GB", {
               month: "short",
               year: "numeric",
             })}
           </p>
           <StatusBadge tone={user.emailVerified ? "green" : "amber"}>
-            {user.emailVerified ? "Email verified" : "Email not verified"}
+            {user.emailVerified ? "Verified" : "Verify email"}
           </StatusBadge>
         </div>
         <WorkspaceNav
