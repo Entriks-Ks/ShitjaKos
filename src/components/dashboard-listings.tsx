@@ -15,7 +15,7 @@ type ListingItem = {
   title: string;
   status: string;
   moderationStatus: string;
-  priceCents: number;
+  priceCents: number | null;
   business: { publicName: string } | null;
   media: { id: string }[];
 };

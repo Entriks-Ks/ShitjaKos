@@ -68,11 +68,12 @@ export function HomeCategoryNav({
 
   useEffect(() => {
     if (!openId) return;
+    const id = openId;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") setOpenId(null);
     }
     function onReposition() {
-      placeArrow(openId);
+      placeArrow(id);
     }
     document.addEventListener("keydown", onKeyDown);
     window.addEventListener("resize", onReposition);
@@ -83,7 +84,7 @@ export function HomeCategoryNav({
   }, [openId]);
 
   function isMouse(event: PointerEvent) {
-    return event.pointerType === "mouse" || event.pointerType === "";
+    return event.pointerType === "mouse";
   }
 
   return (
