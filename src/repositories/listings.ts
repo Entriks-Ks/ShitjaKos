@@ -311,11 +311,11 @@ export function buildListingSearchWhere(
                 { attribute: { type: "SELECT" }, value: { equals: filter.choice } },
                 ...(boolean
                   ? [
-                      {
-                        attribute: { type: "BOOLEAN" as const },
-                        value: { equals: filter.choice === "true" },
-                      },
-                    ]
+                    {
+                      attribute: { type: "BOOLEAN" as const },
+                      value: { equals: filter.choice === "true" },
+                    },
+                  ]
                   : []),
               ],
             },
@@ -354,10 +354,10 @@ async function fuzzyListingIds(query: string) {
       JOIN "Category" c ON c.id = l."categoryId"
       WHERE
         ${Prisma.join(
-          variants.map(
-            (
-              variant,
-            ) => Prisma.sql`word_similarity(unaccent(${variant}), unaccent(l.title)) >= ${threshold}
+      variants.map(
+        (
+          variant,
+        ) => Prisma.sql`word_similarity(unaccent(${variant}), unaccent(l.title)) >= ${threshold}
               OR word_similarity(unaccent(${variant}), unaccent(l.description)) >= ${threshold}
               OR word_similarity(unaccent(${variant}), unaccent(c.slug)) >= ${threshold}
               OR EXISTS (
@@ -365,9 +365,9 @@ async function fuzzyListingIds(query: string) {
                 WHERE ct."categoryId" = c.id
                   AND word_similarity(unaccent(${variant}), unaccent(ct.name)) >= ${threshold}
               )`,
-          ),
-          " OR ",
-        )}
+      ),
+      " OR ",
+    )}
     `;
     const ids = new Set(rows.map((row) => row.id));
     matchingIds = matchingIds
@@ -390,12 +390,12 @@ async function rankedListingIds(query: string, ids: string[]) {
         + CASE WHEN unaccent(lower(c.slug)) LIKE '%' || unaccent(lower(${normalizeSearchText(query)})) || '%' THEN 80 ELSE 0 END
         + GREATEST(
             ${Prisma.join(
-              words.map(
-                (word) =>
-                  Prisma.sql`word_similarity(unaccent(${word}), unaccent(l.title))`,
-              ),
-              " + ",
-            )}
+    words.map(
+      (word) =>
+        Prisma.sql`word_similarity(unaccent(${word}), unaccent(l.title))`,
+    ),
+    " + ",
+  )}
           )
       )::float8 AS score
     FROM "Listing" l
@@ -413,8 +413,6 @@ export async function searchListings(
   const natural = params.q ? parseNaturalSearch(params.q) : {};
   const effectiveParams = { ...natural, ...params };
   const fuzzyIds = params.q?.trim() ? await fuzzyListingIds(params.q) : undefined;
-  const rankedIds =
-    fuzzyIds && params.q ? await rankedListingIds(params.q, fuzzyIds) : undefined;
   const finalWhere = {
     AND: [
       buildListingSearchWhere({ ...effectiveParams, q: undefined }),
@@ -424,33 +422,21 @@ export async function searchListings(
   const requestedPage = Math.max(1, Math.min(1000, Math.floor(Number(params.page)) || 1));
   const sort: Prisma.ListingOrderByWithRelationInput =
     params.sort === "price-asc"
-      ? { priceCents: "asc" }
+      ? { priceCents: { sort: "asc", nulls: "last" } }
       : params.sort === "price-desc"
-        ? { priceCents: "desc" }
-        : { publishedAt: "desc" };
+        ? { priceCents: { sort: "desc", nulls: "last" } }
+        : params.sort === "oldest"
+          ? { publishedAt: { sort: "asc", nulls: "last" } }
+          : { publishedAt: { sort: "desc", nulls: "last" } };
   const size = pageSize;
-  const readPage = async (page: number) => {
-    const pageIds = rankedIds?.slice((page - 1) * size, page * size);
-    const items = pageIds
-      ? await getPrisma().listing.findMany({
-          where: { AND: [finalWhere, { id: { in: pageIds } }] },
-          include: listingInclude,
-          orderBy: { id: "asc" },
-        })
-      : await getPrisma().listing.findMany({
-          where: finalWhere,
-          include: listingInclude,
-          orderBy: [sort, { id: "asc" as const }],
-          take: size,
-          skip: (page - 1) * size,
-        });
-    if (!pageIds) return items;
-    const byId = new Map(items.map((item) => [item.id, item]));
-    return pageIds.flatMap((id) => {
-      const item = byId.get(id);
-      return item ? [item] : [];
+  const readPage = (page: number) =>
+    getPrisma().listing.findMany({
+      where: finalWhere,
+      include: listingInclude,
+      orderBy: [sort, { id: "asc" }],
+      take: size,
+      skip: (page - 1) * size,
     });
-  };
   const [count, requestedItems] = await Promise.all([
     getPrisma().listing.count({ where: finalWhere }),
     readPage(requestedPage),

@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { Header } from "@/components/header";
 import { CategorySidebar } from "@/components/category-sidebar";
-import { SearchFilters } from "@/components/search-filters";
+import { SearchSort } from "@/components/search-sort";
 import { ListingResults } from "@/components/listing-results";
 import { ListingSearchBar } from "@/components/listing-search-bar";
 import { copy, localeOf, translated } from "@/lib/catalog";
@@ -14,6 +14,8 @@ import { getCachedCategories as getCategories } from "@/lib/catalog-cache";
 import { searchListings } from "@/repositories/listings";
 import { getFavoriteListingIds } from "@/repositories/favorites";
 import { ActiveSearchFilters } from "@/components/active-search-filters";
+
+
 
 export const dynamic = "force-dynamic";
 
@@ -109,13 +111,8 @@ export default async function SearchPage({
                   suggestedName={title}
                 />
 
-                {!selected?.parentId && (
-                  <SearchFilters
-                    params={params}
-                    locale={locale}
-                    selected={selected}
-                  />
-                )}
+                <SearchSort params={params} locale={locale} />
+
               </div>
 
               <ActiveSearchFilters
